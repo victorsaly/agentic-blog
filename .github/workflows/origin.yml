@@ -29,7 +29,7 @@ jobs:
           PAYLOAD: ${{ toJSON(github.event.client_payload) }}
         run: node scripts/land-origin.mjs
       - name: Open the pull request
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           branch: ${{ steps.write.outputs.branch }}
           title: ${{ steps.write.outputs.title }}
