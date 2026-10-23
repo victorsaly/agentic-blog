@@ -28,7 +28,8 @@ const plan = z.object({
         name: z.string().min(1).max(60),
         subject: z.string().min(1),
         alt: z.string().min(1).max(250),
-        prompt: z.string().min(1),
+        quote: z.string().optional(),
+        note: z.string().max(300).optional(),
       }),
     )
     .min(1),
@@ -41,6 +42,34 @@ export function sectionsOf(long: string | undefined): string[] {
     .map((m) => (m[1] ?? '').trim())
     .filter((title) => title !== '' && !SKIP_SECTION.test(title))
     .slice(0, MAX_SECTIONS);
+}
+
+/** Quotes compare by their words, so curly quotes or a line break never hide a real match. */
+function words(text: string): string {
+  return text
+    .normalize('NFKD')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+/** The quote only if it really is the blogger's sentence from the text; otherwise none. */
+export function verifiedQuote(quote: string | undefined, text: string | undefined): string | null {
+  if (!quote || !text) return null;
+  const q = words(quote);
+  return q.length >= 12 && words(text).includes(q) ? quote.trim() : null;
+}
+
+/** The prompt the drawing model sees: the house style, the recurring person, then the scene. */
+export function drawingPrompt(
+  style: string,
+  character: string | undefined,
+  subject: string,
+): string {
+  const person = character
+    ? ` If a person appears, it is always this person: ${character.trim()}`
+    : '';
+  return `${style.trim()}${person} ${subject.trim()} Generous empty space, nothing else. Square image.`;
 }
 
 /** 00 for the cover, then 01, 02… in section order, then words that say what is in the picture. */
@@ -92,9 +121,10 @@ export const run: AgentRun = async (ctx) => {
       structure,
       long_version: long,
       house_style: ctx.settings.media.image_style,
+      recurring_person: ctx.settings.media.image_character,
       pictures_wanted: sections.map((s, i) => `${String(i)}. ${s}`).join('\n'),
     },
-    `Today is ${ctx.today}. Plan one picture for each entry in pictures_wanted, in that order, as the prompt describes. Reply with front matter only: why, then images, a list with section (copied exactly), name, subject, alt and prompt for each.`,
+    `Today is ${ctx.today}. Plan one picture for each entry in pictures_wanted, in that order, as the prompt describes. Reply with front matter only: why, then images, a list with section (copied exactly), name, subject, alt, quote and note for each.`,
   );
   const reply = unfence(await ctx.ask(message, { maxOutputTokens: 8000 }));
   const parsed = plan.safeParse(matter(reply).data);
@@ -105,12 +135,21 @@ export const run: AgentRun = async (ctx) => {
   const failures: string[] = [];
   for (const [index, image] of parsed.data.images.entries()) {
     const file = fileNameFor(index, image.name);
+    const prompt = drawingPrompt(
+      ctx.settings.media.image_style,
+      ctx.settings.media.image_character,
+      image.subject,
+    );
+    const quote = verifiedQuote(
+      image.quote,
+      image.section === 'cover' ? `${structure}\n${long ?? ''}` : long,
+    );
     let kept: Uint8Array | null = null;
     let problems: string[] = [];
     let attempts = 0;
     while (attempts < MAX_ATTEMPTS && kept === null) {
       attempts += 1;
-      const picture = await generatePicture(image.prompt);
+      const picture = await generatePicture(prompt);
       if (!picture.ok) {
         problems = [picture.reason];
         break; // a credentials or service problem; redrawing will not help
@@ -130,7 +169,9 @@ export const run: AgentRun = async (ctx) => {
       reviewed_by: 'claude',
       attempts,
       ...(kept === null ? { problems } : {}),
-      prompt: image.prompt,
+      ...(quote ? { quote } : {}),
+      ...(image.note ? { note: image.note.trim() } : {}),
+      prompt,
     });
   }
 

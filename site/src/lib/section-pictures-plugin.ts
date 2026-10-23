@@ -6,7 +6,14 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineMdastPlugin, type MdastPluginEntry, type PluginFactoryContext } from 'satteri';
 import { parse } from 'yaml';
-import { picturesFrom, sameHeading, textOf, type MdNode, type Picture } from './pictures';
+import {
+  captionNodes,
+  picturesFrom,
+  sameHeading,
+  textOf,
+  type MdNode,
+  type Picture,
+} from './pictures';
 
 const LONG = /\/thoughts\/[^/]+\/versions\/long\.md$/;
 
@@ -35,10 +42,13 @@ export const sectionPictures: MdastPluginEntry = (file: PluginFactoryContext) =>
       const heading = textOf(node as unknown as MdNode);
       const picture = pictures.find((p) => sameHeading(p.section, heading));
       if (!picture) return;
-      ctx.insertAfter(node, {
-        type: 'paragraph',
-        children: [{ type: 'image', url: `../${picture.file}`, alt: picture.alt }],
-      });
+      ctx.insertAfter(node, [
+        {
+          type: 'paragraph',
+          children: [{ type: 'image', url: `../${picture.file}`, alt: picture.alt }],
+        },
+        ...(captionNodes(picture) as never[]),
+      ]);
     },
   });
 };

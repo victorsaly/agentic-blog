@@ -80,14 +80,17 @@ const description = excerpt(thought.data.message, 40);
 
     {
       cover && coverImage && (
-        <Image
-          class="drawing cover"
-          src={coverImage}
-          alt={cover.alt}
-          width={720}
-          height={720}
-          loading="eager"
-        />
+        <figure class="cover">
+          <Image
+            class="drawing"
+            src={coverImage}
+            alt={cover.alt}
+            width={720}
+            height={720}
+            loading="eager"
+          />
+          {cover.note && <figcaption class="small quiet">{cover.note}</figcaption>}
+        </figure>
       )
     }
 
@@ -185,6 +188,17 @@ const description = excerpt(thought.data.message, 40);
   }
   .cover {
     margin: var(--space-4) 0;
+  }
+  .cover figcaption {
+    margin-top: var(--space-2);
+    max-width: var(--measure);
+  }
+  /* The line a drawing shows, then the artist's note: quiet, close to the drawing it belongs to. */
+  article :global(#road .caption) {
+    margin: calc(-1 * var(--space-3)) 0 var(--space-4);
+    max-width: 30ch;
+    font-size: var(--size-small);
+    color: var(--quiet);
   }
   /* Section drawings are square with generous white space; half the measure keeps the road readable. */
   article :global(#road img) {

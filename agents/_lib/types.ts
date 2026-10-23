@@ -52,7 +52,12 @@ export interface Settings {
   depths: string[];
   publishing: { index: boolean; badge_text: string; social: string[] };
   licence: { code: string; content: string };
-  media: { audio_bucket: string; image_style: string; voice_id: string | null };
+  media: {
+    audio_bucket: string;
+    image_style: string;
+    image_character?: string;
+    voice_id: string | null;
+  };
   agents: { model: string; max_output_tokens: number; review_required: true };
 }
 

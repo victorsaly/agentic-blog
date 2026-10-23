@@ -39,6 +39,11 @@ media:
   image_style: >
     Monochrome. Black ink on white. Lines and dots only: no photographs, no shading, no gradients, no text.
     One idea per picture, drawn as if by one steady hand with a fine pen. Generous empty space.
+  # The one person who appears in every drawing, so a post's pictures read as one story. A placeholder
+  # until Victor describes who it should be; never a real person's name or likeness.
+  image_character: >
+    An adult with short dark hair and round glasses, wearing a plain crew-neck jumper with the sleeves
+    pushed up. Always the same person, drawn the same way, seen at the same desk.
   voice_id: null # ElevenLabs voice id once chosen
 
 agents:

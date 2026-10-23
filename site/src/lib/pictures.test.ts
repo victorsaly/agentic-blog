@@ -58,3 +58,31 @@ describe('insertSectionPictures', () => {
     expect(tree.children).toHaveLength(5);
   });
 });
+
+describe('captions', () => {
+  it('puts the quoted line and the note under a drawing, only when there are any', () => {
+    const tree: MdNode = {
+      type: 'root',
+      children: [{ type: 'heading', depth: 2, children: [{ type: 'text', value: 'My advice' }] }],
+    };
+    const placed = insertSectionPictures(tree, [
+      {
+        file: 'image/01-x.png',
+        section: 'My advice',
+        alt: 'A desk.',
+        quote: 'Think first, act after.',
+        note: 'The pen waits.',
+      },
+    ]);
+    expect(placed).toBe(1);
+    expect(tree.children?.[2]).toEqual({
+      type: 'paragraph',
+      data: { hProperties: { className: ['caption'] } },
+      children: [
+        { type: 'emphasis', children: [{ type: 'text', value: '“Think first, act after.”' }] },
+        { type: 'break' },
+        { type: 'text', value: 'The pen waits.' },
+      ],
+    });
+  });
+});
