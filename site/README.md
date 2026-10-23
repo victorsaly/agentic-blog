@@ -10,22 +10,26 @@ studio behind Cloudflare Access where every origin begins.
 npm install            # from the repo root
 npm run dev            # http://localhost:4321
 npm run build          # astro check + build into site/dist
-npm run pages:dev --workspace site   # the built site plus the functions, with local R2 and AI bindings
+npm run worker:dev --workspace site  # the built site plus the API, with local R2 and AI bindings
 ```
 
 The functions skip the Access check on localhost. Everything else behaves as in production.
 
 ## Cloudflare setup (once)
 
-1. **Pages project** `agentic-blog`, connected to this repo, root directory `site`, build command
-   `cd .. && npm ci && npm run build`, output `site/dist`. Production branch `main`.
-2. **Custom domain** `blog.victorsaly.com` on the Pages project. DNS on Cloudflare.
-3. **R2 bucket** `agentic-blog-audio`; bind it as `AUDIO` (wrangler.toml already says so).
-4. **Workers AI** binding `AI` (wrangler.toml).
-5. **Secret** `GITHUB_TOKEN`: a fine-grained token on `victorsaly/agentic-blog` with *Contents: read and
-   write* only. `npx wrangler pages secret put GITHUB_TOKEN --project-name agentic-blog`.
-6. **Access**: Zero Trust → Access → Applications → self-hosted, domain `blog.victorsaly.com`, paths
+The site deploys as a **Worker with static assets** (`site/wrangler.jsonc`), not as a Pages project.
+
+1. **R2**: enable R2 on the account (dashboard → R2 → Enable), then create the bucket `agentic-blog-audio`
+   (or let the Cloudflare connector do it). It is bound as `AUDIO`.
+2. **Workers AI** is bound as `AI`; nothing to create.
+3. **Secrets**, from `site/`: `npx wrangler secret put GITHUB_TOKEN` (a fine-grained token on this repo,
+   *Contents: read and write* only). In GitHub, add `CLOUDFLARE_API_TOKEN` (Workers Scripts: edit, DNS: edit
+   on victorsaly.com, Workers R2: read) and `CLOUDFLARE_ACCOUNT_ID` as repository secrets for the deploy.
+4. **Domain**: `wrangler.jsonc` claims `blog.victorsaly.com` as a custom domain; the first deploy creates the
+   DNS record. Remove any CNAME you added by hand first, or the deploy refuses with a conflict.
+5. **Access**: Zero Trust → Access → Applications → self-hosted, domain `blog.victorsaly.com`, paths
    `/studio` and `/api/*`, policy *Allow* with your email. Nothing else needs a login.
+6. Local: `npm run worker:dev --workspace site` runs the built site with local R2 and AI bindings.
 
 ## Where things are
 

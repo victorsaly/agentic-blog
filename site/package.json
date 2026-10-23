@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro check && astro build",
+    "build": "astro check && astro build && wrangler pages functions build --outdir=./dist/_worker.js/ && echo _worker.js > dist/.assetsignore",
     "preview": "astro preview",
     "typecheck": "astro check",
-    "pages:dev": "wrangler pages dev dist --compatibility-date=2026-10-01"
+    "worker:dev": "wrangler dev",
+    "deploy": "wrangler deploy"
   },
   "dependencies": {
     "@astrojs/react": "^4.1.0",
@@ -23,6 +24,6 @@
     "@cloudflare/workers-types": "^4.20241218.0",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
-    "wrangler": "^3.99.0"
+    "wrangler": "^4.0.0"
   }
 }

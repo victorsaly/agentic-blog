@@ -1,0 +1,22 @@
+// Why: the site is a Worker with static assets (Cloudflare's current path; Pages is on its way out).
+// Three bindings and nothing else: the audio bucket, Workers AI for transcription, and one secret for the
+// GitHub dispatch. The custom domain is claimed here, so DNS is created by the deploy, not by hand.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "agentic-blog",
+  "compatibility_date": "2026-10-01",
+  "main": "./dist/_worker.js/index.js",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/api/*"]
+  },
+  "routes": [{ "pattern": "blog.victorsaly.com", "custom_domain": true }],
+  "workers_dev": true,
+  "r2_buckets": [{ "binding": "AUDIO", "bucket_name": "agentic-blog-audio" }],
+  "ai": { "binding": "AI" },
+  "vars": { "GITHUB_REPO": "victorsaly/agentic-blog" },
+  "observability": { "enabled": true }
+  // GITHUB_TOKEN is a secret: `npx wrangler secret put GITHUB_TOKEN` (fine-grained, contents: write, this repo only)
+}

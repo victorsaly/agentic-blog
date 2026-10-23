@@ -1,16 +1,13 @@
-# Why: main is the published site. Every merge builds and deploys to Cloudflare Pages; a failed build never
-# replaces a working site. Pull requests get a preview deployment so a post can be read before it merges.
+# Why: main is the published site. Every merge builds and deploys the Worker (static assets + the API);
+# a failed build never replaces a working site. Pull requests only build; previews come with versions later.
 name: Deploy
 
 on:
   push:
     branches: [main]
-  pull_request:
 
 permissions:
   contents: read
-  deployments: write
-  pull-requests: write
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -18,7 +15,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: Build and deploy to Cloudflare Pages
+    name: Build and deploy the Worker
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,4 +30,4 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: site
-          command: pages deploy dist --project-name=agentic-blog --branch=${{ github.head_ref || github.ref_name }}
+          command: deploy

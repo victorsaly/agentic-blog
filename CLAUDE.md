@@ -23,8 +23,8 @@ The full idea is the first post: `thoughts/2026-10-23-converted-with-ai/`.
 
 ## Stack
 
-- Site: Astro 5 + React islands + TypeScript strict, in `site/`. Deployed to Cloudflare Pages.
-- Edge: Cloudflare Pages Functions in `site/functions/` (upload to R2, transcription via Workers AI).
+- Site: Astro 5 + React islands + TypeScript strict, in `site/`. Deployed as a Cloudflare Worker with static assets.
+- Edge: functions in `site/functions/` compiled into the Worker (upload to R2, transcription via Workers AI).
 - Login: Cloudflare Access in front of `/studio` (configured in the Cloudflare dashboard, not in code).
 - Content: Markdown with YAML front matter in `thoughts/`, read by Astro content collections.
 - Agents: TypeScript programs in `agents/`, one folder each, run by GitHub Actions on a label or a schedule.
