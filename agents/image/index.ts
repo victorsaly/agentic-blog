@@ -10,7 +10,7 @@ import { markdownFile } from '../_lib/files.js';
 import { kebab, readIfPresent, readOrThrow, userMessage } from '../_lib/generic.js';
 import { unfence } from '../_lib/claude.js';
 import type { AgentContext, AgentRun, OutputFile } from '../_lib/types.js';
-import { IMAGE_MODEL, generatePicture } from '../_lib/workers-ai.js';
+import { drawPicture } from '../_lib/workers-ai.js';
 import { reviewDrawing } from './review.js';
 
 export const MANIFEST = 'image/prompts.md';
@@ -147,9 +147,11 @@ export const run: AgentRun = async (ctx) => {
     let kept: Uint8Array | null = null;
     let problems: string[] = [];
     let attempts = 0;
+    let model = '';
     while (attempts < MAX_ATTEMPTS && kept === null) {
       attempts += 1;
-      const picture = await generatePicture(prompt);
+      const picture = await drawPicture(prompt);
+      model = picture.model;
       if (!picture.ok) {
         problems = [picture.reason];
         break; // a credentials or service problem; redrawing will not help
@@ -166,6 +168,7 @@ export const run: AgentRun = async (ctx) => {
       subject: image.subject,
       alt: image.alt,
       drawn: kept !== null,
+      model,
       reviewed_by: 'claude',
       attempts,
       ...(kept === null ? { problems } : {}),
@@ -182,7 +185,6 @@ export const run: AgentRun = async (ctx) => {
       {
         why: parsed.data.why,
         generated_by: 'image',
-        model: IMAGE_MODEL,
         drawn: ctx.today,
         images: manifest,
       },

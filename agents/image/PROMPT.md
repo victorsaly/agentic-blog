@@ -45,7 +45,7 @@ For each panel give:
   no praise of the drawing.
 
 The runner builds each drawing prompt from the house style, the recurring person and your subject, draws
-it with Workers AI, forces it to pure black on white, and has Claude review it; a failed drawing is
+it (OpenAI's image model when OPENAI_API_KEY is set, otherwise Workers AI), forces it to pure black on white, and has Claude review it; a failed drawing is
 redrawn or left out. It names the files 00-<name>.png for the cover, then 01-<name>.png and on, and writes
 image/prompts.md with each file's section, quote, note and alt text.
 
