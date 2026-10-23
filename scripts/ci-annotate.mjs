@@ -11,7 +11,7 @@ process.stderr.write(result.stderr ?? '');
 if (result.status !== 0) {
   const lines = `${result.stdout ?? ''}\n${result.stderr ?? ''}`
     .split('\n')
-    .map((l) => l.replace(new RegExp(String.fromCharCode(27) + '\[[0-9;]*m', 'g'), '').trimEnd())
+    .map((l) => l.replace(new RegExp(String.fromCharCode(27) + '\\[[0-9;]*m', 'g'), '').trimEnd())
     .filter((l) => l.length > 0 && !/^npm (ERR|warn)/.test(l) && !/^> /.test(l));
   const head = lines.slice(0, 45);
   for (const line of head) console.log(`::error title=${name}::${line.replaceAll('%', '%25').replaceAll('\r', '').slice(0, 900)}`);
