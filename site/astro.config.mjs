@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
 import { satteri } from '@astrojs/markdown-satteri';
 import { sectionPictures } from './src/lib/section-pictures-plugin';
+import { sectionDiagrams } from './src/lib/section-diagrams-plugin';
 import { dropLeadHeading } from './src/lib/lead-heading-plugin';
 
 const settings = parse(readFileSync(new URL('../settings.yml', import.meta.url), 'utf8'));
@@ -22,7 +23,7 @@ export default defineConfig({
   image: { service: passthroughImageService() },
   // Each section's drawing goes under its heading in the long version (see the plugin's why).
   markdown: {
-    processor: satteri({ mdastPlugins: [dropLeadHeading, sectionPictures] }),
+    processor: satteri({ mdastPlugins: [dropLeadHeading, sectionPictures, sectionDiagrams] }),
   },
   server: { port: 4321 },
   vite: {

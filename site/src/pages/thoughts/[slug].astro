@@ -238,6 +238,82 @@ const description = excerpt(thought.data.message, 40);
     max-width: min(100%, 30ch);
     margin: var(--space-3) 0 var(--space-4);
   }
+  /* Diagrams the diagram agent described: real text, drawn with rules and spacing only. */
+  article :global(.diagram) {
+    margin: var(--space-4) 0 var(--space-5);
+    max-width: var(--measure);
+  }
+  article :global(.diagram-title) {
+    font-weight: 700;
+    margin: 0 0 var(--space-3);
+  }
+  article :global(.diagram figcaption) {
+    margin-top: var(--space-3);
+    font-size: var(--size-small);
+    color: var(--quiet);
+  }
+  article :global(.flow) {
+    list-style: none;
+    counter-reset: step;
+    margin: 0;
+    padding: 0;
+  }
+  article :global(.flow li) {
+    counter-increment: step;
+    position: relative;
+    border: var(--rule-width) solid var(--ink);
+    padding: var(--space-2) var(--space-3);
+  }
+  article :global(.flow li + li) {
+    margin-top: var(--space-4);
+  }
+  /* The arrow between two steps: a short rule and a tip, in the ink colour. */
+  article :global(.flow li + li::before) {
+    content: '';
+    position: absolute;
+    left: var(--space-4);
+    top: calc(-1 * var(--space-4));
+    height: var(--space-4);
+    border-left: var(--rule-width) solid var(--ink);
+  }
+  article :global(.flow li + li::after) {
+    content: '';
+    position: absolute;
+    left: calc(var(--space-4) - 0.3rem);
+    top: -0.45rem;
+    border: 0.3rem solid transparent;
+    border-top-color: var(--ink);
+    border-bottom: 0;
+  }
+  article :global(.flow .step) {
+    display: block;
+    font-weight: 700;
+  }
+  article :global(.flow .step::before) {
+    content: counter(step) '. ';
+  }
+  article :global(.flow .detail) {
+    display: block;
+    font-size: var(--size-small);
+    color: var(--quiet);
+  }
+  article :global(.compare) {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: var(--space-3);
+  }
+  article :global(.compare .side) {
+    border-top: calc(2 * var(--rule-width)) solid var(--ink);
+    padding-top: var(--space-2);
+  }
+  article :global(.compare .side-label) {
+    font-weight: 700;
+    margin: 0 0 var(--space-2);
+  }
+  article :global(.compare ul) {
+    margin: 0;
+    padding-left: var(--space-4);
+  }
   /* The sources table scrolls sideways on a phone instead of squeezing the links. */
   .sources {
     overflow-x: auto;
