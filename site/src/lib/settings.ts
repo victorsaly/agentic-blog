@@ -1,9 +1,8 @@
 // Why: settings.yml is the one place that says who the blogger is and what the site allows. The site reads
 // it at build time through this module so every page agrees, and a malformed file fails the build.
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
-import { z } from 'astro:content';
+import raw from '../../../settings.yml?raw';
+import { z } from 'astro/zod';
 
 const settingsSchema = z.object({
   site: z.object({
@@ -11,7 +10,7 @@ const settingsSchema = z.object({
     domain: z.string().min(1),
     tagline: z.string().min(1),
     author: z.string().min(1),
-    email: z.string().email(),
+    email: z.email(),
     timezone: z.string().min(1),
   }),
   languages: z.object({
@@ -40,6 +39,5 @@ const settingsSchema = z.object({
 
 export type Settings = z.infer<typeof settingsSchema>;
 
-const path = fileURLToPath(new URL('../../../settings.yml', import.meta.url));
-
-export const settings: Settings = settingsSchema.parse(parse(readFileSync(path, 'utf8')));
+// Vite inlines the file at build time, so the module works wherever Astro bundles it.
+export const settings: Settings = settingsSchema.parse(parse(raw));
