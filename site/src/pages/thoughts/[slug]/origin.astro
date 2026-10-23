@@ -8,7 +8,10 @@ import { formatDate, thoughtSlugOf } from '../../../lib/content';
 
 export async function getStaticPaths() {
   const thoughts = await getCollection('thoughts', ({ data }) => !data.draft);
-  return thoughts.map((thought) => ({ params: { slug: thoughtSlugOf(thought.id) }, props: { thought } }));
+  return thoughts.map((thought) => ({
+    params: { slug: thoughtSlugOf(thought.id) },
+    props: { thought },
+  }));
 }
 
 const { thought } = Astro.props;
@@ -19,25 +22,34 @@ const rendered = await Promise.all(
 );
 ---
 
-<Page title={`Origin: ${thought.data.title}`} description={`The unedited voice note behind “${thought.data.title}”.`} lang={thought.data.language} type="article">
+<Page
+  title={`Origin: ${thought.data.title}`}
+  description={`The unedited voice note behind “${thought.data.title}”.`}
+  lang={thought.data.language}
+  type="article"
+>
   <article>
     <p class="small quiet">
       <a href={`/thoughts/${slug}`}>← Back to the post</a>
     </p>
     <h1>Where “{thought.data.title}” came from</h1>
-    <p class="quiet">This is the origin. Nothing on this page has been edited, and nothing converted it.</p>
+    <p class="quiet">
+      This is the origin. Nothing on this page has been edited, and nothing converted it.
+    </p>
 
     {
       rendered.map(({ origin, Content }) => (
         <section class="origin">
           <p class="small quiet">
-            Recorded {formatDate(origin.data.recorded)}, spoken by {origin.data.speakers.join(' and ')}
+            Recorded {formatDate(origin.data.recorded)}, spoken by{' '}
+            {origin.data.speakers.join(' and ')}
           </p>
           {origin.data.audio && (
             // The transcript below is the caption, word for word; a captions track would duplicate it.
             // eslint-disable-next-line astro/jsx-a11y/media-has-caption
             <audio controls preload="none" src={`/api/audio/${origin.data.audio}`}>
-              Your browser cannot play this recording. <a href={`/api/audio/${origin.data.audio}`}>Download it</a> instead.
+              Your browser cannot play this recording.{' '}
+              <a href={`/api/audio/${origin.data.audio}`}>Download it</a> instead.
             </audio>
           )}
           <p class="why">

@@ -16,7 +16,14 @@ interface Props {
   publishedAt?: Date;
 }
 
-const { title, description, lang = settings.languages.origin, noindex = false, type = 'website', publishedAt } = Astro.props;
+const {
+  title,
+  description,
+  lang = settings.languages.origin,
+  noindex = false,
+  type = 'website',
+  publishedAt,
+} = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const indexable = settings.publishing.index && !noindex;
 const fullTitle = title === settings.site.name ? title : `${title} — ${settings.site.name}`;

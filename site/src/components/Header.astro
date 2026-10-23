@@ -65,7 +65,8 @@ import { settings } from '../lib/settings';
   };
 
   const font = document.getElementById('font-switch');
-  const syncFont = (): void => font?.setAttribute('aria-pressed', String(root.dataset['font'] === 'switch'));
+  const syncFont = (): void =>
+    font?.setAttribute('aria-pressed', String(root.dataset['font'] === 'switch'));
   font?.addEventListener('click', () => {
     const on = root.dataset['font'] !== 'switch';
     if (on) root.dataset['font'] = 'switch';
@@ -77,7 +78,8 @@ import { settings } from '../lib/settings';
 
   const theme = document.getElementById('theme-switch');
   const prefersDark = (): boolean => matchMedia('(prefers-color-scheme: dark)').matches;
-  const isDark = (): boolean => root.dataset['theme'] === 'dark' || (root.dataset['theme'] === undefined && prefersDark());
+  const isDark = (): boolean =>
+    root.dataset['theme'] === 'dark' || (root.dataset['theme'] === undefined && prefersDark());
   const syncTheme = (): void => theme?.setAttribute('aria-pressed', String(isDark()));
   theme?.addEventListener('click', () => {
     const next = isDark() ? 'light' : 'dark';

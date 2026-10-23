@@ -24,7 +24,10 @@ export function problem(message: string, status: number): Response {
 
 /** True when the request came through Cloudflare Access (it sets this header on every allowed request). */
 export function cameThroughAccess(request: Request): boolean {
-  return request.headers.has('cf-access-jwt-assertion') || request.headers.has('cf-access-authenticated-user-email');
+  return (
+    request.headers.has('cf-access-jwt-assertion') ||
+    request.headers.has('cf-access-authenticated-user-email')
+  );
 }
 
 /** The signed-in person, as Access reports it; "unknown" in local dev where Access is not in front. */

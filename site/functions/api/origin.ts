@@ -22,7 +22,8 @@ export const onRequestPost: Handler = async ({ request, env }) => {
 
   if (!isSafeKey(key)) return problem('A valid recording key is required.', 400);
   if (transcript.length === 0) return problem('The transcript is empty.', 400);
-  if (mode === 'feedback' && thought === null) return problem('Feedback needs the thought it is about.', 400);
+  if (mode === 'feedback' && thought === null)
+    return problem('Feedback needs the thought it is about.', 400);
 
   const response = await fetch(`https://api.github.com/repos/${env.GITHUB_REPO}/dispatches`, {
     method: 'POST',
@@ -35,13 +36,25 @@ export const onRequestPost: Handler = async ({ request, env }) => {
     },
     body: JSON.stringify({
       event_type: mode === 'origin' ? 'new-origin' : 'new-feedback',
-      client_payload: { key, transcript, thought, by: signedInEmail(request), recorded: new Date().toISOString() },
+      client_payload: {
+        key,
+        transcript,
+        thought,
+        by: signedInEmail(request),
+        recorded: new Date().toISOString(),
+      },
     }),
   });
 
   if (!response.ok) {
-    return problem(`GitHub refused the dispatch: ${String(response.status)} ${await response.text()}`, 502);
+    return problem(
+      `GitHub refused the dispatch: ${String(response.status)} ${await response.text()}`,
+      502,
+    );
   }
   // The workflow opens the PR a few seconds later; the pulls page is the honest place to send the person.
-  return json({ prUrl: `https://github.com/${env.GITHUB_REPO}/pulls?q=is%3Apr+is%3Aopen+label%3A${mode}` }, 202);
+  return json(
+    { prUrl: `https://github.com/${env.GITHUB_REPO}/pulls?q=is%3Apr+is%3Aopen+label%3A${mode}` },
+    202,
+  );
 };

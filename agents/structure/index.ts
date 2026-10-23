@@ -11,5 +11,9 @@ export const run: AgentRun = async (ctx) => {
     `Today is ${ctx.today}. The thought folder is ${ctx.thought.slug}. Write structure.md as the prompt describes.`,
   );
   const file = await askForFile(ctx, message, 'structure.md');
-  return { status: 'done', summary: 'Found the message, the idea and the small ideas; draft until reviewed.', files: [file] };
+  return {
+    status: 'done',
+    summary: 'Found the message, the idea and the small ideas; draft until reviewed.',
+    files: [file],
+  };
 };

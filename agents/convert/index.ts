@@ -19,7 +19,8 @@ export function targetsFor(ctx: AgentContext): Target[] {
     base.push({ kind: 'linkedin', language: origin, path: 'versions/linkedin.md' });
   }
   for (const language of ctx.settings.languages.publish) {
-    if (language !== origin) base.push({ kind: 'language', language, path: `versions/${language}.md` });
+    if (language !== origin)
+      base.push({ kind: 'language', language, path: `versions/${language}.md` });
   }
   return base;
 }

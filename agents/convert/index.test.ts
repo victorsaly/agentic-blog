@@ -7,7 +7,10 @@ import type { AgentContext } from '../_lib/types.js';
 function contextWith(languages: string[], social: string[]): AgentContext {
   return {
     agent: 'convert',
-    prompt: { meta: { name: 'convert', why: 'x'.repeat(20), phase: 2, reads: ['a'], writes: ['b'] }, instructions: '' },
+    prompt: {
+      meta: { name: 'convert', why: 'x'.repeat(20), phase: 2, reads: ['a'], writes: ['b'] },
+      instructions: '',
+    },
     settings: {
       site: { name: '', domain: '', tagline: '', author: '', email: 'a@b.c', timezone: 'UTC' },
       languages: { origin: 'en', publish: languages },
@@ -32,12 +35,17 @@ describe('targetsFor', () => {
   });
 
   it('adds linkedin only when the social list asks for it', () => {
-    expect(targetsFor(contextWith(['en'], ['linkedin'])).some((t) => t.kind === 'linkedin')).toBe(true);
+    expect(targetsFor(contextWith(['en'], ['linkedin'])).some((t) => t.kind === 'linkedin')).toBe(
+      true,
+    );
     expect(targetsFor(contextWith(['en'], [])).some((t) => t.kind === 'linkedin')).toBe(false);
   });
 
   it('adds one language version per publish language other than the origin', () => {
     const targets = targetsFor(contextWith(['en', 'es', 'pt'], []));
-    expect(targets.filter((t) => t.kind === 'language').map((t) => t.path)).toEqual(['versions/es.md', 'versions/pt.md']);
+    expect(targets.filter((t) => t.kind === 'language').map((t) => t.path)).toEqual([
+      'versions/es.md',
+      'versions/pt.md',
+    ]);
   });
 });

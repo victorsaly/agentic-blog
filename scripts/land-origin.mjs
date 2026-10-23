@@ -15,14 +15,48 @@ if (typeof key !== 'string' || typeof transcript !== 'string' || transcript.trim
 }
 
 const date = (typeof recorded === 'string' ? recorded : new Date().toISOString()).slice(0, 10);
-const stamp = (typeof recorded === 'string' ? recorded : new Date().toISOString()).replaceAll(/[:.]/g, '-');
+const stamp = (typeof recorded === 'string' ? recorded : new Date().toISOString()).replaceAll(
+  /[:.]/g,
+  '-',
+);
 
 function slugFromTranscript(text) {
   const words = text
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, ' ')
     .split(/\s+/)
-    .filter((w) => w.length > 3 && !['that', 'this', 'with', 'have', 'they', 'about', 'there', 'where', 'which', 'when', 'what', 'from', 'your', 'want', 'like', 'just', 'know', 'then', 'into', 'also', 'will', 'been', 'were', 'them', 'than', 'because'].includes(w))
+    .filter(
+      (w) =>
+        w.length > 3 &&
+        ![
+          'that',
+          'this',
+          'with',
+          'have',
+          'they',
+          'about',
+          'there',
+          'where',
+          'which',
+          'when',
+          'what',
+          'from',
+          'your',
+          'want',
+          'like',
+          'just',
+          'know',
+          'then',
+          'into',
+          'also',
+          'will',
+          'been',
+          'were',
+          'them',
+          'than',
+          'because',
+        ].includes(w),
+    )
     .slice(0, 4);
   return words.length > 0 ? words.join('-') : 'thought';
 }
@@ -37,10 +71,16 @@ function yamlFold(text) {
 const outputs = [];
 
 if (event === 'new-origin') {
-  const slug = typeof thought === 'string' && thought.length > 0 ? thought : `${date}-${slugFromTranscript(transcript)}`;
+  const slug =
+    typeof thought === 'string' && thought.length > 0
+      ? thought
+      : `${date}-${slugFromTranscript(transcript)}`;
   const dir = join('thoughts', slug, 'origin');
   await mkdir(dir, { recursive: true });
-  const existing = await stat(join(dir, 'transcript.md')).then(() => true, () => false);
+  const existing = await stat(join(dir, 'transcript.md')).then(
+    () => true,
+    () => false,
+  );
   const file = existing ? `transcript-${stamp}.md` : 'transcript.md';
   const why = `This is the origin of the thought "${slug}", kept exactly as it was spoken${by ? ` by ${by}` : ''} on ${date}. Nothing has been edited. Every published version points back here.`;
   const content = [
@@ -58,10 +98,15 @@ if (event === 'new-origin') {
     '',
   ].join('\n');
   await writeFile(join(dir, file), content, 'utf8');
-  outputs.push(['branch', `origin/${slug}`], ['title', `content: new origin for ${slug}`], ['label', 'origin'], [
-    'body',
-    `A new voice note landed from the studio.\n\n- Folder: \`thoughts/${slug}\`\n- Recording: \`${key}\` in R2\n- Recorded: ${date}\n\nThe transcript is unedited. Merging makes it an origin. The interview agent runs next: add the label \`agent:interview\` to ask the questions, or merge and let the schedule pick it up.`,
-  ]);
+  outputs.push(
+    ['branch', `origin/${slug}`],
+    ['title', `content: new origin for ${slug}`],
+    ['label', 'origin'],
+    [
+      'body',
+      `A new voice note landed from the studio.\n\n- Folder: \`thoughts/${slug}\`\n- Recording: \`${key}\` in R2\n- Recorded: ${date}\n\nThe transcript is unedited. Merging makes it an origin. The interview agent runs next: add the label \`agent:interview\` to ask the questions, or merge and let the schedule pick it up.`,
+    ],
+  );
 } else {
   if (typeof thought !== 'string' || thought.length === 0) {
     console.error('feedback needs the thought it is about');
@@ -71,12 +116,28 @@ if (event === 'new-origin') {
   await mkdir(dir, { recursive: true });
   const file = `${stamp}.md`;
   const why = `Feedback about the output of "${thought}", spoken${by ? ` by ${by}` : ''} on ${date}. The feedback agent treats it as an instruction and reworks the versions it names.`;
-  const content = ['---', 'why: >', yamlFold(why), `recorded: ${date}`, `audio: ${key}`, 'handled: false', '---', '', transcript.trim(), ''].join('\n');
+  const content = [
+    '---',
+    'why: >',
+    yamlFold(why),
+    `recorded: ${date}`,
+    `audio: ${key}`,
+    'handled: false',
+    '---',
+    '',
+    transcript.trim(),
+    '',
+  ].join('\n');
   await writeFile(join(dir, file), content, 'utf8');
-  outputs.push(['branch', `feedback/${thought}-${stamp}`], ['title', `content: feedback on ${thought}`], ['label', 'feedback'], [
-    'body',
-    `A feedback note about \`thoughts/${thought}\` landed from the studio.\n\n- File: \`${file}\`\n- Recording: \`${key}\` in R2\n\nMerging records it. Add the label \`agent:feedback\` to have the versions reworked from it.`,
-  ]);
+  outputs.push(
+    ['branch', `feedback/${thought}-${stamp}`],
+    ['title', `content: feedback on ${thought}`],
+    ['label', 'feedback'],
+    [
+      'body',
+      `A feedback note about \`thoughts/${thought}\` landed from the studio.\n\n- File: \`${file}\`\n- Recording: \`${key}\` in R2\n\nMerging records it. Add the label \`agent:feedback\` to have the versions reworked from it.`,
+    ],
+  );
 }
 
 const outFile = process.env.GITHUB_OUTPUT;

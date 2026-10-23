@@ -20,11 +20,25 @@ export function leafOf(entryId: string): string {
 
 /** Reading time in whole minutes at a gentle 180 words a minute, never less than one. */
 export function readingMinutes(text: string): number {
-  const words = text.trim().split(/\s+/).filter((w) => w.length > 0).length;
+  const words = text
+    .trim()
+    .split(/\s+/)
+    .filter((w) => w.length > 0).length;
   return Math.max(1, Math.round(words / 180));
 }
 
-const ordinals = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'] as const;
+const ordinals = [
+  'one',
+  'two',
+  'three',
+  'four',
+  'five',
+  'six',
+  'seven',
+  'eight',
+  'nine',
+  'ten',
+] as const;
 
 /** "four minutes", "one minute", "twelve minutes" — words read better than digits beside a title. */
 export function readingLabel(minutes: number): string {
@@ -34,7 +48,12 @@ export function readingLabel(minutes: number): string {
 
 /** "23 October 2026", in British order, without a middle dot in sight. */
 export function formatDate(date: Date, locale = 'en-GB', timeZone = 'Europe/London'): string {
-  return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', year: 'numeric', timeZone }).format(date);
+  return new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone,
+  }).format(date);
 }
 
 /** Strips Markdown to plain text well enough for a description or a word count. */

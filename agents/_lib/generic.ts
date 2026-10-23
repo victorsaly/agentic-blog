@@ -5,7 +5,8 @@ import type { AgentContext, AgentResult, OutputFile } from './types.js';
 
 export function readOrThrow(ctx: AgentContext, path: string): string {
   const content = ctx.thought.files.get(path);
-  if (content === undefined) throw new Error(`thoughts/${ctx.thought.slug}/${path} is missing; ${ctx.agent} needs it`);
+  if (content === undefined)
+    throw new Error(`thoughts/${ctx.thought.slug}/${path} is missing; ${ctx.agent} needs it`);
   return content;
 }
 
@@ -22,10 +23,15 @@ export function userMessage(sections: Record<string, string | undefined>, task: 
 }
 
 /** Asks once and expects the whole reply to be one Markdown file with front matter. */
-export async function askForFile(ctx: AgentContext, message: string, path: string): Promise<OutputFile> {
+export async function askForFile(
+  ctx: AgentContext,
+  message: string,
+  path: string,
+): Promise<OutputFile> {
   const reply = await ctx.ask(message);
   const content = unfence(reply);
-  if (!content.startsWith('---')) throw new Error(`${ctx.agent} replied without front matter for ${path}`);
+  if (!content.startsWith('---'))
+    throw new Error(`${ctx.agent} replied without front matter for ${path}`);
   return { path, content };
 }
 

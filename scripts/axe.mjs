@@ -11,13 +11,21 @@ const dist = new URL('../site/dist', import.meta.url).pathname;
 async function htmlFiles(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
   const nested = await Promise.all(
-    entries.map((e) => (e.isDirectory() ? htmlFiles(join(dir, e.name)) : e.name.endsWith('.html') ? [join(dir, e.name)] : [])),
+    entries.map((e) =>
+      e.isDirectory()
+        ? htmlFiles(join(dir, e.name))
+        : e.name.endsWith('.html')
+          ? [join(dir, e.name)]
+          : [],
+    ),
   );
   return nested.flat();
 }
 
 const pages = (await htmlFiles(dist)).map((file) => {
-  const path = relative(dist, file).replace(/index\.html$/, '').replace(/\.html$/, '');
+  const path = relative(dist, file)
+    .replace(/index\.html$/, '')
+    .replace(/\.html$/, '');
   return `${base}/${path}`.replace(/\/$/, '') || base;
 });
 
@@ -28,8 +36,12 @@ let failures = 0;
 for (const url of pages) {
   const page = await context.newPage();
   await page.goto(url, { waitUntil: 'networkidle' });
-  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag22aa']).analyze();
-  const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+  const results = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag22aa'])
+    .analyze();
+  const serious = results.violations.filter(
+    (v) => v.impact === 'serious' || v.impact === 'critical',
+  );
   if (serious.length > 0) {
     failures += serious.length;
     console.error(`\n${url}`);

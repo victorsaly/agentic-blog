@@ -35,7 +35,8 @@ export const onRequestPost: Handler = async ({ request, env }) => {
   })) as WhisperResult;
 
   const text = (result.text ?? '').trim();
-  if (text.length === 0) return problem('The model heard nothing. Try again closer to the microphone.', 422);
+  if (text.length === 0)
+    return problem('The model heard nothing. Try again closer to the microphone.', 422);
 
   await env.AUDIO.put(`${key}.json`, JSON.stringify({ text, words: result.words ?? [] }), {
     httpMetadata: { contentType: 'application/json' },

@@ -6,7 +6,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { hasWhy, markdownFile, writeOutputs } from './files.js';
 
-const good = markdownFile({ why: 'This exists so the test has a file that passes every rule.', kind: 'short' }, 'Body');
+const good = markdownFile(
+  { why: 'This exists so the test has a file that passes every rule.', kind: 'short' },
+  'Body',
+);
 
 describe('markdownFile', () => {
   it('puts the why first in the front matter', () => {
@@ -25,11 +28,15 @@ describe('writeOutputs', () => {
 
   it('refuses to write under origin/', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'agentic-'));
-    await expect(writeOutputs(dir, [{ path: 'origin/transcript.md', content: good }])).rejects.toThrow(/origins are never edited/);
+    await expect(
+      writeOutputs(dir, [{ path: 'origin/transcript.md', content: good }]),
+    ).rejects.toThrow(/origins are never edited/);
   });
 
   it('refuses a file without a why', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'agentic-'));
-    await expect(writeOutputs(dir, [{ path: 'versions/short.md', content: '---\nkind: short\n---\nBody' }])).rejects.toThrow(/no why/);
+    await expect(
+      writeOutputs(dir, [{ path: 'versions/short.md', content: '---\nkind: short\n---\nBody' }]),
+    ).rejects.toThrow(/no why/);
   });
 });

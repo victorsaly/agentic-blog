@@ -4,7 +4,12 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
 import matter from 'gray-matter';
-import { genericFrontMatter, originFrontMatter, structureFrontMatter, versionFrontMatter } from './content-schema.js';
+import {
+  genericFrontMatter,
+  originFrontMatter,
+  structureFrontMatter,
+  versionFrontMatter,
+} from './content-schema.js';
 
 const ROOTS = ['thoughts', 'wiki', 'agents', 'profile.md'] as const;
 
@@ -27,7 +32,9 @@ export async function listMarkdown(path: string): Promise<string[]> {
       const full = join(path, entry.name);
       if (entry.name === 'node_modules' || entry.name.startsWith('.')) return Promise.resolve([]);
       if (entry.isDirectory()) return listMarkdown(full);
-      return entry.isFile() && entry.name.endsWith('.md') ? Promise.resolve([full]) : Promise.resolve([]);
+      return entry.isFile() && entry.name.endsWith('.md')
+        ? Promise.resolve([full])
+        : Promise.resolve([]);
     }),
   );
   return nested.flat();
@@ -71,7 +78,9 @@ if (isMain) {
       // GitHub Actions turns this into an annotation on the file, readable without the raw log.
       if (process.env['GITHUB_ACTIONS']) console.error(`::error file=${p.file}::${p.message}`);
     }
-    console.error(`\n${String(problems.length)} file(s) without a proper why. Add a why: line to each.`);
+    console.error(
+      `\n${String(problems.length)} file(s) without a proper why. Add a why: line to each.`,
+    );
     process.exitCode = 1;
   }
 }

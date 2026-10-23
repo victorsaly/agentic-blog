@@ -9,7 +9,8 @@ export async function writeOutputs(baseDir: string, files: OutputFile[]): Promis
   const written: string[] = [];
   for (const file of files) {
     assertNotOrigin(file.path);
-    if (!hasWhy(file.content)) throw new Error(`${file.path} has no why in its front matter; refusing to write it`);
+    if (!hasWhy(file.content))
+      throw new Error(`${file.path} has no why in its front matter; refusing to write it`);
     const full = join(baseDir, file.path);
     await mkdir(dirname(full), { recursive: true });
     await writeFile(full, file.content.endsWith('\n') ? file.content : `${file.content}\n`, 'utf8');

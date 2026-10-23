@@ -6,11 +6,21 @@ import Page from '../../layouts/Page.astro';
 import Badge from '../../components/Badge.astro';
 import Depth from '../../components/Depth.astro';
 import { settings } from '../../lib/settings';
-import { excerpt, formatDate, leafOf, readingLabel, readingMinutes, thoughtSlugOf } from '../../lib/content';
+import {
+  excerpt,
+  formatDate,
+  leafOf,
+  readingLabel,
+  readingMinutes,
+  thoughtSlugOf,
+} from '../../lib/content';
 
 export async function getStaticPaths() {
   const thoughts = await getCollection('thoughts', ({ data }) => !data.draft);
-  return thoughts.map((thought) => ({ params: { slug: thoughtSlugOf(thought.id) }, props: { thought } }));
+  return thoughts.map((thought) => ({
+    params: { slug: thoughtSlugOf(thought.id) },
+    props: { thought },
+  }));
 }
 
 const { thought } = Astro.props;
@@ -32,7 +42,13 @@ const minutes = readingMinutes(long?.body ?? short?.body ?? thought.body ?? '');
 const description = excerpt(thought.data.message, 40);
 ---
 
-<Page title={thought.data.title} description={description} lang={thought.data.language} type="article" publishedAt={thought.data.date}>
+<Page
+  title={thought.data.title}
+  description={description}
+  lang={thought.data.language}
+  type="article"
+  publishedAt={thought.data.date}
+>
   <article>
     <Badge originHref={originHref} by={long?.data.converted_by ?? short?.data.converted_by} />
     <h1>{thought.data.title}</h1>
@@ -52,7 +68,9 @@ const description = excerpt(thought.data.message, 40);
         <Depth name="The road" hint="the whole piece" id="road">
           <road.Content />
           {!long?.data.reviewed && (
-            <p class="small quiet">This version has not yet been reviewed by {settings.site.author}. It can still change.</p>
+            <p class="small quiet">
+              This version has not yet been reviewed by {settings.site.author}. It can still change.
+            </p>
           )}
         </Depth>
       )
@@ -63,8 +81,11 @@ const description = excerpt(thought.data.message, 40);
         firstOrigin ? (
           <>
             <p>
-              Recorded {formatDate(firstOrigin.data.recorded)}, {firstOrigin.data.speakers.length === 1 ? 'one voice' : `${String(firstOrigin.data.speakers.length)} voices`}, never
-              edited. It starts like this:
+              Recorded {formatDate(firstOrigin.data.recorded)},{' '}
+              {firstOrigin.data.speakers.length === 1
+                ? 'one voice'
+                : `${String(firstOrigin.data.speakers.length)} voices`}
+              , never edited. It starts like this:
             </p>
             <blockquote>{excerpt(firstOrigin.body ?? '', 60)}</blockquote>
             <p>
@@ -78,12 +99,14 @@ const description = excerpt(thought.data.message, 40);
     </Depth>
 
     <p class="small quiet themes">
-      Themes: {thought.data.themes.map((theme, i) => (
-        <>
-          {i > 0 && ', '}
-          <span>{theme.replaceAll('-', ' ')}</span>
-        </>
-      ))}
+      Themes: {
+        thought.data.themes.map((theme, i) => (
+          <>
+            {i > 0 && ', '}
+            <span>{theme.replaceAll('-', ' ')}</span>
+          </>
+        ))
+      }
     </p>
   </article>
 </Page>

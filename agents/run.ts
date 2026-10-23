@@ -4,7 +4,13 @@
 // summary the workflow turns into a pull request body. A held result exits non-zero on purpose.
 import { resolve } from 'node:path';
 import { createAskClient } from './_lib/claude.js';
-import { loadProfile, loadPrompt, loadSettings, loadThought, systemMessage } from './_lib/context.js';
+import {
+  loadProfile,
+  loadPrompt,
+  loadSettings,
+  loadThought,
+  systemMessage,
+} from './_lib/context.js';
 import { writeOutputs } from './_lib/files.js';
 import { agentNames, type AgentContext, type AgentName, type AgentRun } from './_lib/types.js';
 
@@ -50,7 +56,16 @@ async function main(): Promise<void> {
   const baseDir = agent === 'profile' || agent === 'drilldown' ? root : thought.dir;
   const written = await writeOutputs(baseDir, result.files);
 
-  console.info(JSON.stringify({ agent, slug, status: result.status, summary: result.summary, written, holdReason: result.holdReason ?? null }));
+  console.info(
+    JSON.stringify({
+      agent,
+      slug,
+      status: result.status,
+      summary: result.summary,
+      written,
+      holdReason: result.holdReason ?? null,
+    }),
+  );
   if (result.status === 'held') process.exitCode = 3;
   if (result.status === 'not-implemented') process.exitCode = 4;
 }

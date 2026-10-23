@@ -7,7 +7,10 @@ export interface AskClient {
   ask: (user: string, options?: AskOptions) => Promise<string>;
 }
 
-export function createAskClient(system: string, defaults: { model: string; maxOutputTokens: number }): AskClient {
+export function createAskClient(
+  system: string,
+  defaults: { model: string; maxOutputTokens: number },
+): AskClient {
   const apiKey = process.env['ANTHROPIC_API_KEY'];
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not set');
   const client = new Anthropic({ apiKey });

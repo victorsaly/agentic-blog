@@ -39,7 +39,14 @@ export interface Prompt {
 }
 
 export interface Settings {
-  site: { name: string; domain: string; tagline: string; author: string; email: string; timezone: string };
+  site: {
+    name: string;
+    domain: string;
+    tagline: string;
+    author: string;
+    email: string;
+    timezone: string;
+  };
   languages: { origin: string; publish: string[] };
   themes: string[];
   depths: string[];

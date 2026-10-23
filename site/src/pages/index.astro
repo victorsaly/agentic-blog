@@ -11,14 +11,21 @@ const thoughts = (await getCollection('thoughts', ({ data }) => !data.draft)).so
 );
 ---
 
-<Page title={settings.site.name} description={`${settings.site.tagline}. Thoughts by ${settings.site.author}, each one starting as a voice note.`}>
+<Page
+  title={settings.site.name}
+  description={`${settings.site.tagline}. Thoughts by ${settings.site.author}, each one starting as a voice note.`}
+>
   <h1 class="visually-hidden">{settings.site.name}</h1>
   <p class="lead">
-    Every post here starts as a voice note, kept exactly as it was spoken. What you read is a conversion of it,
-    and the origin is always one click away.
+    Every post here starts as a voice note, kept exactly as it was spoken. What you read is a
+    conversion of it, and the origin is always one click away.
   </p>
 
-  {thoughts.length === 0 && <p class="quiet">Nothing published yet. The first thought is on its way.</p>}
+  {
+    thoughts.length === 0 && (
+      <p class="quiet">Nothing published yet. The first thought is on its way.</p>
+    )
+  }
 
   <ol class="thoughts">
     {

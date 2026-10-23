@@ -22,7 +22,16 @@ describe('checkFrontMatter', () => {
   });
 
   it('accepts a bare YAML date, which the parser turns into a Date', () => {
-    const source = ['---', why, 'recorded: 2026-10-23', 'language: en', 'speakers: [victor]', 'edited: false', '---', 'Body'].join('\n');
+    const source = [
+      '---',
+      why,
+      'recorded: 2026-10-23',
+      'language: en',
+      'speakers: [victor]',
+      'edited: false',
+      '---',
+      'Body',
+    ].join('\n');
     expect(checkFrontMatter('thoughts/x/origin/transcript.md', source)).toEqual([]);
   });
 
@@ -42,7 +51,15 @@ describe('checkFrontMatter', () => {
   });
 
   it('requires a version to say what it was converted from and by whom', () => {
-    const source = ['---', why, 'kind: short', 'language: en', 'reviewed: false', '---', 'Body'].join('\n');
+    const source = [
+      '---',
+      why,
+      'kind: short',
+      'language: en',
+      'reviewed: false',
+      '---',
+      'Body',
+    ].join('\n');
     const messages = checkFrontMatter('thoughts/x/versions/short.md', source).map((p) => p.message);
     expect(messages.some((m) => m.startsWith('converted_from'))).toBe(true);
     expect(messages.some((m) => m.startsWith('converted_by'))).toBe(true);

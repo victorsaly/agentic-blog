@@ -12,7 +12,21 @@ on:
         description: Which agent
         required: true
         type: choice
-        options: [interview, structure, convert, image, citations, drilldown, profile, feedback, safety, security, seo, publish]
+        options:
+          [
+            interview,
+            structure,
+            convert,
+            image,
+            citations,
+            drilldown,
+            profile,
+            feedback,
+            safety,
+            security,
+            seo,
+            publish,
+          ]
       thought:
         description: Thought folder, e.g. 2026-10-23-converted-with-ai
         required: true

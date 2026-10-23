@@ -5,7 +5,13 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import matter from 'gray-matter';
 import { parse } from 'yaml';
-import { promptFrontMatter, type AgentName, type Prompt, type Settings, type ThoughtFiles } from './types.js';
+import {
+  promptFrontMatter,
+  type AgentName,
+  type Prompt,
+  type Settings,
+  type ThoughtFiles,
+} from './types.js';
 
 export async function loadSettings(root: string): Promise<Settings> {
   const raw = await readFile(join(root, 'settings.yml'), 'utf8');
@@ -21,14 +27,17 @@ export async function loadPrompt(root: string, agent: AgentName): Promise<Prompt
   const raw = await readFile(join(root, 'agents', agent, 'PROMPT.md'), 'utf8');
   const { data, content } = matter(raw);
   const meta = promptFrontMatter.parse(data);
-  if (meta.name !== agent) throw new Error(`agents/${agent}/PROMPT.md says its name is ${meta.name}`);
+  if (meta.name !== agent)
+    throw new Error(`agents/${agent}/PROMPT.md says its name is ${meta.name}`);
   return { meta, instructions: content.trim() };
 }
 
 async function walk(dir: string): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true });
   const nested = await Promise.all(
-    entries.map((e) => (e.isDirectory() ? walk(join(dir, e.name)) : Promise.resolve([join(dir, e.name)]))),
+    entries.map((e) =>
+      e.isDirectory() ? walk(join(dir, e.name)) : Promise.resolve([join(dir, e.name)]),
+    ),
   );
   return nested.flat();
 }

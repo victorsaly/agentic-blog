@@ -1,11 +1,21 @@
 // Why: these helpers decide what a reader sees beside every title; a wrong word count or a broken slug
 // would show on every page, so they are tested on their own.
 import { describe, expect, it } from 'vitest';
-import { excerpt, formatDate, leafOf, plainText, readingLabel, readingMinutes, thoughtSlugOf } from './content.js';
+import {
+  excerpt,
+  formatDate,
+  leafOf,
+  plainText,
+  readingLabel,
+  readingMinutes,
+  thoughtSlugOf,
+} from './content.js';
 
 describe('ids', () => {
   it('finds the thought slug and the leaf of a collection id', () => {
-    expect(thoughtSlugOf('2026-10-23-converted-with-ai/versions/long')).toBe('2026-10-23-converted-with-ai');
+    expect(thoughtSlugOf('2026-10-23-converted-with-ai/versions/long')).toBe(
+      '2026-10-23-converted-with-ai',
+    );
     expect(leafOf('2026-10-23-converted-with-ai/versions/long')).toBe('long');
   });
 

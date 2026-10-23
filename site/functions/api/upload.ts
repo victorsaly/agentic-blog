@@ -9,18 +9,28 @@ export const onRequestPost: Handler = async ({ request, env }) => {
   const audio = form?.get('audio');
   const mode = form?.get('mode');
   if (!(audio instanceof File)) return problem('Send the recording as the "audio" field.', 400);
-  if (mode !== 'origin' && mode !== 'feedback') return problem('mode must be "origin" or "feedback".', 400);
+  if (mode !== 'origin' && mode !== 'feedback')
+    return problem('mode must be "origin" or "feedback".', 400);
   if (audio.size === 0) return problem('The recording is empty.', 400);
-  if (audio.size > MAX_BYTES) return problem('The recording is larger than the studio accepts.', 413);
+  if (audio.size > MAX_BYTES)
+    return problem('The recording is larger than the studio accepts.', 413);
 
-  const extension = audio.type.includes('webm') ? 'webm' : audio.type.includes('mp4') ? 'm4a' : 'webm';
+  const extension = audio.type.includes('webm')
+    ? 'webm'
+    : audio.type.includes('mp4')
+      ? 'm4a'
+      : 'webm';
   const thought = form?.get('thought');
   const key = newAudioKey(mode, extension);
   if (!isSafeKey(key)) return problem('Could not name the recording.', 500);
 
   await env.AUDIO.put(key, audio.stream(), {
     httpMetadata: { contentType: audio.type || 'audio/webm' },
-    customMetadata: { mode, by: signedInEmail(request), thought: typeof thought === 'string' ? thought : '' },
+    customMetadata: {
+      mode,
+      by: signedInEmail(request),
+      thought: typeof thought === 'string' ? thought : '',
+    },
   });
   return json({ key }, 201);
 };
