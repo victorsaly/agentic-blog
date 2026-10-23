@@ -80,7 +80,9 @@ import { settings } from '../lib/settings';
   const prefersDark = (): boolean => matchMedia('(prefers-color-scheme: dark)').matches;
   const isDark = (): boolean =>
     root.dataset['theme'] === 'dark' || (root.dataset['theme'] === undefined && prefersDark());
-  const syncTheme = (): void => theme?.setAttribute('aria-pressed', String(isDark()));
+  const syncTheme = (): void => {
+    theme?.setAttribute('aria-pressed', String(isDark()));
+  };
   theme?.addEventListener('click', () => {
     const next = isDark() ? 'light' : 'dark';
     root.dataset['theme'] = next;
