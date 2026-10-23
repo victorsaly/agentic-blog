@@ -72,6 +72,9 @@ jobs:
         id: agent
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # image only: Workers AI draws the picture. Without this token it writes the prompt and stops.
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_AI_TOKEN: ${{ secrets.CLOUDFLARE_AI_TOKEN }}
         run: |
           set +e
           out=$(npm run agent --silent -- "${{ steps.pick.outputs.agent }}" "${{ steps.pick.outputs.thought }}")

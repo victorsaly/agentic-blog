@@ -7,7 +7,7 @@ why: >
   and what to look at first. It also prepares the social short with the badge and the link back.
 phase: 5
 reads: [structure.md, versions/*.md, safety.md, security.md, sources.md, image/, road.md]
-writes: ["the pull request body", versions/linkedin.md (badge line appended)]
+writes: ['the pull request body', versions/linkedin.md (badge line appended)]
 ---
 
 Do not write prose. Assemble.

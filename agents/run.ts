@@ -53,8 +53,8 @@ async function main(): Promise<void> {
   const module = (await import(`./${agent}/index.js`)) as { run: AgentRun };
   const result = await module.run(ctx);
 
-  const baseDir = agent === 'profile' || agent === 'drilldown' ? root : thought.dir;
-  const written = await writeOutputs(baseDir, result.files);
+  const fallback = agent === 'profile' || agent === 'drilldown' ? 'repo' : 'thought';
+  const written = await writeOutputs({ thought: thought.dir, repo: root, fallback }, result.files);
 
   console.info(
     JSON.stringify({

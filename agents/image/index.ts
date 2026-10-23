@@ -1,6 +1,145 @@
-// Why: see PROMPT.md. This agent is planned for phase 4; the prompt is the design, the code arrives with
-// the phase. The runner reports not-implemented so a workflow can never mistake a stub for a result.
-import { notImplemented } from '../_lib/generic.js';
-import type { AgentRun } from '../_lib/types.js';
+// Why: see PROMPT.md. One picture for the post and one for each section of the long version, so the
+// drawings follow the text. Claude plans every picture in one reply; the code names the files, Workers AI
+// draws them, and a manifest records which section each belongs to and its alt text. A picture that fails
+// to draw does not stop the others. If the blogger put their own photo in image/, nothing is drawn.
+import { readdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import matter from 'gray-matter';
+import { z } from 'zod';
+import { markdownFile } from '../_lib/files.js';
+import { kebab, readIfPresent, readOrThrow, userMessage } from '../_lib/generic.js';
+import { unfence } from '../_lib/claude.js';
+import type { AgentContext, AgentRun, OutputFile } from '../_lib/types.js';
+import { IMAGE_MODEL, generatePicture } from '../_lib/workers-ai.js';
 
-export const run: AgentRun = (ctx) => Promise.resolve(notImplemented(ctx));
+export const MANIFEST = 'image/prompts.md';
+const MAX_SECTIONS = 8;
+const SKIP_SECTION = /^what changed from the origin/i;
+
+const plan = z.object({
+  why: z.string().min(20),
+  images: z
+    .array(
+      z.object({
+        section: z.string().min(1),
+        name: z.string().min(1).max(60),
+        subject: z.string().min(1),
+        alt: z.string().min(1).max(250),
+        prompt: z.string().min(1),
+      }),
+    )
+    .min(1),
+});
+
+/** The sections of the long version that get a picture, in order, after the cover. */
+export function sectionsOf(long: string | undefined): string[] {
+  if (long === undefined) return [];
+  return [...long.matchAll(/^## (.+)$/gm)]
+    .map((m) => (m[1] ?? '').trim())
+    .filter((title) => title !== '' && !SKIP_SECTION.test(title))
+    .slice(0, MAX_SECTIONS);
+}
+
+/** 00 for the cover, then 01, 02… in section order, then words that say what is in the picture. */
+export function fileNameFor(index: number, name: string): string {
+  return `image/${String(index).padStart(2, '0')}-${kebab(name) || 'picture'}.png`;
+}
+
+/** Files this agent wrote last time, so a rerun replaces them instead of leaving stale pictures. */
+function previousOutputs(ctx: AgentContext): string[] {
+  const manifest = readIfPresent(ctx, MANIFEST);
+  const legacy = readIfPresent(ctx, 'image/prompt.md');
+  const files: string[] = [];
+  if (manifest !== undefined) {
+    const images: unknown = matter(manifest).data['images'];
+    if (Array.isArray(images))
+      for (const image of images) {
+        const file: unknown = (image as Record<string, unknown>)['file'];
+        if (typeof file === 'string' && /^image\/[a-z0-9-]+\.png$/.test(file)) files.push(file);
+      }
+  }
+  if (legacy !== undefined && matter(legacy).data['generated_by'] === 'image')
+    files.push('image/picture.png', 'image/prompt.md');
+  return files;
+}
+
+async function ownPhotos(thoughtDir: string, ours: string[]): Promise<string[]> {
+  const names = await readdir(join(thoughtDir, 'image')).catch(() => [] as string[]);
+  return names.filter(
+    (name) => /\.(jpe?g|png|webp|heic)$/i.test(name) && !ours.includes(`image/${name}`),
+  );
+}
+
+export const run: AgentRun = async (ctx) => {
+  const structure = readOrThrow(ctx, 'structure.md');
+  const long = readIfPresent(ctx, 'versions/long.md');
+  const previous = previousOutputs(ctx);
+  const photos = await ownPhotos(ctx.thought.dir, previous);
+  if (photos.length > 0) {
+    return {
+      status: 'nothing-to-do',
+      summary: `The blogger placed their own photo (${photos.join(', ')}); nothing drawn.`,
+      files: [],
+    };
+  }
+
+  const sections = ['cover', ...sectionsOf(long)];
+  const message = userMessage(
+    {
+      structure,
+      long_version: long,
+      house_style: ctx.settings.media.image_style,
+      pictures_wanted: sections.map((s, i) => `${String(i)}. ${s}`).join('\n'),
+    },
+    `Today is ${ctx.today}. Plan one picture for each entry in pictures_wanted, in that order, as the prompt describes. Reply with front matter only: why, then images, a list with section (copied exactly), name, subject, alt and prompt for each.`,
+  );
+  const reply = unfence(await ctx.ask(message, { maxOutputTokens: 8000 }));
+  const parsed = plan.safeParse(matter(reply).data);
+  if (!parsed.success) throw new Error(`the image plan did not parse: ${parsed.error.message}`);
+
+  const files: OutputFile[] = previous.map((path) => ({ path, content: '', remove: true }));
+  const manifest: Record<string, unknown>[] = [];
+  const failures: string[] = [];
+  for (const [index, image] of parsed.data.images.entries()) {
+    const file = fileNameFor(index, image.name);
+    const picture = await generatePicture(image.prompt);
+    if (picture.ok) files.push({ path: file, content: '', bytes: picture.png });
+    else failures.push(`${file}: ${picture.reason}`);
+    manifest.push({
+      file,
+      section: image.section,
+      subject: image.subject,
+      alt: image.alt,
+      drawn: picture.ok,
+      prompt: image.prompt,
+    });
+  }
+
+  const drawn = manifest.filter((m) => m['drawn'] === true).length;
+  files.push({
+    path: MANIFEST,
+    content: markdownFile(
+      {
+        why: parsed.data.why,
+        generated_by: 'image',
+        model: IMAGE_MODEL,
+        drawn: ctx.today,
+        images: manifest,
+      },
+      [
+        '| File | Section | What it shows |',
+        '|---|---|---|',
+        ...manifest.map(
+          (m) => `| ${String(m['file'])} | ${String(m['section'])} | ${String(m['alt'])} |`,
+        ),
+      ].join('\n'),
+    ),
+  });
+  return {
+    status: 'done',
+    summary:
+      `Drew ${String(drawn)} of ${String(manifest.length)} pictures: the cover and one per section.` +
+      (failures.length > 0 ? ` Not drawn: ${failures.join('; ')}` : ''),
+    files,
+  };
+};

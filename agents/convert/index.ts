@@ -2,12 +2,14 @@
 // and a failure leaves the others in place.
 import {
   askForFile,
+  badgeLine,
   originPaths,
   readIfPresent,
   readOrThrow,
   readOrigin,
   setFrontMatterField,
   userMessage,
+  withBadge,
 } from '../_lib/generic.js';
 import type { AgentContext, AgentRun, OutputFile } from '../_lib/types.js';
 
@@ -47,7 +49,10 @@ export const run: AgentRun = async (ctx) => {
     const file = await askForFile(ctx, message, target.path);
     // A version points back at the origin it came from; with several notes, at the first one.
     const from = `../${originPaths(ctx)[0] ?? 'origin/transcript.md'}`;
-    files.push({ ...file, content: setFrontMatterField(file.content, 'converted_from', from) });
+    let content = setFrontMatterField(file.content, 'converted_from', from);
+    if (target.kind === 'linkedin')
+      content = withBadge(content, badgeLine(ctx), ctx.settings.site.domain);
+    files.push({ ...file, content });
   }
 
   return {

@@ -6,7 +6,7 @@ why: >
   into a link where the name appears. An agent can also invent a source, confidently, so nothing it finds
   is published until the blogger has opened the link.
 phase: 4
-reads: [structure.md, versions/long.md, "web search"]
+reads: [structure.md, versions/long.md, 'web search']
 writes: [sources.md]
 ---
 

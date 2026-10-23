@@ -78,12 +78,20 @@ export interface AgentContext {
 export interface AskOptions {
   maxOutputTokens?: number;
   model?: string;
+  /** Lets the model search the web (Anthropic's server-side tool), at most this many times. */
+  webSearch?: { maxUses: number };
 }
 
 /** A file an agent wants written. Paths are relative to the thought folder (or the repo for profile/wiki). */
 export interface OutputFile {
   path: string;
   content: string;
+  /** Raw bytes for a non-Markdown file such as a picture; content is then ignored. */
+  bytes?: Uint8Array;
+  /** Delete this file instead of writing it (an agent replacing its own earlier output). */
+  remove?: boolean;
+  /** Where the path starts. Defaults to the agent's usual place (the thought, or the repo for profile/wiki). */
+  base?: 'thought' | 'repo';
 }
 
 export interface AgentResult {

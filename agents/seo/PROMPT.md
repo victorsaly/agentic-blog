@@ -6,8 +6,8 @@ why: >
   names the author, the date and the language, a sitemap, and the links between versions. Nothing clever,
   nothing that tricks a crawler; a page a machine reads as easily as the blogger's kids.
 phase: 5
-reads: [structure.md, versions/*.md, settings.yml → publishing.index, "the built site"]
-writes: [seo.md, "pull requests to site/ when a page lacks its metadata"]
+reads: [structure.md, versions/*.md, settings.yml → publishing.index, 'the built site']
+writes: [seo.md, 'pull requests to site/ when a page lacks its metadata']
 ---
 
 Only act when settings.yml → publishing.index is true. Otherwise reply with seo.md saying the switch is

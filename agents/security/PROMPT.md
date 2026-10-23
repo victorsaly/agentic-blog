@@ -6,8 +6,8 @@ why: >
   friend's name in a recorded conversation, a face in a photo, an email in a note. None of that leaves the
   repo until the blogger has confirmed it should, and the rules it checks against are written down.
 phase: 5
-reads: [package-lock.json, "npm audit and GitHub advisories", versions/*.md, image/, sources.md]
-writes: [security.md, "dependency update pull requests"]
+reads: [package-lock.json, 'npm audit and GitHub advisories', versions/*.md, image/, sources.md]
+writes: [security.md, 'dependency update pull requests']
 ---
 
 Two jobs, on a weekly schedule and on every publish.
