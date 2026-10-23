@@ -17,6 +17,7 @@ import {
   thoughtSlugOf,
 } from '../../lib/content';
 import { coverOf, picturesFrom } from '../../lib/pictures';
+import { themeLabel } from '../../lib/themes';
 
 // Every drawing in the repo, so the cover can be looked up by its path in the thought folder.
 const drawings = import.meta.glob<ImageMetadata>('../../../../thoughts/*/image/*.png', {
@@ -70,10 +71,10 @@ const description = excerpt(thought.data.message, 40);
   type="article"
   publishedAt={thought.data.date}
 >
-  <article>
+  <article data-pagefind-body>
     <Badge originHref={originHref} by={long?.data.converted_by ?? short?.data.converted_by} />
     <h1>{thought.data.title}</h1>
-    <p class="small quiet meta">
+    <p class="small quiet meta" data-pagefind-ignore>
       <time datetime={thought.data.date.toISOString()}>{formatDate(thought.data.date)}</time>
       <span>{readingLabel(minutes)} to walk the whole road</span>
     </p>
@@ -103,6 +104,20 @@ const description = excerpt(thought.data.message, 40);
     {
       road && (
         <Depth name="The road" hint="the whole piece" id="road">
+          {road.headings.filter((h) => h.depth === 2).length > 1 && (
+            <nav class="contents small" aria-label="In this road" data-pagefind-ignore>
+              <p class="quiet">In this road</p>
+              <ol>
+                {road.headings
+                  .filter((h) => h.depth === 2)
+                  .map((h) => (
+                    <li>
+                      <a href={`#${h.slug}`}>{h.text}</a>
+                    </li>
+                  ))}
+              </ol>
+            </nav>
+          )}
           <road.Content />
           {!long?.data.reviewed && (
             <p class="small quiet">
@@ -154,16 +169,17 @@ const description = excerpt(thought.data.message, 40);
       }
     </Depth>
 
-    <p class="small quiet themes">
-      Themes: {
+    <nav class="small quiet themes" aria-label="Themes of this thought" data-pagefind-ignore>
+      Themes:{' '}
+      {
         thought.data.themes.map((theme, i) => (
           <>
             {i > 0 && ', '}
-            <span>{theme.replaceAll('-', ' ')}</span>
+            <a href={`/themes/${theme}`}>{themeLabel(theme)}</a>
           </>
         ))
       }
-    </p>
+    </nav>
   </article>
 </Page>
 
@@ -176,6 +192,22 @@ const description = excerpt(thought.data.message, 40);
   }
   .themes {
     margin-top: var(--space-5);
+  }
+  .contents {
+    margin: 0 0 var(--space-4);
+    padding-bottom: var(--space-3);
+    border-bottom: var(--rule-width) solid var(--rule);
+  }
+  .contents p {
+    margin: 0 0 var(--space-1);
+  }
+  .contents ol {
+    margin: 0;
+    padding-left: var(--space-4);
+  }
+  .contents a {
+    display: inline-block;
+    padding: var(--space-1) 0;
   }
   /* Drawings: black ink on white, inverted with the theme, never wider than the text. */
   .drawing,

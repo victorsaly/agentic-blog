@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro check && astro build && wrangler pages functions build --outdir=./dist/_worker.js/ && echo _worker.js > dist/.assetsignore",
+    "build": "astro check && astro build && pagefind --site dist && wrangler pages functions build --outdir=./dist/_worker.js/ && echo _worker.js > dist/.assetsignore",
     "preview": "astro preview",
     "typecheck": "astro check",
     "worker:dev": "wrangler dev",
@@ -27,6 +27,7 @@
     "@cloudflare/workers-types": "^4.20241218.0",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
+    "pagefind": "1.5.2",
     "wrangler": "^4.0.0"
   }
 }

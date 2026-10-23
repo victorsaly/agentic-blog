@@ -1,0 +1,62 @@
+---
+// Why: themes are how the posts are classified. A plain row of links, each with how many posts carry it,
+// lets a reader narrow the list without a script; the current theme is marked for screen readers too.
+import { themeCounts, themeLabel } from '../lib/themes';
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  thoughts: CollectionEntry<'thoughts'>[];
+  current?: string;
+}
+
+const { thoughts, current } = Astro.props;
+const counts = themeCounts(thoughts.map((t) => t.data.themes));
+---
+
+{
+  counts.length > 0 && (
+    <nav class="themes small" aria-label="Themes">
+      <ul>
+        <li>
+          <a href="/" aria-current={current === undefined ? 'page' : undefined}>
+            All <span class="quiet">{thoughts.length}</span>
+          </a>
+        </li>
+        {counts.map(([theme, count]) => (
+          <li>
+            <a href={`/themes/${theme}`} aria-current={current === theme ? 'page' : undefined}>
+              {themeLabel(theme)} <span class="quiet">{count}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  )
+}
+
+<style>
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
+    list-style: none;
+    padding: 0;
+    margin: 0 0 var(--space-5);
+  }
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: var(--tap);
+    text-decoration: none;
+  }
+  a:hover,
+  a:focus-visible {
+    text-decoration: underline;
+  }
+  a[aria-current='page'] {
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-thickness: 0.15em;
+  }
+</style>
