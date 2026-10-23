@@ -25,6 +25,7 @@ export async function listMarkdown(path: string): Promise<string[]> {
   const nested = await Promise.all(
     entries.map((entry) => {
       const full = join(path, entry.name);
+      if (entry.name === 'node_modules' || entry.name.startsWith('.')) return Promise.resolve([]);
       if (entry.isDirectory()) return listMarkdown(full);
       return entry.isFile() && entry.name.endsWith('.md') ? Promise.resolve([full]) : Promise.resolve([]);
     }),
@@ -65,7 +66,11 @@ if (isMain) {
   if (problems.length === 0) {
     console.info('check:why — every file says why it exists.');
   } else {
-    for (const p of problems) console.error(`${p.file}: ${p.message}`);
+    for (const p of problems) {
+      console.error(`${p.file}: ${p.message}`);
+      // GitHub Actions turns this into an annotation on the file, readable without the raw log.
+      if (process.env['GITHUB_ACTIONS']) console.error(`::error file=${p.file}::${p.message}`);
+    }
     console.error(`\n${String(problems.length)} file(s) without a proper why. Add a why: line to each.`);
     process.exitCode = 1;
   }
