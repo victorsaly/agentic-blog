@@ -16,7 +16,9 @@ export const originFrontMatter = z.object({
   why: whySchema,
   recorded: isoDate,
   language: z.string().min(2).max(5),
-  audio: z.string().optional(), // R2 object key; absent when the recording is not kept
+  // voice: spoken and transcribed; text: written, or transcribed elsewhere and pasted. Old files are voice.
+  medium: z.enum(['voice', 'text']).default('voice'),
+  audio: z.string().optional(), // R2 object key; absent when the recording is not kept, always for text
   speakers: z.array(z.string().min(1)).min(1),
   edited: z.literal(false), // origins are never edited; the schema makes the claim checkable
 });
