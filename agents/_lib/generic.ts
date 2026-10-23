@@ -112,6 +112,25 @@ export function kebab(text: string): string {
     .slice(0, 60);
 }
 
+/** The last line of every social version: the badge, then the link back to the thought. */
+export function badgeLine(ctx: AgentContext): string {
+  return `${ctx.settings.publishing.badge_text} · https://${ctx.settings.site.domain}/thoughts/${ctx.thought.slug}`;
+}
+
+/**
+ * Ends a version with exactly one badge line. Trailing lines that already mention the site (a footer
+ * the model wrote itself) are replaced, so the badge is never doubled or reworded.
+ */
+export function withBadge(content: string, badge: string, domain: string): string {
+  const lines = content.trimEnd().split('\n');
+  while (lines.length > 0) {
+    const last = lines.at(-1)?.trim() ?? '';
+    if (last === '' || last.includes(domain)) lines.pop();
+    else break;
+  }
+  return `${lines.join('\n')}\n\n${badge}\n`;
+}
+
 export function notImplemented(ctx: AgentContext): AgentResult {
   return {
     status: 'not-implemented',

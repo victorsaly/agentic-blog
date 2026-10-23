@@ -3,7 +3,7 @@
 import { resolve } from 'node:path';
 import matter from 'gray-matter';
 import { hasWhy, markdownFile } from '../_lib/files.js';
-import { fencedFiles, readIfPresent, userMessage } from '../_lib/generic.js';
+import { badgeLine, fencedFiles, readIfPresent, userMessage, withBadge } from '../_lib/generic.js';
 import { agentHistory } from '../_lib/git.js';
 import type { AgentContext, AgentRun, OutputFile } from '../_lib/types.js';
 
@@ -12,10 +12,6 @@ function verdictProblem(ctx: AgentContext, name: 'safety.md' | 'security.md'): s
   if (file === undefined) return `${name} is missing; run that agent first.`;
   const verdict: unknown = matter(file).data['verdict'];
   return verdict === 'pass' ? null : `${name} says ${String(verdict)}.`;
-}
-
-function badgeLine(ctx: AgentContext): string {
-  return `${ctx.settings.publishing.badge_text} · https://${ctx.settings.site.domain}/thoughts/${ctx.thought.slug}`;
 }
 
 export const run: AgentRun = async (ctx) => {
@@ -38,8 +34,11 @@ export const run: AgentRun = async (ctx) => {
   const files: OutputFile[] = [];
   const linkedin = readIfPresent(ctx, 'versions/linkedin.md');
   const badge = badgeLine(ctx);
-  if (linkedin !== undefined && !linkedin.trimEnd().endsWith(badge))
-    files.push({ path: 'versions/linkedin.md', content: `${linkedin.trimEnd()}\n\n${badge}\n` });
+  if (linkedin !== undefined) {
+    const fixed = withBadge(linkedin, badge, ctx.settings.site.domain);
+    if (fixed !== (linkedin.endsWith('\n') ? linkedin : `${linkedin}\n`))
+      files.push({ path: 'versions/linkedin.md', content: fixed });
+  }
 
   const repo = resolve(ctx.thought.dir, '..', '..');
   const listing = [...ctx.thought.files.keys()].sort().join('\n');
@@ -49,7 +48,15 @@ export const run: AgentRun = async (ctx) => {
       long_version: readIfPresent(ctx, 'versions/long.md'),
       files_in_thought: listing,
       agents_that_ran: (await agentHistory(repo, ctx.thought.slug)) || 'No agent commits found.',
-      models: `Reasoning agents ran on ${ctx.settings.agents.model} unless their PROMPT.md says otherwise; pictures on Workers AI.`,
+      models: `Reasoning agents run on ${ctx.settings.agents.model} unless their PROMPT.md says otherwise. seo makes no model call while the index switch is off. image writes its prompt with that model and draws with Workers AI only when image/picture.png exists.`,
+      checked_by_code: [
+        'safety.md verdict: pass',
+        'security.md verdict: pass',
+        'every Markdown file in the thought has a why',
+        'every version has converted_from',
+        `versions/linkedin.md ends with: ${badge}`,
+        'Do not ask the reviewer to re-check these; they are verified.',
+      ].join('\n'),
       existing_road: readIfPresent(ctx, 'road.md'),
     },
     `Today is ${ctx.today}. Assemble as the prompt describes: road.md in one fenced block (with front matter that starts with a why), then the pull request body in a second block fenced as \`\`\`pr.`,

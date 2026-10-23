@@ -27,8 +27,8 @@ Per kind:
   sentence case, no numbers unless the content is a sequence. End with a section "What changed from the
   origin, and why": a bullet list of every cut, reorder and caveat you added, and everything the transcript
   said that you left out.
-- linkedin: under 180 words, the hook in the first line, no hashtags, no emoji, and the last line is the
-  badge text followed by the site domain.
+- linkedin: under 180 words, the hook in the first line, no hashtags, no emoji, and do not write a closing
+  badge or link: the runner adds the badge line with the link back to the thought.
 - language: the long version in the named language, written the way the blogger would speak that language,
   not translated word by word. Keep names and the badge text in English.
 

@@ -1,7 +1,7 @@
 // Why: every converting agent reads the origin through readOrigin; if it missed a text origin or a second
 // note, the agents would convert half a thought without saying so.
 import { describe, expect, it } from 'vitest';
-import { fencedFiles, kebab, readOrigin, setFrontMatterField } from './generic.js';
+import { fencedFiles, kebab, readOrigin, setFrontMatterField, withBadge } from './generic.js';
 import type { AgentContext } from './types.js';
 
 function ctxWith(files: Record<string, string>): AgentContext {
@@ -90,5 +90,23 @@ describe('kebab', () => {
       'ray-kurzweil-the-age-of-spiritual-machines',
     );
     expect(kebab('Gödel, Escher, Bach!')).toBe('godel-escher-bach');
+  });
+});
+
+describe('withBadge', () => {
+  const badge = 'Converted with AI, not made by AI · https://blog.example.com/thoughts/x';
+
+  it('replaces a footer the model wrote itself, so the badge is never doubled', () => {
+    const post =
+      '---\nwhy: x\n---\n\nThe point.\n\nConverted from my note: blog.example.com\n\n' +
+      badge +
+      '\n';
+    expect(withBadge(post, badge, 'blog.example.com')).toBe(
+      `---\nwhy: x\n---\n\nThe point.\n\n${badge}\n`,
+    );
+  });
+
+  it('adds the badge when there is none', () => {
+    expect(withBadge('The point.', badge, 'blog.example.com')).toBe(`The point.\n\n${badge}\n`);
   });
 });
