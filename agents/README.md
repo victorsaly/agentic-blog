@@ -25,20 +25,20 @@ the written files into a pull request. See `.github/workflows/agents.yml`.
 
 ## The roster
 
-| Agent | One job | Phase | Code |
-| --- | --- | --- | --- |
-| interview | asks what a reader would need, and asks about the blogger | 1 | real |
-| structure | message, idea, road, small ideas, tags | 2 | real |
-| convert | short, long, posts, languages | 2 | real |
-| safety | reads everything that leaves for hate or harm; can hold | 5 | real |
-| profile | learns how the blogger talks and what they accept | 3 | prompt only |
-| image | one picture in the house style | 4 | prompt only |
-| citations | finds what each claim rests on, links out | 4 | prompt only |
-| drilldown | wiki pages for books and people | 4 | prompt only |
-| feedback | turns a note about the output into a rework, and a pattern into a route change | 5 | prompt only |
-| security | patches, and other people's data; can hold | 5 | prompt only |
-| seo | metadata when the index switch is on | 5 | prompt only |
-| publish | assembles the pull request, confirms the badge | 5 | prompt only |
+| Agent     | One job                                                                        | Phase | Code        |
+| --------- | ------------------------------------------------------------------------------ | ----- | ----------- |
+| interview | asks what a reader would need, and asks about the blogger                      | 1     | real        |
+| structure | message, idea, road, small ideas, tags                                         | 2     | real        |
+| convert   | short, long, posts, languages                                                  | 2     | real        |
+| safety    | reads everything that leaves for hate or harm; can hold                        | 5     | real        |
+| profile   | learns how the blogger talks and what they accept                              | 3     | prompt only |
+| image     | one picture in the house style                                                 | 4     | prompt only |
+| citations | finds what each claim rests on, links out                                      | 4     | prompt only |
+| drilldown | wiki pages for books and people                                                | 4     | prompt only |
+| feedback  | turns a note about the output into a rework, and a pattern into a route change | 5     | prompt only |
+| security  | patches, and other people's data; can hold                                     | 5     | prompt only |
+| seo       | metadata when the index switch is on                                           | 5     | prompt only |
+| publish   | assembles the pull request, confirms the badge                                 | 5     | prompt only |
 
 "Prompt only" agents return `not-implemented` and exit 4, so no workflow can mistake them for a result.
 

@@ -1,6 +1,77 @@
-// Why: see PROMPT.md. This agent is planned for phase 5; the prompt is the design, the code arrives with
-// the phase. The runner reports not-implemented so a workflow can never mistake a stub for a result.
-import { notImplemented } from '../_lib/generic.js';
-import type { AgentRun } from '../_lib/types.js';
+// Why: see PROMPT.md. The checks that can be counted are counted in code (verdicts, whys, origin links,
+// the badge); the model only assembles the road and the pull request body from what is there.
+import { resolve } from 'node:path';
+import matter from 'gray-matter';
+import { hasWhy, markdownFile } from '../_lib/files.js';
+import { fencedFiles, readIfPresent, userMessage } from '../_lib/generic.js';
+import { agentHistory } from '../_lib/git.js';
+import type { AgentContext, AgentRun, OutputFile } from '../_lib/types.js';
 
-export const run: AgentRun = (ctx) => Promise.resolve(notImplemented(ctx));
+function verdictProblem(ctx: AgentContext, name: 'safety.md' | 'security.md'): string | null {
+  const file = readIfPresent(ctx, name);
+  if (file === undefined) return `${name} is missing; run that agent first.`;
+  const verdict: unknown = matter(file).data['verdict'];
+  return verdict === 'pass' ? null : `${name} says ${String(verdict)}.`;
+}
+
+function badgeLine(ctx: AgentContext): string {
+  return `${ctx.settings.publishing.badge_text} · https://${ctx.settings.site.domain}/thoughts/${ctx.thought.slug}`;
+}
+
+export const run: AgentRun = async (ctx) => {
+  const problems = [verdictProblem(ctx, 'safety.md'), verdictProblem(ctx, 'security.md')].filter(
+    (p): p is string => p !== null,
+  );
+  for (const [path, content] of ctx.thought.files) {
+    if (!hasWhy(content)) problems.push(`${path} has no why.`);
+    if (path.startsWith('versions/') && typeof matter(content).data['converted_from'] !== 'string')
+      problems.push(`${path} has no converted_from.`);
+  }
+  if (problems.length > 0)
+    return {
+      status: 'held',
+      summary: 'Not ready to publish.',
+      files: [],
+      holdReason: problems.join('\n'),
+    };
+
+  const files: OutputFile[] = [];
+  const linkedin = readIfPresent(ctx, 'versions/linkedin.md');
+  const badge = badgeLine(ctx);
+  if (linkedin !== undefined && !linkedin.trimEnd().endsWith(badge))
+    files.push({ path: 'versions/linkedin.md', content: `${linkedin.trimEnd()}\n\n${badge}\n` });
+
+  const repo = resolve(ctx.thought.dir, '..', '..');
+  const listing = [...ctx.thought.files.keys()].sort().join('\n');
+  const message = userMessage(
+    {
+      structure: readIfPresent(ctx, 'structure.md'),
+      long_version: readIfPresent(ctx, 'versions/long.md'),
+      files_in_thought: listing,
+      agents_that_ran: (await agentHistory(repo, ctx.thought.slug)) || 'No agent commits found.',
+      models: `Reasoning agents ran on ${ctx.settings.agents.model} unless their PROMPT.md says otherwise; pictures on Workers AI.`,
+      existing_road: readIfPresent(ctx, 'road.md'),
+    },
+    `Today is ${ctx.today}. Assemble as the prompt describes: road.md in one fenced block (with front matter that starts with a why), then the pull request body in a second block fenced as \`\`\`pr.`,
+  );
+  const blocks = fencedFiles(await ctx.ask(message, { maxOutputTokens: 6000 }));
+  const road = blocks.find((b) => b.label !== 'pr');
+  const pr = blocks.find((b) => b.label === 'pr');
+  if (!road || !pr) throw new Error('publish must return road.md and a pr block');
+  files.push({ path: 'road.md', content: road.content });
+  files.push({
+    path: 'pull-request.md',
+    content: markdownFile(
+      {
+        why: 'The body of the pull request that brings this thought to the blogger for review, assembled by the publish agent from what the other agents wrote.',
+        assembled: ctx.today,
+      },
+      pr.content,
+    ),
+  });
+  return {
+    status: 'done',
+    summary: `Ready for review: road.md and pull-request.md written${files[0]?.path === 'versions/linkedin.md' ? ', badge added to linkedin.md' : ''}.`,
+    files,
+  };
+};

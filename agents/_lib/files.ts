@@ -5,16 +5,36 @@ import { dirname, join } from 'node:path';
 import matter from 'gray-matter';
 import { assertNotOrigin, type OutputFile } from './types.js';
 
-export async function writeOutputs(baseDir: string, files: OutputFile[]): Promise<string[]> {
+export interface Bases {
+  thought: string;
+  repo: string;
+  /** Where a file goes when it does not say. */
+  fallback: 'thought' | 'repo';
+}
+
+export async function writeOutputs(bases: Bases, files: OutputFile[]): Promise<string[]> {
   const written: string[] = [];
   for (const file of files) {
     assertNotOrigin(file.path);
-    if (!hasWhy(file.content))
-      throw new Error(`${file.path} has no why in its front matter; refusing to write it`);
-    const full = join(baseDir, file.path);
+    if (file.path.split('/').includes('..'))
+      throw new Error(`refusing to write ${file.path}: paths stay inside their base`);
+    const base = file.base ?? bases.fallback;
+    const full = join(bases[base], file.path);
     await mkdir(dirname(full), { recursive: true });
-    await writeFile(full, file.content.endsWith('\n') ? file.content : `${file.content}\n`, 'utf8');
-    written.push(file.path);
+    if (file.bytes !== undefined) {
+      if (file.path.endsWith('.md'))
+        throw new Error(`${file.path} is Markdown and must be text with a why, not bytes`);
+      await writeFile(full, file.bytes);
+    } else {
+      if (!hasWhy(file.content))
+        throw new Error(`${file.path} has no why in its front matter; refusing to write it`);
+      await writeFile(
+        full,
+        file.content.endsWith('\n') ? file.content : `${file.content}\n`,
+        'utf8',
+      );
+    }
+    written.push(base === bases.fallback ? file.path : `${base}:${file.path}`);
   }
   return written;
 }

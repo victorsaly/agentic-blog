@@ -1,7 +1,7 @@
 // Why: most agents are "read these files, ask once, write that file". This keeps each agent's index.ts to
 // the parts that are actually different: which inputs, which prompt, which output path.
 import { unfence } from './claude.js';
-import type { AgentContext, AgentResult, OutputFile } from './types.js';
+import type { AgentContext, AgentResult, AskOptions, OutputFile } from './types.js';
 
 export function readOrThrow(ctx: AgentContext, path: string): string {
   const content = ctx.thought.files.get(path);
@@ -64,12 +64,52 @@ export async function askForFile(
   ctx: AgentContext,
   message: string,
   path: string,
+  options?: AskOptions,
 ): Promise<OutputFile> {
-  const reply = await ctx.ask(message);
+  const reply = await ctx.ask(message, options);
   const content = unfence(reply);
   if (!content.startsWith('---'))
     throw new Error(`${ctx.agent} replied without front matter for ${path}`);
   return { path, content };
+}
+
+export interface FencedFile {
+  /** The fence's label (```pr) or the path on the block's first line, when there is one. */
+  label: string | null;
+  content: string;
+}
+
+/**
+ * Every fenced block in a reply, in order. An agent that returns several files puts each in its own
+ * block; a first line that looks like a path (no spaces, ends in .md) is taken as the label and removed.
+ */
+export function fencedFiles(reply: string): FencedFile[] {
+  const blocks: FencedFile[] = [];
+  const fence = /^(`{3,})([^\n`]*)\n([\s\S]*?)^\1[ \t]*$/gm;
+  for (const match of reply.matchAll(fence)) {
+    const info = (match[2] ?? '').trim();
+    let body = match[3] ?? '';
+    let label: string | null =
+      info !== '' && !/^(markdown|md|yaml|text)$/i.test(info) ? info : null;
+    const firstLine = body.split('\n', 1)[0]?.trim() ?? '';
+    if (/^[^\s]+\.md$/.test(firstLine) && !firstLine.startsWith('---')) {
+      label = firstLine;
+      body = body.slice(body.indexOf('\n') + 1);
+    }
+    blocks.push({ label, content: body.trim() });
+  }
+  return blocks;
+}
+
+/** A short, safe file name from a title: lower case, ascii letters and digits, hyphens. */
+export function kebab(text: string): string {
+  return text
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
 }
 
 export function notImplemented(ctx: AgentContext): AgentResult {
