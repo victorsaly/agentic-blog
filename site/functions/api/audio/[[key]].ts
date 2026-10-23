@@ -4,8 +4,8 @@
 import { isSafeKey, problem, type Handler } from '../../_lib';
 
 export const onRequestGet: Handler = async ({ params, env }) => {
-  const raw = params['key'];
-  const key = Array.isArray(raw) ? raw.join('/') : String(raw ?? '');
+  const raw = params.key;
+  const key = Array.isArray(raw) ? raw.join('/') : (raw ?? '');
   if (!isSafeKey(key)) return problem('Not a recording.', 404);
 
   const object = await env.AUDIO.get(key);

@@ -38,7 +38,8 @@ async function postJson<T>(url: string, body: BodyInit, contentType?: string): P
     const text = await response.text();
     throw new Error(`${url} answered ${String(response.status)}: ${text || response.statusText}`);
   }
-  return (await response.json()) as T;
+  const data: unknown = await response.json();
+  return data as T;
 }
 
 function formatElapsed(since: number, now: number): string {
@@ -94,7 +95,9 @@ export function Recorder({ mode, thoughtSlug }: RecorderProps): React.JSX.Elemen
         const { text } = await postJson<TranscribeResponse>('/api/transcribe', JSON.stringify({ key }), 'application/json');
         setPhase({ kind: 'ready', key, transcript: text });
       } catch (error) {
-        setPhase({ kind: 'failed', message: String(error), retry: () => void upload(blob) });
+        setPhase({ kind: 'failed', message: String(error), retry: () => {
+          void upload(blob);
+        } });
       }
     },
     [mode, thoughtSlug],
@@ -122,7 +125,9 @@ export function Recorder({ mode, thoughtSlug }: RecorderProps): React.JSX.Elemen
       const { prUrl } = await postJson<OriginResponse>('/api/origin', body, 'application/json');
       setPhase({ kind: 'sent', prUrl });
     } catch (error) {
-      setPhase({ kind: 'failed', message: String(error), retry: () => void send() });
+      setPhase({ kind: 'failed', message: String(error), retry: () => {
+          void send();
+        } });
     }
   }, [mode, phase, thoughtSlug]);
 
@@ -131,7 +136,9 @@ export function Recorder({ mode, thoughtSlug }: RecorderProps): React.JSX.Elemen
   return (
     <section className="recorder" aria-live="polite">
       {phase.kind === 'idle' && (
-        <button type="button" className="big" onClick={() => void start()}>
+        <button type="button" className="big" onClick={() => {
+            void start();
+          }}>
           {title}
         </button>
       )}
@@ -155,10 +162,14 @@ export function Recorder({ mode, thoughtSlug }: RecorderProps): React.JSX.Elemen
           <p className="small quiet">This is the first conversion. It is not edited here; the pull request keeps it as it is.</p>
           <blockquote className="transcript">{phase.transcript}</blockquote>
           <div className="row">
-            <button type="button" onClick={() => void send()} disabled={phase.kind === 'sending'}>
+            <button type="button" onClick={() => {
+                void send();
+              }} disabled={phase.kind === 'sending'}>
               {phase.kind === 'sending' ? 'Opening the pull request…' : mode === 'origin' ? 'Make it an origin' : 'Send the feedback'}
             </button>
-            <button type="button" onClick={() => setPhase({ kind: 'idle' })} disabled={phase.kind === 'sending'}>
+            <button type="button" onClick={() => {
+            setPhase({ kind: 'idle' });
+          }} disabled={phase.kind === 'sending'}>
               Discard
             </button>
           </div>
@@ -168,7 +179,9 @@ export function Recorder({ mode, thoughtSlug }: RecorderProps): React.JSX.Elemen
       {phase.kind === 'sent' && (
         <p>
           Done. <a href={phase.prUrl}>The pull request is open</a>; read it, fix what sounds wrong, merge.{' '}
-          <button type="button" onClick={() => setPhase({ kind: 'idle' })}>
+          <button type="button" onClick={() => {
+            setPhase({ kind: 'idle' });
+          }}>
             Say another
           </button>
         </p>
@@ -182,7 +195,9 @@ export function Recorder({ mode, thoughtSlug }: RecorderProps): React.JSX.Elemen
               Try again
             </button>
           )}{' '}
-          <button type="button" onClick={() => setPhase({ kind: 'idle' })}>
+          <button type="button" onClick={() => {
+            setPhase({ kind: 'idle' });
+          }}>
             Start over
           </button>
         </p>

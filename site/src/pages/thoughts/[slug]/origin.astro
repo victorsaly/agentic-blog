@@ -34,6 +34,8 @@ const rendered = await Promise.all(
             Recorded {formatDate(origin.data.recorded)}, spoken by {origin.data.speakers.join(' and ')}
           </p>
           {origin.data.audio && (
+            // The transcript below is the caption, word for word; a captions track would duplicate it.
+            // eslint-disable-next-line astro/jsx-a11y/media-has-caption
             <audio controls preload="none" src={`/api/audio/${origin.data.audio}`}>
               Your browser cannot play this recording. <a href={`/api/audio/${origin.data.audio}`}>Download it</a> instead.
             </audio>
