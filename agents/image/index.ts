@@ -3,7 +3,7 @@
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import matter from 'gray-matter';
-import { askForFile, readOrThrow, userMessage } from '../_lib/generic.js';
+import { askForFile, readIfPresent, readOrThrow, userMessage } from '../_lib/generic.js';
 import type { AgentRun, OutputFile } from '../_lib/types.js';
 import { generatePicture } from '../_lib/workers-ai.js';
 
@@ -18,6 +18,7 @@ export const run: AgentRun = async (ctx) => {
   const message = userMessage(
     {
       structure,
+      long_version: readIfPresent(ctx, 'versions/long.md'),
       house_style: ctx.settings.media.image_style,
       own_photos: photos.length > 0 ? photos.join('\n') : undefined,
     },

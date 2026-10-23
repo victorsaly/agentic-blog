@@ -10,8 +10,14 @@ reads: [structure.md, settings.yml → media.image_style, profile.md]
 writes: [image/picture.png, image/prompt.md]
 ---
 
-Read the message and the idea. Pick the one concrete object, scene or motion in them that a drawing could
-hold: a phone, a door, a ring of dots, two voices. Not a metaphor stack, not a symbol collage, not text.
+Read the message, the idea and the long version. Find the scene the post is actually about: who is in it,
+where, doing what, taken from the post's own words. A programmer at a desk weighing what a screen says; a
+hand marking up a printed page; two people at a whiteboard. Someone who sees only the picture and the title
+should be able to guess what the post is about.
+
+Draw people and their tools doing the thing, not a symbol for it. No abstract shapes, grids, patterns or
+icons standing in for an idea, no metaphor stack, no robots or glowing brains for "AI", no text. Keep it
+to one scene with few elements, seen simply, because it will be drawn as plain ink lines.
 
 Write a generation prompt that starts with the house style from settings.yml word for word, then names the
 one subject in a single plain sentence, then "generous empty space, nothing else". Request a square image.
