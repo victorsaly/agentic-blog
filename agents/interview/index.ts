@@ -1,5 +1,5 @@
 // Why: see PROMPT.md. This file only gathers the inputs and names the output; the behaviour is the prompt.
-import { askForFile, readIfPresent, readOrThrow, userMessage } from '../_lib/generic.js';
+import { askForFile, readIfPresent, readOrigin, userMessage } from '../_lib/generic.js';
 import type { AgentRun } from '../_lib/types.js';
 
 export const run: AgentRun = async (ctx) => {
@@ -10,7 +10,7 @@ export const run: AgentRun = async (ctx) => {
       files: [],
     };
   }
-  const transcript = readOrThrow(ctx, 'origin/transcript.md');
+  const transcript = readOrigin(ctx);
   const existing = readIfPresent(ctx, 'interview.md');
   const message = userMessage(
     { transcript, previous_questions: existing },

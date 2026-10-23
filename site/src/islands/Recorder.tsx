@@ -1,7 +1,8 @@
 // Why: the studio is a private page with one job: let Victor talk and turn that into an origin. This island
-// records in the browser, sends the audio to R2, asks for a transcript, and opens the pull request. It is
-// React because the state (idle, recording, uploading, transcribed, sent) drives everything on screen.
-import { useCallback, useEffect, useRef, useState } from 'react';
+// records in the browser, sends the audio to R2, asks for a transcript, and opens the pull request. Some
+// thoughts already exist as text (written down, or transcribed elsewhere), so the same island also takes
+// words typed or pasted in, with no recording. It is React because the state drives everything on screen.
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 
 type Phase =
   | { kind: 'idle' }
@@ -10,6 +11,7 @@ type Phase =
   | { kind: 'transcribing'; key: string }
   | { kind: 'ready'; key: string; transcript: string }
   | { kind: 'sending'; key: string; transcript: string }
+  | { kind: 'writing'; text: string; sending: boolean }
   | { kind: 'sent'; prUrl: string }
   | { kind: 'failed'; message: string; retry?: () => void };
 
@@ -54,6 +56,14 @@ export function Recorder({ mode, thoughtSlug }: RecorderProps): React.JSX.Elemen
   const [now, setNow] = useState<number>(() => Date.now());
   const recorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
+  const textArea = useRef<HTMLTextAreaElement | null>(null);
+  const textId = useId();
+  const writing = phase.kind === 'writing';
+
+  // The reader asked for the text box by pressing the button, so the caret goes straight into it.
+  useEffect(() => {
+    if (writing) textArea.current?.focus();
+  }, [writing]);
 
   useEffect(() => {
     if (phase.kind !== 'recording') return undefined;
@@ -143,20 +153,101 @@ export function Recorder({ mode, thoughtSlug }: RecorderProps): React.JSX.Elemen
     }
   }, [mode, phase, thoughtSlug]);
 
+  const sendText = useCallback(
+    async (text: string) => {
+      setPhase({ kind: 'writing', text, sending: true });
+      try {
+        const body = JSON.stringify({
+          medium: 'text',
+          transcript: text,
+          mode,
+          thought: thoughtSlug ?? null,
+        });
+        const { prUrl } = await postJson<OriginResponse>('/api/origin', body, 'application/json');
+        setPhase({ kind: 'sent', prUrl });
+      } catch (error) {
+        setPhase({
+          kind: 'failed',
+          message: String(error),
+          retry: () => {
+            void sendText(text);
+          },
+        });
+      }
+    },
+    [mode, thoughtSlug],
+  );
+
   const title = mode === 'origin' ? 'Say it' : 'Say what is wrong with the output';
+  const writeLabel = mode === 'origin' ? 'Write or paste it instead' : 'Write it instead';
+  const sendLabel = mode === 'origin' ? 'Make it an origin' : 'Send the feedback';
 
   return (
     <section className="recorder" aria-live="polite">
       {phase.kind === 'idle' && (
-        <button
-          type="button"
-          className="big"
-          onClick={() => {
-            void start();
+        <>
+          <button
+            type="button"
+            className="big"
+            onClick={() => {
+              void start();
+            }}
+          >
+            {title}
+          </button>
+          <button
+            type="button"
+            className="alternative"
+            onClick={() => {
+              setPhase({ kind: 'writing', text: '', sending: false });
+            }}
+          >
+            {writeLabel}
+          </button>
+        </>
+      )}
+
+      {phase.kind === 'writing' && (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (phase.text.trim().length > 0) void sendText(phase.text);
           }}
         >
-          {title}
-        </button>
+          <label htmlFor={textId} className="field">
+            {mode === 'origin' ? 'The words, as they are' : 'What is wrong with the output'}
+            <textarea
+              id={textId}
+              ref={textArea}
+              rows={10}
+              value={phase.text}
+              readOnly={phase.sending}
+              aria-describedby={`${textId}-hint`}
+              onChange={(event) => {
+                setPhase({ kind: 'writing', text: event.target.value, sending: false });
+              }}
+            />
+          </label>
+          <p id={`${textId}-hint`} className="small quiet">
+            {mode === 'origin'
+              ? 'Write it here, or paste a transcript from somewhere else. It is kept exactly as it is, typos and all, and marked as text rather than a recording.'
+              : 'Say what went down the wrong road, not which sentences to change.'}
+          </p>
+          <div className="row">
+            <button type="submit" disabled={phase.sending || phase.text.trim().length === 0}>
+              {phase.sending ? 'Opening the pull request…' : sendLabel}
+            </button>
+            <button
+              type="button"
+              disabled={phase.sending}
+              onClick={() => {
+                setPhase({ kind: 'idle' });
+              }}
+            >
+              Discard
+            </button>
+          </div>
+        </form>
       )}
 
       {phase.kind === 'recording' && (
@@ -187,11 +278,7 @@ export function Recorder({ mode, thoughtSlug }: RecorderProps): React.JSX.Elemen
               }}
               disabled={phase.kind === 'sending'}
             >
-              {phase.kind === 'sending'
-                ? 'Opening the pull request…'
-                : mode === 'origin'
-                  ? 'Make it an origin'
-                  : 'Send the feedback'}
+              {phase.kind === 'sending' ? 'Opening the pull request…' : sendLabel}
             </button>
             <button
               type="button"

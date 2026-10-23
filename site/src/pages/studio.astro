@@ -11,7 +11,8 @@ import { settings } from '../lib/settings';
   <h1>Studio</h1>
   <p class="quiet">
     Talk. Don't tidy. What you say here is kept exactly as it comes out, and becomes an origin that
-    every conversion will point back to.
+    every conversion will point back to. When the thought already exists as text, write or paste it
+    instead; it is kept the same way.
   </p>
 
   <Recorder client:load mode="origin" />
@@ -39,6 +40,9 @@ import { settings } from '../lib/settings';
     font-weight: 700;
     border-width: 2px;
   }
+  .recorder .alternative {
+    margin-top: var(--space-2);
+  }
   .recorder .elapsed {
     font-size: var(--size-title);
     font-variant-numeric: tabular-nums;
@@ -59,12 +63,24 @@ import { settings } from '../lib/settings';
     width: 100%;
     max-width: var(--measure);
   }
-  .field input {
+  .field input,
+  .field textarea {
     font: inherit;
     min-height: var(--tap);
     padding: 0 var(--space-2);
     border: var(--rule-width) solid var(--ink);
     background: var(--paper);
     color: var(--ink);
+  }
+  .field textarea {
+    padding: var(--space-2);
+    line-height: inherit;
+    resize: vertical;
+  }
+  .recorder form .field + p {
+    margin-top: var(--space-2);
+  }
+  .recorder form .row {
+    margin-top: var(--space-3);
   }
 </style>

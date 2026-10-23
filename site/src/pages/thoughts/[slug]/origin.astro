@@ -1,7 +1,7 @@
 ---
 // Why: the origin page carries no badge, because nothing converted it. It shows the recording when there is
-// one and the transcript exactly as it was spoken, with the file's own why on top so the reader knows what
-// they are looking at.
+// one and the words exactly as they arrived, spoken or written, with the file's own why on top so the
+// reader knows what they are looking at.
 import { getCollection, render } from 'astro:content';
 import Page from '../../../layouts/Page.astro';
 import { formatDate, thoughtSlugOf } from '../../../lib/content';
@@ -24,7 +24,7 @@ const rendered = await Promise.all(
 
 <Page
   title={`Origin: ${thought.data.title}`}
-  description={`The unedited voice note behind “${thought.data.title}”.`}
+  description={`The unedited origin behind “${thought.data.title}”.`}
   lang={thought.data.language}
   type="article"
 >
@@ -41,7 +41,8 @@ const rendered = await Promise.all(
       rendered.map(({ origin, Content }) => (
         <section class="origin">
           <p class="small quiet">
-            Recorded {formatDate(origin.data.recorded)}, spoken by{' '}
+            {origin.data.medium === 'text' ? 'Written' : 'Recorded'}{' '}
+            {formatDate(origin.data.recorded)}, {origin.data.medium === 'text' ? 'by' : 'spoken by'}{' '}
             {origin.data.speakers.join(' and ')}
           </p>
           {origin.data.audio && (

@@ -40,6 +40,7 @@ const origins = defineCollection({
     why,
     recorded: z.coerce.date(),
     language,
+    medium: z.enum(['voice', 'text']).default('voice'),
     audio: z.string().optional(),
     speakers: z.array(z.string().min(1)).min(1),
     edited: z.literal(false),

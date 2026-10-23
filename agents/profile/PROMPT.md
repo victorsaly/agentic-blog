@@ -6,7 +6,7 @@ why: >
   profile.md as a pull request. It never writes to the profile directly, never infers health, mood or
   personality, and never adds a line the blogger did not demonstrate in their own words.
 phase: 3
-reads: [origin/transcript.md, origin/answers.md, "git diff of versions/*.md between the agent's draft and the merged file", profile.md]
+reads: [origin/*.md, origin/answers.md, "git diff of versions/*.md between the agent's draft and the merged file", profile.md]
 writes: [profile.md]
 ---
 

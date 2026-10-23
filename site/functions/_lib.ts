@@ -44,8 +44,4 @@ export function newAudioKey(mode: 'origin' | 'feedback', extension: string): str
   return `${mode}/${stamp}-${random}.${extension}`;
 }
 
-const SAFE_KEY = /^(origin|feedback)\/[A-Za-z0-9-]+\.(webm|m4a|mp3|wav|ogg)$/;
-
-export function isSafeKey(key: string): boolean {
-  return SAFE_KEY.test(key);
-}
+export { isSafeKey } from '../src/lib/origin-request';
