@@ -13,7 +13,9 @@ npm run build          # astro check + build into site/dist
 npm run worker:dev --workspace site  # the built site plus the API, with local R2 and AI bindings
 ```
 
-The functions skip the Access check on localhost. Everything else behaves as in production.
+The functions skip the Access check when `DEV_SKIP_ACCESS=1` is set in `site/.dev.vars` (copy
+`.dev.vars.example`). The hostname cannot tell local from production, because wrangler dev rewrites every
+request to the custom domain. Everything else behaves as in production.
 
 ## Cloudflare setup (once)
 

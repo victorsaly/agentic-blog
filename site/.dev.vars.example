@@ -1,0 +1,4 @@
+# Why: what `npm run worker:dev --workspace site` needs. Copy to .dev.vars and fill in; wrangler reads
+# .dev.vars in dev and never deploys it.
+DEV_SKIP_ACCESS=1
+GITHUB_TOKEN=
