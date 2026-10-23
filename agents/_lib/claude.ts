@@ -27,7 +27,18 @@ export function createAskClient(
             },
           ] as unknown as Anthropic.Tool[])
         : undefined;
-      const messages: Anthropic.MessageParam[] = [{ role: 'user', content: user }];
+      const content: Anthropic.ContentBlockParam[] = [
+        ...(options.images ?? []).map((png): Anthropic.ImageBlockParam => ({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: 'image/png',
+            data: Buffer.from(png).toString('base64'),
+          },
+        })),
+        { type: 'text', text: user },
+      ];
+      const messages: Anthropic.MessageParam[] = [{ role: 'user', content }];
       const texts: string[] = [];
 
       // A long search can pause the turn; resend it as it stands and the server carries on.
