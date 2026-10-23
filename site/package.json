@@ -9,14 +9,17 @@
     "preview": "astro preview",
     "typecheck": "astro check",
     "worker:dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "dev:fresh": "rm -f .astro/data-store.json node_modules/.astro/data-store.json .astro/content-assets.mjs && astro dev"
   },
   "dependencies": {
+    "@astrojs/markdown-satteri": "^0.4.5",
     "@astrojs/react": "^7.1.1",
     "@astrojs/sitemap": "^3.7.4",
     "astro": "^7.4.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "satteri": "^0.10.5",
     "yaml": "^2.6.1"
   },
   "devDependencies": {

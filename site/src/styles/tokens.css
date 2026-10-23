@@ -12,6 +12,7 @@
   --field: #f3f3f3;
   --mark: #ffc400; /* the one colour; black text on it reads at 12.7:1 */
   --mark-ink: #000000;
+  --drawing-filter: none; /* drawings are black ink on white */
 
   /* type */
   --font-read: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
@@ -56,6 +57,7 @@
     --ink: #ffffff;
     --quiet: #a8a8a8; /* 7.3:1 on black */
     --rule: #333333;
+    --drawing-filter: invert(1); /* white lines on black */
     --field: #141414;
   }
 }
@@ -65,5 +67,6 @@
   --ink: #ffffff;
   --quiet: #a8a8a8;
   --rule: #333333;
+  --drawing-filter: invert(1);
   --field: #141414;
 }

@@ -21,7 +21,8 @@
     "typecheck": "npm run typecheck --workspaces",
     "test": "vitest run",
     "check:why": "tsx scripts/check-why.ts",
-    "agent": "npm run agent --workspace agents --"
+    "agent": "npm run agent --workspace agents --",
+    "dev:fresh": "npm run dev:fresh --workspace site"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.1",
