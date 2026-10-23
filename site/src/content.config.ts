@@ -1,5 +1,5 @@
 // Why: the site reads thoughts/ straight from the repo, so a merged pull request is a published post and
-// nothing is copied. Three collections, one per kind of file, each validated against the same rules the
+// nothing is copied. One collection per kind of file, each validated against the same rules the
 // why-check uses, so a file that breaks a rule fails the build rather than the page.
 import { defineCollection } from 'astro:content';
 import { z } from 'astro/zod';
@@ -47,4 +47,27 @@ const origins = defineCollection({
   }),
 });
 
-export const collections = { thoughts, versions, origins };
+// The image agent's list of drawings: which file, which section, what a screen reader says.
+const pictures = defineCollection({
+  loader: glob({ pattern: '*/image/prompts.md', base: '../thoughts' }),
+  schema: z
+    .object({
+      why,
+      images: z.array(
+        z
+          .object({ file: z.string(), section: z.string(), alt: z.string(), drawn: z.boolean() })
+          .loose(),
+      ),
+    })
+    .loose(),
+});
+
+// The citations agent's doors out. Shown on the post only once reviewed is true.
+const sources = defineCollection({
+  loader: glob({ pattern: '*/sources.md', base: '../thoughts' }),
+  schema: z
+    .object({ why, checked: z.coerce.date().optional(), reviewed: z.boolean().default(false) })
+    .loose(),
+});
+
+export const collections = { thoughts, versions, origins, pictures, sources };
