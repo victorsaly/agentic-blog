@@ -25,15 +25,15 @@ jobs:
           node-version: 22
       - run: npm ci --no-audit --no-fund || npm install --no-audit --no-fund
       - name: Every file says why it exists
-        run: npm run check:why
+        run: node scripts/ci-annotate.mjs why npm run check:why
       - name: Lint and format
-        run: npm run lint
+        run: node scripts/ci-annotate.mjs lint npm run lint
       - name: Types
-        run: npm run typecheck
+        run: node scripts/ci-annotate.mjs types npm run typecheck
       - name: Tests
-        run: npm run test
+        run: node scripts/ci-annotate.mjs tests npm run test -- --reporter=dot
       - name: Build the site
-        run: npm run build --workspace site
+        run: node scripts/ci-annotate.mjs build npm run build --workspace site
       - uses: actions/upload-artifact@v4
         with:
           name: site
@@ -60,7 +60,7 @@ jobs:
         run: |
           npx --yes serve@14 site/dist -l 4321 -s &
           sleep 2
-          node scripts/axe.mjs http://localhost:4321
+          node scripts/ci-annotate.mjs axe node scripts/axe.mjs http://localhost:4321
 
   format-patch:
     name: Formatting diff (for fixing from anywhere)
