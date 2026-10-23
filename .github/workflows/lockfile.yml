@@ -1,0 +1,32 @@
+# Why: the scaffold was written where npm could not reach the registry, so it came without a lock file.
+# This runs once, generates package-lock.json on a GitHub runner, and commits it, so every later run is
+# reproducible with `npm ci`. It does nothing when the lock already exists.
+name: Lockfile
+
+on:
+  push:
+    branches: [main]
+    paths: ['package.json', 'site/package.json', 'agents/package.json']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Generate the lock file if it is missing or stale
+        run: npm install --package-lock-only --no-audit --no-fund
+      - name: Commit it
+        run: |
+          git config user.name "agentic-blog[bot]"
+          git config user.email "agentic-blog[bot]@users.noreply.github.com"
+          git add package-lock.json
+          if git diff --cached --quiet; then echo "lock file up to date"; exit 0; fi
+          git commit -m "chore: refresh package-lock.json" -m "Generated on a runner; see .github/workflows/lockfile.yml for why."
+          git push

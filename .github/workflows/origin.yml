@@ -20,8 +20,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci
+      - run: npm ci --no-audit --no-fund || npm install --no-audit --no-fund
       - name: Write the origin or feedback files
         id: write
         env:
