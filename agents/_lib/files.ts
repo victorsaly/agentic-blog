@@ -1,6 +1,6 @@
 // Why: agents hand back files; only the runner touches the disk. That keeps the "never write under
 // origin/" rule in one function, and makes an agent testable without a filesystem.
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import matter from 'gray-matter';
 import { assertNotOrigin, type OutputFile } from './types.js';
@@ -20,6 +20,11 @@ export async function writeOutputs(bases: Bases, files: OutputFile[]): Promise<s
       throw new Error(`refusing to write ${file.path}: paths stay inside their base`);
     const base = file.base ?? bases.fallback;
     const full = join(bases[base], file.path);
+    if (file.remove === true) {
+      await rm(full, { force: true });
+      written.push(`removed ${base === bases.fallback ? file.path : `${base}:${file.path}`}`);
+      continue;
+    }
     await mkdir(dirname(full), { recursive: true });
     if (file.bytes !== undefined) {
       if (file.path.endsWith('.md'))

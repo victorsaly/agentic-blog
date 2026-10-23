@@ -70,3 +70,14 @@ describe('writeOutputs', () => {
     );
   });
 });
+
+describe('writeOutputs remove', () => {
+  it('deletes a file the agent wrote before', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'agentic-'));
+    const at2 = { thought: dir, repo: dir, fallback: 'thought' as const };
+    await writeOutputs(at2, [{ path: 'image/old.png', content: '', bytes: new Uint8Array([1]) }]);
+    const written = await writeOutputs(at2, [{ path: 'image/old.png', content: '', remove: true }]);
+    expect(written).toEqual(['removed image/old.png']);
+    await expect(readFile(join(dir, 'image/old.png'))).rejects.toThrow();
+  });
+});

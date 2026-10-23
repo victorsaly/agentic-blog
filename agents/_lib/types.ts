@@ -88,6 +88,8 @@ export interface OutputFile {
   content: string;
   /** Raw bytes for a non-Markdown file such as a picture; content is then ignored. */
   bytes?: Uint8Array;
+  /** Delete this file instead of writing it (an agent replacing its own earlier output). */
+  remove?: boolean;
   /** Where the path starts. Defaults to the agent's usual place (the thought, or the repo for profile/wiki). */
   base?: 'thought' | 'repo';
 }
