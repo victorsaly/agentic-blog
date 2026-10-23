@@ -1,0 +1,47 @@
+# Site settings. Every agent and the site read this file. Change it in a pull request like anything else.
+# why: the blogger is a parameter, not a hard-coded name. Everything that is "about Victor" lives here and in profile.md.
+
+site:
+  name: Victor Saly
+  domain: blog.victorsaly.com
+  tagline: Converted with AI, not made by AI
+  author: Victor Saly
+  email: info@victorsaly.com
+  timezone: Europe/London
+
+languages:
+  origin: en # the language most origins come out in
+  publish: [en] # add a code here and the convert agent produces that version; a folder appears on the site
+
+themes: # the ring around the core; one idea can carry several
+  - ai-changing-work
+  - accountability
+  - credibility
+  - scalable-secure
+  - apps-and-workflows
+
+depths: # the three reading depths, in order
+  - message
+  - idea
+  - road
+
+publishing:
+  index: false # robots: keep search engines out until this is true
+  badge_text: Converted with AI, not made by AI
+  social: [linkedin] # which short versions the publish agent prepares
+
+licence:
+  code: MIT
+  content: all-rights-reserved # change when chosen, e.g. CC-BY-4.0
+
+media:
+  audio_bucket: agentic-blog-audio # R2 bucket, bound as AUDIO in site/wrangler.toml
+  image_style: >
+    Monochrome. Black ink on white. Lines and dots only: no photographs, no shading, no gradients, no text.
+    One idea per picture, drawn as if by one steady hand with a fine pen. Generous empty space.
+  voice_id: null # ElevenLabs voice id once chosen
+
+agents:
+  model: claude-sonnet-5-5 # reasoning agents; override per agent in its PROMPT.md front matter
+  max_output_tokens: 4000
+  review_required: true # never false

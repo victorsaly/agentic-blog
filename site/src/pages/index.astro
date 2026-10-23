@@ -1,0 +1,76 @@
+---
+// Why: the front page is the messages, nothing else. A reader sees the point of every post in three lines
+// and picks one. The graph will take over this page in phase 3; until then the list is the map.
+import { getCollection } from 'astro:content';
+import Page from '../layouts/Page.astro';
+import { settings } from '../lib/settings';
+import { formatDate, thoughtSlugOf } from '../lib/content';
+
+const thoughts = (await getCollection('thoughts', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime(),
+);
+---
+
+<Page title={settings.site.name} description={`${settings.site.tagline}. Thoughts by ${settings.site.author}, each one starting as a voice note.`}>
+  <h1 class="visually-hidden">{settings.site.name}</h1>
+  <p class="lead">
+    Every post here starts as a voice note, kept exactly as it was spoken. What you read is a conversion of it,
+    and the origin is always one click away.
+  </p>
+
+  {thoughts.length === 0 && <p class="quiet">Nothing published yet. The first thought is on its way.</p>}
+
+  <ol class="thoughts">
+    {
+      thoughts.map((t) => {
+        const slug = thoughtSlugOf(t.id);
+        return (
+          <li>
+            <p class="message">
+              <a href={`/thoughts/${slug}`}>
+                <mark>{t.data.message}</mark>
+              </a>
+            </p>
+            <p class="small quiet meta">
+              <span>{t.data.title}</span>
+              <time datetime={t.data.date.toISOString()}>{formatDate(t.data.date)}</time>
+            </p>
+          </li>
+        );
+      })
+    }
+  </ol>
+</Page>
+
+<style>
+  .lead {
+    color: var(--quiet);
+    margin-bottom: var(--space-5);
+  }
+  .thoughts {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .thoughts li + li {
+    border-top: var(--rule-width) solid var(--rule);
+    padding-top: var(--space-4);
+  }
+  .thoughts .message {
+    margin: 0 0 var(--space-2);
+  }
+  .thoughts .message a {
+    text-decoration: none;
+  }
+  .thoughts .message a:hover mark,
+  .thoughts .message a:focus-visible mark {
+    text-decoration: underline;
+    text-decoration-thickness: 0.12em;
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+</style>

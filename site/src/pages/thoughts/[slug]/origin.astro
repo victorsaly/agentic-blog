@@ -1,0 +1,72 @@
+---
+// Why: the origin page carries no badge, because nothing converted it. It shows the recording when there is
+// one and the transcript exactly as it was spoken, with the file's own why on top so the reader knows what
+// they are looking at.
+import { getCollection, render } from 'astro:content';
+import Page from '../../../layouts/Page.astro';
+import { formatDate, thoughtSlugOf } from '../../../lib/content';
+
+export async function getStaticPaths() {
+  const thoughts = await getCollection('thoughts', ({ data }) => !data.draft);
+  return thoughts.map((thought) => ({ params: { slug: thoughtSlugOf(thought.id) }, props: { thought } }));
+}
+
+const { thought } = Astro.props;
+const slug = thoughtSlugOf(thought.id);
+const origins = await getCollection('origins', ({ id }) => thoughtSlugOf(id) === slug);
+const rendered = await Promise.all(
+  origins.map(async (origin) => ({ origin, Content: (await render(origin)).Content })),
+);
+---
+
+<Page title={`Origin: ${thought.data.title}`} description={`The unedited voice note behind “${thought.data.title}”.`} lang={thought.data.language} type="article">
+  <article>
+    <p class="small quiet">
+      <a href={`/thoughts/${slug}`}>← Back to the post</a>
+    </p>
+    <h1>Where “{thought.data.title}” came from</h1>
+    <p class="quiet">This is the origin. Nothing on this page has been edited, and nothing converted it.</p>
+
+    {
+      rendered.map(({ origin, Content }) => (
+        <section class="origin">
+          <p class="small quiet">
+            Recorded {formatDate(origin.data.recorded)}, spoken by {origin.data.speakers.join(' and ')}
+          </p>
+          {origin.data.audio && (
+            <audio controls preload="none" src={`/api/audio/${origin.data.audio}`}>
+              Your browser cannot play this recording. <a href={`/api/audio/${origin.data.audio}`}>Download it</a> instead.
+            </audio>
+          )}
+          <p class="why">
+            <span class="small quiet">Why this file exists</span>
+            <br />
+            {origin.data.why}
+          </p>
+          <div class="transcript">
+            <Content />
+          </div>
+        </section>
+      ))
+    }
+  </article>
+</Page>
+
+<style>
+  .origin {
+    margin-top: var(--space-5);
+  }
+  .why {
+    border-left: var(--rule-width) solid var(--rule);
+    padding-left: var(--space-3);
+  }
+  audio {
+    display: block;
+    width: 100%;
+    margin: var(--space-3) 0;
+  }
+  .transcript :global(h1) {
+    font-size: var(--size-h2);
+    margin-top: var(--space-5);
+  }
+</style>

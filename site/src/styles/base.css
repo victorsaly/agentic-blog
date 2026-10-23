@@ -1,0 +1,252 @@
+/* Why: one small stylesheet for the whole site. No framework, no component library, no shadows, no
+   gradients, no cards. Structure is shown with space and single rules; the only loud thing on any page is
+   the message. Everything is reachable by keyboard and nothing moves unless the reader asked it to. */
+
+@import './tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 100%;
+  -webkit-text-size-adjust: 100%;
+  scroll-padding-top: var(--space-5);
+}
+
+body {
+  margin: 0;
+  font-size: var(--size-body);
+  line-height: var(--leading);
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+  width: 100%;
+  max-width: calc(var(--measure) + 2 * var(--gutter));
+  margin: 0 auto;
+  padding: var(--space-5) var(--gutter) var(--space-6);
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 700;
+  line-height: var(--leading-tight);
+  margin: 0 0 var(--space-3);
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: var(--size-title);
+}
+
+h2 {
+  font-size: var(--size-h2);
+  margin-top: var(--space-5);
+}
+
+p,
+ul,
+ol,
+blockquote,
+table {
+  margin: 0 0 var(--space-3);
+  max-width: var(--measure);
+}
+
+p {
+  text-wrap: pretty;
+}
+
+a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.15em;
+}
+
+a:hover {
+  text-decoration-thickness: 0.15em;
+}
+
+:focus-visible {
+  outline: var(--focus);
+  outline-offset: var(--focus-offset);
+}
+
+::selection {
+  background: var(--mark);
+  color: var(--mark-ink);
+}
+
+hr {
+  border: 0;
+  border-top: var(--rule-width) solid var(--rule);
+  margin: var(--space-5) 0;
+}
+
+blockquote {
+  border-left: var(--rule-width) solid var(--rule);
+  padding-left: var(--space-3);
+  color: var(--quiet);
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--size-small);
+}
+
+th,
+td {
+  text-align: left;
+  vertical-align: top;
+  padding: var(--space-2) var(--space-2) var(--space-2) 0;
+  border-bottom: var(--rule-width) solid var(--rule);
+}
+
+th {
+  font-weight: 700;
+}
+
+code,
+pre {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+pre {
+  overflow-x: auto;
+  padding: var(--space-3);
+  background: var(--field);
+  max-width: 100%;
+}
+
+img,
+svg,
+audio {
+  max-width: 100%;
+  height: auto;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: var(--rule-width) solid var(--ink);
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* The message: the one loud thing on a page. */
+.message {
+  font-size: var(--size-message);
+  line-height: 1.35;
+  letter-spacing: var(--tracking-message);
+  font-weight: 700;
+  margin: var(--space-4) 0 var(--space-5);
+}
+
+.message mark {
+  background: var(--mark);
+  color: var(--mark-ink);
+  padding: 0.1em 0.2em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* Depths: idea is open, the road and the origin are behind a summary the reader opens. */
+details.depth {
+  border-top: var(--rule-width) solid var(--rule);
+  padding: var(--space-3) 0;
+}
+
+details.depth:last-of-type {
+  border-bottom: var(--rule-width) solid var(--rule);
+}
+
+details.depth > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap);
+  font-weight: 700;
+}
+
+details.depth > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.depth > summary::before {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--ink);
+  flex: none;
+}
+
+details.depth[open] > summary::before {
+  background: none;
+  border: var(--rule-width) solid var(--ink);
+}
+
+details.depth > summary .hint {
+  color: var(--quiet);
+  font-weight: 400;
+  font-size: var(--size-small);
+}
+
+details.depth > .body {
+  padding-top: var(--space-3);
+}
+
+.quiet {
+  color: var(--quiet);
+}
+
+.small {
+  font-size: var(--size-small);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  details.depth > .body {
+    animation: open 160ms ease-out;
+  }
+  @keyframes open {
+    from {
+      opacity: 0;
+      translate: 0 -4px;
+    }
+    to {
+      opacity: 1;
+      translate: 0 0;
+    }
+  }
+}

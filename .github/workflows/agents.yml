@@ -1,0 +1,91 @@
+# Why: agents live where the content lives. Add the label `agent:<name>` to a pull request (or run the
+# workflow by hand with a thought slug) and that one agent runs on that one thought, writing its files to
+# the branch so the pull request shows the diff. Nothing merges by itself; a held result fails the check.
+name: Agents
+
+on:
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      agent:
+        description: Which agent
+        required: true
+        type: choice
+        options: [interview, structure, convert, image, citations, drilldown, profile, feedback, safety, security, seo, publish]
+      thought:
+        description: Thought folder, e.g. 2026-10-23-converted-with-ai
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  run:
+    name: Run one agent on one thought
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.label.name, 'agent:')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Work out the agent and the thought
+        id: pick
+        env:
+          LABEL: ${{ github.event.label.name }}
+          INPUT_AGENT: ${{ github.event.inputs.agent }}
+          INPUT_THOUGHT: ${{ github.event.inputs.thought }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if [ -n "$INPUT_AGENT" ]; then
+            echo "agent=$INPUT_AGENT" >> "$GITHUB_OUTPUT"
+            echo "thought=$INPUT_THOUGHT" >> "$GITHUB_OUTPUT"
+          else
+            echo "agent=${LABEL#agent:}" >> "$GITHUB_OUTPUT"
+            # origin/<slug> and feedback/<slug>-<stamp> branches name the thought
+            slug=$(git diff --name-only origin/main...HEAD -- thoughts | awk -F/ '{print $2}' | sort -u | head -1)
+            echo "thought=$slug" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run the agent
+        id: agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set +e
+          out=$(npm run agent --silent -- "${{ steps.pick.outputs.agent }}" "${{ steps.pick.outputs.thought }}")
+          code=$?
+          echo "$out"
+          echo "result=$out" >> "$GITHUB_OUTPUT"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          # 3 = held: files are still committed so the reason is in the PR; the check fails below
+          [ "$code" = "0" ] || [ "$code" = "3" ] || exit "$code"
+
+      - name: Commit what the agent wrote
+        run: |
+          git config user.name "agentic-blog[bot]"
+          git config user.email "agentic-blog[bot]@users.noreply.github.com"
+          git add -A thoughts wiki profile.md
+          if git diff --cached --quiet; then echo "nothing to commit"; exit 0; fi
+          git commit -m "agent(${{ steps.pick.outputs.agent }}): ${{ steps.pick.outputs.thought }}" -m "${{ steps.agent.outputs.result }}"
+          git push
+
+      - name: Remove the trigger label
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr edit "${{ github.event.pull_request.number }}" --remove-label "${{ github.event.label.name }}"
+
+      - name: Hold the post if the agent said so
+        if: steps.agent.outputs.code == '3'
+        run: |
+          echo "::error::The ${{ steps.pick.outputs.agent }} agent held this post. Read its file in the pull request before merging."
+          exit 1

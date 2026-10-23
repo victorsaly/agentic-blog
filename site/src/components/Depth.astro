@@ -1,0 +1,22 @@
+---
+// Why: a reader goes as deep as they want and no deeper. A depth is a native <details>: no script, keyboard
+// works, screen readers announce it, and the reader's choice to open it is the only motion on the page.
+interface Props {
+  name: string;
+  hint?: string;
+  open?: boolean;
+  id?: string;
+}
+
+const { name, hint, open = false, id } = Astro.props;
+---
+
+<details class="depth" open={open} id={id}>
+  <summary>
+    <span>{name}</span>
+    {hint && <span class="hint">{hint}</span>}
+  </summary>
+  <div class="body">
+    <slot />
+  </div>
+</details>

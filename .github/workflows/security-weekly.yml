@@ -1,0 +1,40 @@
+# Why: the security agent keeps the stack patched so the blogger never has to find the time. Until its
+# code lands (phase 5), this runs the audit that needs no model and opens an issue when something is
+# known to be vulnerable. Dependabot handles the version bumps themselves.
+name: Security weekly
+
+on:
+  schedule:
+    - cron: '17 6 * * 1' # Mondays, 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  audit:
+    name: npm audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Audit
+        id: audit
+        run: |
+          set +e
+          npm audit --audit-level=high --json > audit.json
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+      - name: Open an issue if something is high or critical
+        if: steps.audit.outputs.code != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          summary=$(node -e 'const a=require("./audit.json");const v=a.metadata?.vulnerabilities||{};console.log(`high: ${v.high||0}, critical: ${v.critical||0}`)')
+          gh issue create --title "Security: npm audit found something ($summary)" \
+            --label security \
+            --body "Weekly audit on $(date -u +%F). Run \`npm audit\` locally for the detail. The security agent (phase 5) will turn these into pull requests."

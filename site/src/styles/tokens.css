@@ -1,0 +1,69 @@
+/* Why: every colour, size and rhythm on the site lives here and nowhere else. Monochrome by design:
+   black on white, white on black, and one colour, marigold, that is only ever the highlight behind the
+   message. The type is chosen for a dyslexic reader and a distracted one: large, open, well spaced,
+   short lines, and a switch to a second face built for reading proficiency. */
+
+:root {
+  /* colour */
+  --paper: #ffffff;
+  --ink: #000000;
+  --quiet: #595959; /* 7:1 on white */
+  --rule: #d4d4d4;
+  --field: #f3f3f3;
+  --mark: #ffc400; /* the one colour; black text on it reads at 12.7:1 */
+  --mark-ink: #000000;
+
+  /* type */
+  --font-read: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
+  --font-switch: 'Lexend', 'Atkinson Hyperlegible', system-ui, sans-serif;
+  --font: var(--font-read);
+  --size-body: 1.1875rem; /* 19px */
+  --size-small: 0.9375rem; /* 15px */
+  --size-message: 1.75rem; /* 28px */
+  --size-title: 2.25rem; /* 36px */
+  --size-h2: 1.5rem; /* 24px */
+  --leading: 1.6;
+  --leading-tight: 1.25;
+  --measure: 60ch;
+  --tracking-message: -0.005em;
+
+  /* rhythm */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2.5rem;
+  --space-6: 4rem;
+  --gutter: 1.25rem;
+  --tap: 2.75rem; /* 44px minimum target */
+
+  /* edges */
+  --rule-width: 1px;
+  --focus: 3px solid var(--ink);
+  --focus-offset: 3px;
+
+  color-scheme: light dark;
+}
+
+:root[data-font='switch'] {
+  --font: var(--font-switch);
+  --leading: 1.7;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --paper: #000000;
+    --ink: #ffffff;
+    --quiet: #a8a8a8; /* 7.3:1 on black */
+    --rule: #333333;
+    --field: #141414;
+  }
+}
+
+:root[data-theme='dark'] {
+  --paper: #000000;
+  --ink: #ffffff;
+  --quiet: #a8a8a8;
+  --rule: #333333;
+  --field: #141414;
+}

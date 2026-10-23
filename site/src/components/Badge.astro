@@ -1,0 +1,41 @@
+---
+// Why: the badge is the whole idea in one line: a human had the thought, a tool changed its shape, and the
+// origin is one click away. It is drawn in lines and dots, like everything else, and it is always a link.
+import { settings } from '../lib/settings';
+
+interface Props {
+  /** Where the origin lives for this version. */
+  originHref: string;
+  /** Who or what did the converting, for the title text. */
+  by?: string | undefined;
+}
+
+const { originHref, by } = Astro.props;
+const title = by ? `${settings.publishing.badge_text}. Converted by ${by}. Read the origin.` : `${settings.publishing.badge_text}. Read the origin.`;
+---
+
+<a class="badge" href={originHref} title={title}>
+  <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+    <circle cx="10" cy="10" r="2" fill="currentColor"></circle>
+    <circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="1.25" stroke-dasharray="1.5 3.2"></circle>
+  </svg>
+  <span>{settings.publishing.badge_text}</span>
+  <span class="visually-hidden">. Read the origin.</span>
+</a>
+
+<style>
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--size-small);
+    text-decoration: none;
+    min-height: var(--tap);
+    color: var(--quiet);
+  }
+  .badge:hover,
+  .badge:focus-visible {
+    color: var(--ink);
+    text-decoration: underline;
+  }
+</style>

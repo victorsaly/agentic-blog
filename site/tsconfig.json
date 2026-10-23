@@ -1,0 +1,14 @@
+{
+  "extends": "astro/tsconfigs/strictest",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "baseUrl": ".",
+    "paths": { "@/*": ["src/*"] },
+    "types": ["astro/client", "@cloudflare/workers-types/2023-07-01"],
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true
+  },
+  "include": [".astro/types.d.ts", "src/**/*", "functions/**/*", "astro.config.mjs"],
+  "exclude": ["dist", "node_modules"]
+}

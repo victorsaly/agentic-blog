@@ -1,0 +1,83 @@
+---
+// Why: one layout for every page. It carries the fonts, the theme and font switches (restored before first
+// paint so nothing flashes), the robots rule from settings.yml, and the skip link. Pages add only content.
+import '../styles/base.css';
+import { settings } from '../lib/settings';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+interface Props {
+  title: string;
+  description: string;
+  lang?: string;
+  /** Pages that must never be indexed, whatever the switch says (the studio). */
+  noindex?: boolean;
+  type?: 'website' | 'article';
+  publishedAt?: Date;
+}
+
+const { title, description, lang = settings.languages.origin, noindex = false, type = 'website', publishedAt } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const indexable = settings.publishing.index && !noindex;
+const fullTitle = title === settings.site.name ? title : `${title} — ${settings.site.name}`;
+---
+
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="robots" content={indexable ? 'index, follow' : 'noindex, nofollow'} />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+    <meta property="og:type" content={type} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:site_name" content={settings.site.name} />
+    {publishedAt && <meta property="article:published_time" content={publishedAt.toISOString()} />}
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Lexend:wght@400;700&display=swap"
+    />
+    <script is:inline>
+      // Restore the reader's font and theme choices before first paint. Stored per browser; failures are fine.
+      try {
+        const font = localStorage.getItem('font');
+        if (font === 'switch') document.documentElement.dataset.font = 'switch';
+        const theme = localStorage.getItem('theme');
+        if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <a class="skip" href="#content">Skip to content</a>
+    <Header />
+    <main id="content" tabindex="-1">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>
+
+<style>
+  .skip {
+    position: absolute;
+    left: var(--gutter);
+    top: -100%;
+    background: var(--paper);
+    padding: var(--space-2) var(--space-3);
+    border: var(--rule-width) solid var(--ink);
+  }
+  .skip:focus {
+    top: var(--space-2);
+    z-index: 1;
+  }
+</style>

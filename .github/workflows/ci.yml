@@ -1,0 +1,86 @@
+# Why: every pull request is held to the same gate: every file has a why, the code passes lint, types and
+# tests, the site builds, and every page passes an accessibility check. Nothing merges on a red run.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Why, lint, types, tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Every file says why it exists
+        run: npm run check:why
+      - name: Lint and format
+        run: npm run lint
+      - name: Types
+        run: npm run typecheck
+      - name: Tests
+        run: npm run test
+      - name: Build the site
+        run: npm run build --workspace site
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: site/dist
+          retention-days: 7
+
+  accessibility:
+    name: Accessibility (axe on every page)
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: site/dist
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Serve and audit
+        run: |
+          npx --yes serve@14 site/dist -l 4321 -s &
+          sleep 2
+          node scripts/axe.mjs http://localhost:4321
+
+  format-patch:
+    name: Formatting diff (for fixing from anywhere)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: What prettier would change
+        run: |
+          npm run format --silent || true
+          git --no-pager diff > format.patch || true
+          if [ -s format.patch ]; then
+            echo "::group::format.patch"; cat format.patch; echo "::endgroup::"
+            echo "::warning::prettier wants changes; see format.patch in the log"
+          else
+            echo "nothing to format"
+          fi

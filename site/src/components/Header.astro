@@ -1,0 +1,89 @@
+---
+// Why: the header is the site name and two switches a reader may need before reading anything: the font
+// for a dyslexic reader and the theme for a tired one. Nothing else; the graph will take the front door later.
+import { settings } from '../lib/settings';
+---
+
+<header>
+  <a class="name" href="/">{settings.site.name}</a>
+  <div class="switches">
+    <button type="button" id="font-switch" aria-pressed="false">
+      <span aria-hidden="true">Aa</span>
+      <span class="visually-hidden">Switch reading font</span>
+    </button>
+    <button type="button" id="theme-switch" aria-pressed="false">
+      <span aria-hidden="true">◐</span>
+      <span class="visually-hidden">Switch between light and dark</span>
+    </button>
+  </div>
+</header>
+
+<style>
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    max-width: calc(var(--measure) + 2 * var(--gutter));
+    margin: 0 auto;
+    padding: var(--space-3) var(--gutter) 0;
+  }
+  .name {
+    font-weight: 700;
+    text-decoration: none;
+    min-height: var(--tap);
+    display: inline-flex;
+    align-items: center;
+  }
+  .name:hover {
+    text-decoration: underline;
+  }
+  .switches {
+    display: flex;
+    gap: var(--space-2);
+  }
+  button {
+    min-width: var(--tap);
+    padding: 0 var(--space-2);
+  }
+  button[aria-pressed='true'] {
+    background: var(--ink);
+    color: var(--paper);
+  }
+</style>
+
+<script>
+  // Why: two toggles, stored per browser, restored by the layout before paint. No framework needed for this.
+  const root = document.documentElement;
+  const remember = (key: string, value: string | null): void => {
+    try {
+      if (value === null) localStorage.removeItem(key);
+      else localStorage.setItem(key, value);
+    } catch {
+      /* private window or storage blocked: the switch still works for this page */
+    }
+  };
+
+  const font = document.getElementById('font-switch');
+  const syncFont = (): void => font?.setAttribute('aria-pressed', String(root.dataset['font'] === 'switch'));
+  font?.addEventListener('click', () => {
+    const on = root.dataset['font'] !== 'switch';
+    if (on) root.dataset['font'] = 'switch';
+    else delete root.dataset['font'];
+    remember('font', on ? 'switch' : null);
+    syncFont();
+  });
+  syncFont();
+
+  const theme = document.getElementById('theme-switch');
+  const prefersDark = (): boolean => matchMedia('(prefers-color-scheme: dark)').matches;
+  const isDark = (): boolean => root.dataset['theme'] === 'dark' || (root.dataset['theme'] === undefined && prefersDark());
+  const syncTheme = (): void => theme?.setAttribute('aria-pressed', String(isDark()));
+  theme?.addEventListener('click', () => {
+    const next = isDark() ? 'light' : 'dark';
+    root.dataset['theme'] = next;
+    remember('theme', next);
+    syncTheme();
+  });
+  syncTheme();
+</script>

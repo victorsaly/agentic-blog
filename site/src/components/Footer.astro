@@ -1,0 +1,23 @@
+---
+// Why: the footer says what the site is in one line and where the code lives, so the road is never hidden.
+import { settings } from '../lib/settings';
+---
+
+<footer>
+  <p class="small quiet">
+    {settings.site.tagline}. Every post starts as a voice note and links back to it. The engine is open:
+    <a href="https://github.com/victorsaly/agentic-blog">agentic-blog on GitHub</a>.
+  </p>
+</footer>
+
+<style>
+  footer {
+    max-width: calc(var(--measure) + 2 * var(--gutter));
+    margin: 0 auto;
+    padding: var(--space-4) var(--gutter) var(--space-5);
+    border-top: var(--rule-width) solid var(--rule);
+  }
+  p {
+    margin: 0;
+  }
+</style>

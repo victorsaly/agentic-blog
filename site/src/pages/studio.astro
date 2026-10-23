@@ -1,0 +1,68 @@
+---
+// Why: the studio is where an origin begins. One button to talk, one to talk back about an output, and
+// nothing else on the page. Cloudflare Access sits in front of /studio and /api/*; this page never indexes.
+import Page from '../layouts/Page.astro';
+import { Recorder } from '../islands/Recorder';
+import { FeedbackStudio } from '../islands/FeedbackStudio';
+import { settings } from '../lib/settings';
+---
+
+<Page title="Studio" description="A private room to talk in." noindex={true}>
+  <h1>Studio</h1>
+  <p class="quiet">
+    Talk. Don't tidy. What you say here is kept exactly as it comes out, and becomes an origin that every
+    conversion will point back to.
+  </p>
+
+  <Recorder client:load mode="origin" />
+
+  <h2>Talk back</h2>
+  <p class="quiet">
+    When an output went down the wrong road, say so here instead of editing sentences. Name the thought
+    first.
+  </p>
+  <FeedbackStudio client:visible />
+
+  <p class="small quiet">Signed in as {settings.site.author}. This page is behind Cloudflare Access and is never indexed.</p>
+</Page>
+
+<style is:global>
+  .recorder {
+    margin: var(--space-4) 0 var(--space-6);
+  }
+  .recorder .big {
+    width: 100%;
+    min-height: calc(var(--tap) * 3);
+    font-size: var(--size-message);
+    font-weight: 700;
+    border-width: 2px;
+  }
+  .recorder .elapsed {
+    font-size: var(--size-title);
+    font-variant-numeric: tabular-nums;
+    margin: 0 0 var(--space-3);
+  }
+  .recorder .transcript {
+    white-space: pre-wrap;
+  }
+  .recorder .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    width: 100%;
+    max-width: var(--measure);
+  }
+  .field input {
+    font: inherit;
+    min-height: var(--tap);
+    padding: 0 var(--space-2);
+    border: var(--rule-width) solid var(--ink);
+    background: var(--paper);
+    color: var(--ink);
+  }
+</style>

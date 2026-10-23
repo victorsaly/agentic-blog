@@ -1,0 +1,28 @@
+{
+  "name": "@agentic-blog/site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro check && astro build",
+    "preview": "astro preview",
+    "typecheck": "astro check",
+    "pages:dev": "wrangler pages dev dist --compatibility-date=2026-10-01"
+  },
+  "dependencies": {
+    "@astrojs/react": "^4.1.0",
+    "@astrojs/sitemap": "^3.2.1",
+    "astro": "^5.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "yaml": "^2.6.1"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@cloudflare/workers-types": "^4.20241218.0",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "wrangler": "^3.99.0"
+  }
+}
