@@ -65,8 +65,9 @@ import { settings } from '../lib/settings';
   };
 
   const font = document.getElementById('font-switch');
-  const syncFont = (): void =>
+  const syncFont = (): void => {
     font?.setAttribute('aria-pressed', String(root.dataset['font'] === 'switch'));
+  };
   font?.addEventListener('click', () => {
     const on = root.dataset['font'] !== 'switch';
     if (on) root.dataset['font'] = 'switch';
