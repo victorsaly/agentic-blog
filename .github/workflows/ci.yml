@@ -59,7 +59,10 @@ jobs:
       - name: Serve and audit
         run: |
           npx --yes serve@14 site/dist -l 4321 -s &
-          sleep 2
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://localhost:4321/ && break
+            sleep 1
+          done
           node scripts/ci-annotate.mjs axe node scripts/axe.mjs http://localhost:4321
 
   format-patch:
