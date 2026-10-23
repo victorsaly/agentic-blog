@@ -9,9 +9,12 @@ export const whySchema = z
   .min(20, 'a why needs at least a sentence')
   .max(600, 'a why is two or three sentences, not an essay');
 
+/** YAML turns a bare 2026-10-23 into a Date; a quoted one stays a string. Both are a date. */
+const isoDate = z.union([z.string().date(), z.date()]);
+
 export const originFrontMatter = z.object({
   why: whySchema,
-  recorded: z.string().date(),
+  recorded: isoDate,
   language: z.string().min(2).max(5),
   audio: z.string().optional(), // R2 object key; absent when the recording is not kept
   speakers: z.array(z.string().min(1)).min(1),
@@ -21,7 +24,7 @@ export const originFrontMatter = z.object({
 export const structureFrontMatter = z.object({
   why: whySchema,
   title: z.string().min(1).max(120),
-  date: z.string().date(),
+  date: isoDate,
   language: z.string().min(2).max(5),
   themes: z.array(z.string().min(1)).min(1),
   message: z.string().min(1).max(400),

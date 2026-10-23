@@ -21,6 +21,11 @@ describe('checkFrontMatter', () => {
     expect(problems[0]?.message).toContain('sentence');
   });
 
+  it('accepts a bare YAML date, which the parser turns into a Date', () => {
+    const source = ['---', why, 'recorded: 2026-10-23', 'language: en', 'speakers: [victor]', 'edited: false', '---', 'Body'].join('\n');
+    expect(checkFrontMatter('thoughts/x/origin/transcript.md', source)).toEqual([]);
+  });
+
   it('rejects an origin that claims to have been edited', () => {
     const source = [
       '---',

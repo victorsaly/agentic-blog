@@ -1,6 +1,12 @@
+---
+why: >
+  Several agents, one job each, one profile they all read, and a human at the start and at the end. This file
+  says how to run one and what each is for.
+---
+
 # Agents
 
-Why: several agents, one job each, one profile they all read, and a human at the start and at the end.
+Several agents, one job each, one profile they all read, and a human at the start and at the end.
 Each lives in its own folder with a `PROMPT.md` that starts with its why and an `index.ts` that only
 gathers inputs and names outputs. The prompt is the behaviour; the code is plumbing.
 
