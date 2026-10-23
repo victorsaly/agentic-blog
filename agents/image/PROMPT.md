@@ -24,6 +24,11 @@ the order given in pictures_wanted. Each picture is its own scene from that sect
 should read as one story drawn by the same hand: the same person, the same desk, the same pen where the
 text allows. Do not repeat a scene.
 
+The drawing model drops whatever it cannot fit, so keep every scene small: one person, or two at most,
+one action, two or three objects. If the point is a contrast (one person apart from a crowd), draw it with
+the fewest figures that still show it, and name the contrast in the subject sentence. Laptops, phones and
+cups are plain, with no logo or brand; name that in the subject ("a plain laptop with no logo").
+
 For each picture give:
 
 - section: the entry from pictures_wanted, copied exactly ("cover" for the first).
