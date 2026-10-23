@@ -13,7 +13,10 @@
     "run_worker_first": ["/api/*"]
   },
   "routes": [{ "pattern": "blog.victorsaly.com", "custom_domain": true }],
-  "workers_dev": true,
+  // Only the custom domain serves the site. workers.dev and preview URLs sit outside Cloudflare Access,
+  // so leaving them on would show /studio to anyone.
+  "workers_dev": false,
+  "preview_urls": false,
   "r2_buckets": [{ "binding": "AUDIO", "bucket_name": "agentic-blog-audio" }],
   "ai": { "binding": "AI" },
   "vars": { "GITHUB_REPO": "victorsaly/agentic-blog" },
