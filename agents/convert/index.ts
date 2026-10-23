@@ -1,6 +1,12 @@
 // Why: see PROMPT.md. One ask per version, so a weak short version does not drag the long one with it,
 // and a failure leaves the others in place.
-import { askForFile, readIfPresent, readOrThrow, userMessage } from '../_lib/generic.js';
+import {
+  askForFile,
+  readIfPresent,
+  readOrThrow,
+  readOrigin,
+  userMessage,
+} from '../_lib/generic.js';
 import type { AgentContext, AgentRun, OutputFile } from '../_lib/types.js';
 
 interface Target {
@@ -27,7 +33,7 @@ export function targetsFor(ctx: AgentContext): Target[] {
 
 export const run: AgentRun = async (ctx) => {
   const structure = readOrThrow(ctx, 'structure.md');
-  const transcript = readOrThrow(ctx, 'origin/transcript.md');
+  const transcript = readOrigin(ctx);
   const answers = readIfPresent(ctx, 'origin/answers.md');
   const files: OutputFile[] = [];
 

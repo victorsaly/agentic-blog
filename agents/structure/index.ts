@@ -1,9 +1,9 @@
 // Why: see PROMPT.md. Gathers the origin, the answers if any, and the themes list, and asks once.
-import { askForFile, readIfPresent, readOrThrow, userMessage } from '../_lib/generic.js';
+import { askForFile, readIfPresent, readOrigin, userMessage } from '../_lib/generic.js';
 import type { AgentRun } from '../_lib/types.js';
 
 export const run: AgentRun = async (ctx) => {
-  const transcript = readOrThrow(ctx, 'origin/transcript.md');
+  const transcript = readOrigin(ctx);
   const answers = readIfPresent(ctx, 'origin/answers.md');
   const interview = readIfPresent(ctx, 'interview.md');
   const message = userMessage(
