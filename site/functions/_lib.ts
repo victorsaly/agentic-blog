@@ -7,6 +7,8 @@ export interface Env {
   AI: { run: (model: string, inputs: Record<string, unknown>) => Promise<unknown> };
   GITHUB_REPO: string;
   GITHUB_TOKEN?: string;
+  /** Set to "1" in .dev.vars only. wrangler never deploys that file, so production never sees it. */
+  DEV_SKIP_ACCESS?: string;
 }
 
 export type Handler = PagesFunction<Env>;
