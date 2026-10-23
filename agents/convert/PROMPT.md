@@ -5,7 +5,7 @@ why: >
   minute, the long one for the road, the post for one social place, the same thought in another language.
   Each carries the badge and a note on why it was changed that way. None of them pretends to be the origin.
 phase: 2
-reads: [structure.md, origin/transcript.md, origin/answers.md, profile.md, settings.yml]
+reads: [structure.md, origin/*.md, origin/answers.md, profile.md, settings.yml]
 writes: [versions/short.md, versions/long.md, versions/linkedin.md, versions/<lang>.md]
 ---
 
@@ -33,5 +33,5 @@ Per kind:
   not translated word by word. Keep names and the badge text in English.
 
 Reply with one Markdown file and nothing else. Front matter, in this order: why (what you changed and
-why, two or three sentences), kind, language, converted_from (../origin/transcript.md), converted_by
+why, two or three sentences), kind, language, converted_from (the origin file, e.g. ../origin/transcript.md or ../origin/text.md; the runner sets it), converted_by
 (convert), reviewed: false. Then the body.

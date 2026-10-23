@@ -19,16 +19,36 @@ export function readIfPresent(ctx: AgentContext, path: string): string | undefin
  * alike, and a second note as well as the first. answers.md is the blogger replying to the interview, so
  * agents read it separately. Throws when the thought has no origin at all.
  */
+export function originPaths(ctx: AgentContext): string[] {
+  return [...ctx.thought.files.keys()]
+    .filter((path) => /^origin\/[^/]+\.md$/.test(path) && path !== 'origin/answers.md')
+    .sort((a, b) => a.localeCompare(b));
+}
+
 export function readOrigin(ctx: AgentContext): string {
-  const parts = [...ctx.thought.files.entries()]
-    .filter(([path]) => /^origin\/[^/]+\.md$/.test(path) && path !== 'origin/answers.md')
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([path, content]) => `<!-- ${path} -->\n${content.trim()}`);
+  const parts = originPaths(ctx).map(
+    (path) => `<!-- ${path} -->\n${(ctx.thought.files.get(path) ?? '').trim()}`,
+  );
   if (parts.length === 0)
     throw new Error(
       `thoughts/${ctx.thought.slug}/origin/ has no origin file; ${ctx.agent} needs one`,
     );
   return parts.join('\n\n');
+}
+
+/**
+ * Sets one top-level front matter field to a value the code knows, so a fact like which file a version
+ * came from never depends on the model copying it right. Adds the field if the model left it out.
+ */
+export function setFrontMatterField(content: string, field: string, value: string): string {
+  const end = content.indexOf('\n---', 3);
+  if (!content.startsWith('---') || end === -1) return content;
+  const head = content.slice(0, end);
+  const line = new RegExp(`^${field}:.*$`, 'm');
+  const next = line.test(head)
+    ? head.replace(line, `${field}: ${value}`)
+    : `${head}\n${field}: ${value}`;
+  return next + content.slice(end);
 }
 
 /** Builds the user message: named sections, each the content of one file, then the task. */

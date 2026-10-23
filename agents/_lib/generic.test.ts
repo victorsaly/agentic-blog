@@ -1,7 +1,7 @@
 // Why: every converting agent reads the origin through readOrigin; if it missed a text origin or a second
 // note, the agents would convert half a thought without saying so.
 import { describe, expect, it } from 'vitest';
-import { readOrigin } from './generic.js';
+import { readOrigin, setFrontMatterField } from './generic.js';
 import type { AgentContext } from './types.js';
 
 function ctxWith(files: Record<string, string>): AgentContext {
@@ -33,5 +33,25 @@ describe('readOrigin', () => {
 
   it('throws when there is no origin', () => {
     expect(() => readOrigin(ctxWith({ 'origin/answers.md': 'replies' }))).toThrow(/no origin file/);
+  });
+});
+
+describe('setFrontMatterField', () => {
+  const file =
+    '---\nwhy: >\n  because\nconverted_from: ../origin/transcript.md\nreviewed: false\n---\n\nbody with converted_from: x';
+
+  it('replaces the field in the front matter only', () => {
+    const next = setFrontMatterField(file, 'converted_from', '../origin/text.md');
+    expect(next).toContain('converted_from: ../origin/text.md\nreviewed: false');
+    expect(next).toContain('body with converted_from: x');
+  });
+
+  it('adds the field when the model left it out', () => {
+    const next = setFrontMatterField(
+      '---\nwhy: because\n---\n\nbody',
+      'converted_from',
+      '../origin/text.md',
+    );
+    expect(next).toBe('---\nwhy: because\nconverted_from: ../origin/text.md\n---\n\nbody');
   });
 });
