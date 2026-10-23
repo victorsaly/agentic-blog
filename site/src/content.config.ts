@@ -1,7 +1,8 @@
 // Why: the site reads thoughts/ straight from the repo, so a merged pull request is a published post and
 // nothing is copied. Three collections, one per kind of file, each validated against the same rules the
 // why-check uses, so a file that breaks a rule fails the build rather than the page.
-import { defineCollection, z } from 'astro:content';
+import { defineCollection } from 'astro:content';
+import { z } from 'astro/zod';
 import { glob } from 'astro/loaders';
 
 const why = z.string().trim().min(20).max(600);
