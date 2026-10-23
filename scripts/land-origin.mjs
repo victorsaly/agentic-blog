@@ -8,7 +8,9 @@ import { join } from 'node:path';
 
 const event = process.env.EVENT ?? 'new-origin';
 const payload = JSON.parse(process.env.PAYLOAD ?? '{}');
-const { key, transcript, thought, by, recorded } = payload;
+const { key, transcript, thought, recorded } = payload;
+// Local dev has no Cloudflare Access in front, so the studio reports "unknown"; say nothing rather than that.
+const by = typeof payload.by === 'string' && payload.by.includes('@') ? payload.by : null;
 const medium = payload.medium === 'text' ? 'text' : 'voice';
 
 if (typeof transcript !== 'string' || transcript.trim().length === 0) {
