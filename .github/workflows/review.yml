@@ -1,0 +1,38 @@
+# Why: marking a version reviewed is a change to the published site, so it lands like everything else: as a
+# pull request Victor merges. The studio sends a repository_dispatch with the files he ticked; this flips the
+# `reviewed` flag in each and opens one pull request, labelled review.
+name: Mark reviewed
+
+on:
+  repository_dispatch:
+    types: [mark-reviewed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  mark:
+    name: Flip the flags and open a pull request
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - run: npm ci --no-audit --no-fund || npm install --no-audit --no-fund
+      - name: Mark the files reviewed
+        id: mark
+        env:
+          PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+        run: npx tsx scripts/mark-reviewed.ts
+      - name: Open the pull request
+        if: steps.mark.outputs.changed != '0'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: ${{ steps.mark.outputs.branch }}
+          title: ${{ steps.mark.outputs.title }}
+          body: ${{ steps.mark.outputs.body }}
+          labels: review
+          commit-message: ${{ steps.mark.outputs.title }}
+          delete-branch: true

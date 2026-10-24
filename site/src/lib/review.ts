@@ -73,3 +73,45 @@ export function waitingForReview(
     })
     .filter((t) => t.waiting.length > 0);
 }
+
+// ---------------------------------------------------------------------------------------------- marking
+
+/** A file the studio may mark reviewed: a version or the sources of one thought, nothing else. */
+const REVIEWABLE =
+  /^thoughts\/\d{4}-\d{2}-\d{2}-[a-z0-9-]+\/(versions\/[a-z0-9-]+\.md|sources\.md)$/;
+export const MAX_MARKED = 20;
+
+export function isReviewable(path: string): boolean {
+  return REVIEWABLE.test(path) && !path.split('/').includes('..');
+}
+
+export type ReviewRequest = { ok: true; files: string[] } | { ok: false; error: string };
+
+/** What the studio sends to mark files reviewed, checked: known kinds of file only, a few at a time. */
+export function readReviewRequest(body: unknown): ReviewRequest {
+  const files: unknown =
+    typeof body === 'object' && body !== null ? (body as { files?: unknown }).files : undefined;
+  if (!Array.isArray(files) || files.length === 0)
+    return { ok: false, error: 'Pick a file first.' };
+  if (files.length > MAX_MARKED)
+    return { ok: false, error: `Mark at most ${String(MAX_MARKED)} files at once.` };
+  const paths = [...new Set(files.filter((f): f is string => typeof f === 'string'))];
+  const bad = paths.find((f) => !isReviewable(f));
+  if (bad !== undefined || paths.length !== files.length)
+    return {
+      ok: false,
+      error: `Only versions and sources can be marked reviewed${bad ? ` (not ${bad})` : ''}.`,
+    };
+  return { ok: true, files: paths.sort() };
+}
+
+/**
+ * The file with `reviewed: false` turned to `reviewed: true` in its front matter and nothing else changed,
+ * or null when there is nothing to turn (already reviewed, or no such line).
+ */
+export function markReviewed(markdown: string): string | null {
+  const front = /^---\r?\n[\s\S]*?\r?\n---/.exec(markdown);
+  if (!front) return null;
+  const turned = front[0].replace(/^reviewed:[ \t]*false[ \t]*$/m, 'reviewed: true');
+  return turned === front[0] ? null : turned + markdown.slice(front[0].length);
+}
