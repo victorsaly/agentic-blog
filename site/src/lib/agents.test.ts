@@ -8,27 +8,37 @@ const cards = import.meta.glob<AgentCardFacts>('../../../agents/*/card.ts', {
   eager: true,
   import: 'card',
 });
+const prompts = import.meta.glob<string>('../../../agents/*/PROMPT.md', {
+  query: '?raw',
+  eager: true,
+  import: 'default',
+});
+const prompt = (meta: string): string => `---\n${meta}\n---\n\nBody.`;
 
 describe('rosterFrom', () => {
   it('lists name, why, phase, reads and writes, by phase then name', () => {
-    const cards = rosterFrom([
-      {
-        name: 'safety',
-        why: 'Reads for harm. Can hold.',
-        phase: 5,
-        reads: ['versions/*.md'],
-        writes: ['safety.md'],
-      },
-      {
-        name: 'interview',
-        why: 'Asks.',
-        phase: 1,
-        reads: ['origin/*.md'],
-        writes: ['interview.md'],
-      },
-    ]);
-    expect(cards.map((c) => c.name)).toEqual(['interview', 'safety']);
-    expect(cards[1]).toEqual({
+    const roster = rosterFrom(
+      [
+        {
+          name: 'safety',
+          phase: 5,
+          reads: ['versions/*.md'],
+          writes: ['safety.md'],
+        },
+        {
+          name: 'interview',
+          phase: 1,
+          reads: ['origin/*.md'],
+          writes: ['interview.md'],
+        },
+      ],
+      [
+        prompt('name: safety\nwhy: >\n  Reads for harm.\n  Can hold.'),
+        prompt('name: interview\nwhy: Asks.'),
+      ],
+    );
+    expect(roster.map((c) => c.name)).toEqual(['interview', 'safety']);
+    expect(roster[1]).toEqual({
       name: 'safety',
       why: 'Reads for harm. Can hold.',
       phase: 5,
@@ -38,12 +48,12 @@ describe('rosterFrom', () => {
     });
   });
 
-  it('skips a card without a why or its workflow facts', () => {
-    expect(rosterFrom([{ name: 'x', why: '', phase: 2, reads: [], writes: [] }])).toEqual([]);
+  it('skips a card without its workflow facts or matching prompt rationale', () => {
+    expect(rosterFrom([{ name: 'x', phase: 2, reads: [], writes: [] }], [])).toEqual([]);
   });
 
   it('finds all 13 agents from their cards', () => {
-    expect(rosterFrom(Object.values(cards))).toHaveLength(13);
+    expect(rosterFrom(Object.values(cards), Object.values(prompts))).toHaveLength(13);
   });
 });
 

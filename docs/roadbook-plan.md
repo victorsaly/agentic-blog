@@ -37,7 +37,8 @@ green and every item below it holds.
 
 - `npm run roadbook -- check-cards` compares each `PROMPT.md` front matter (`phase`, `reads`, `writes`)
   with its card and prints each disagreement with the fix. CI runs it.
-- `site/src/lib/agents.ts` reads the cards instead of `PROMPT.md` (keep `rosterFrom` and its tests).
+- `site/src/lib/agents.ts` reads workflow facts from cards and the agent's why from `PROMPT.md`
+  (keep `rosterFrom` and its tests).
 - Done: changing a card's phase without its `PROMPT.md` fails CI; /how-it-works still lists 13 agents.
 - Good for: Copilot (well specified, mostly plumbing).
 

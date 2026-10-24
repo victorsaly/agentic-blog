@@ -40,7 +40,12 @@ const agentCards = import.meta.glob<AgentCardFacts>('../../../agents/*/card.ts',
   import: 'card',
   eager: true,
 });
-const roster = rosterFrom(Object.values(agentCards));
+const agentPrompts = import.meta.glob<string>('../../../agents/*/PROMPT.md', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
+const roster = rosterFrom(Object.values(agentCards), Object.values(agentPrompts));
 const byPhase = Object.entries(phases)
   .map(([n, name]) => ({ n: Number(n), name, agents: roster.filter((a) => a.phase === Number(n)) }))
   .filter((p) => p.agents.length > 0);

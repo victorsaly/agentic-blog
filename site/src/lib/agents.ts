@@ -1,5 +1,6 @@
-// Why: /how-it-works lists every agent with its why, what it reads and what it writes. The facts come from
-// each agent's card, so the page and the workflow use the same source.
+// Why: /how-it-works lists every agent with its why, what it reads and what it writes. Workflow facts come
+// from each agent's card; the agent's rationale stays in its prompt.
+import { parse } from 'yaml';
 
 export interface AgentCard {
   name: string;
@@ -13,7 +14,6 @@ export interface AgentCard {
 
 export interface AgentCardFacts {
   name: string;
-  why: string;
   phase: number;
   reads: string[];
   writes: string[];
@@ -30,13 +30,31 @@ export const phases: Record<number, string> = {
 
 const holders = new Set(['safety', 'security']);
 
-/** One card per agent that names itself, has a why and a phase; by phase, then by name. */
-export function rosterFrom(agentFacts: AgentCardFacts[]): AgentCard[] {
+function whysFrom(prompts: string[]): Map<string, string> {
+  const whys = new Map<string, string>();
+  for (const prompt of prompts) {
+    const frontMatter = /^---\r?\n([\s\S]*?)\r?\n---/.exec(prompt)?.[1];
+    if (frontMatter === undefined) continue;
+    const meta: unknown = parse(frontMatter);
+    if (typeof meta !== 'object' || meta === null || Array.isArray(meta)) continue;
+    const record = meta as Record<string, unknown>;
+    if (typeof record['name'] === 'string' && typeof record['why'] === 'string') {
+      whys.set(record['name'], record['why'].trim().replace(/\s+/g, ' '));
+    }
+  }
+  return whys;
+}
+
+/** One entry per card matched to its prompt rationale; by phase, then by name. */
+export function rosterFrom(agentFacts: AgentCardFacts[], prompts: string[]): AgentCard[] {
+  const whys = whysFrom(prompts);
   const roster: AgentCard[] = [];
   for (const facts of agentFacts) {
+    const why = whys.get(facts.name);
     if (
       facts.name.trim() === '' ||
-      facts.why.trim() === '' ||
+      why === undefined ||
+      why === '' ||
       !Number.isInteger(facts.phase) ||
       facts.phase < 1 ||
       facts.reads.length === 0 ||
@@ -46,7 +64,7 @@ export function rosterFrom(agentFacts: AgentCardFacts[]): AgentCard[] {
     }
     roster.push({
       name: facts.name,
-      why: facts.why.trim().replace(/\s+/g, ' '),
+      why,
       phase: facts.phase,
       reads: facts.reads,
       writes: facts.writes,
