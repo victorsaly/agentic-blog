@@ -1,11 +1,24 @@
 ---
-// Why: the origin page is the original, so its switch marks Original and offers the AI version back. It
-// shows the recording when there is one and the words exactly as they arrived, spoken or written, with the
-// file's own why on top so the reader knows what they are looking at.
+// Why: the origin page is the original, so its switch marks Original and offers the AI version back. It is
+// laid out like the post it feeds, on the same frame: the switch, the title at display size, a contents
+// column and a column for this thought on a desk. It shows the recording when there is one and the words
+// exactly as they arrived, spoken or written (a written note keeps its line breaks), with the file's own why
+// on top so the reader knows what they are looking at. It ends with the way back into the tidied versions.
 import { getCollection, render } from 'astro:content';
+import { Image } from 'astro:assets';
 import Page from '../../../layouts/Page.astro';
 import VersionSwitch from '../../../components/VersionSwitch.astro';
-import { formatDate, thoughtSlugOf } from '../../../lib/content';
+import ideaIcon from '../../../assets/icons/idea.png';
+import roadIcon from '../../../assets/icons/road.png';
+import askIcon from '../../../assets/icons/ask.png';
+import {
+  formatDate,
+  leafOf,
+  readingLabel,
+  readingMinutes,
+  thoughtSlugOf,
+} from '../../../lib/content';
+import { settings } from '../../../lib/settings';
 
 export async function getStaticPaths() {
   const thoughts = await getCollection('thoughts', ({ data }) => !data.draft);
@@ -19,8 +32,24 @@ const { thought } = Astro.props;
 const slug = thoughtSlugOf(thought.id);
 const origins = await getCollection('origins', ({ id }) => thoughtSlugOf(id) === slug);
 const rendered = await Promise.all(
-  origins.map(async (origin) => ({ origin, Content: (await render(origin)).Content })),
+  origins.map(async (origin) => {
+    const { Content, headings } = await render(origin);
+    return { origin, Content, headings: headings.filter((h) => h.depth === 1) };
+  }),
 );
+const sections = rendered.flatMap((r) => r.headings);
+const first = origins[0];
+const hasRoad = (await getCollection('versions', ({ id }) => thoughtSlugOf(id) === slug)).some(
+  (v) => leafOf(v.id) === 'long',
+);
+const postHref = `/thoughts/${slug}`;
+const minutes = readingMinutes(origins.map((o) => o.body ?? '').join('\n'));
+const speakers = [...new Set(origins.flatMap((o) => o.data.speakers))];
+const chatOn = settings.publishing.index || import.meta.env.DEV;
+const pad = (n: number): string => String(n).padStart(2, '0');
+const capital = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
+// "Origin 3 — the look, and what it does" is listed as "The look, and what it does" beside its number.
+const noteName = (text: string): string => capital(text.replace(/^origin \d+\s*[—–-]\s*/i, ''));
 ---
 
 <Page
@@ -28,67 +57,399 @@ const rendered = await Promise.all(
   description={`The unedited origin behind “${thought.data.title}”.`}
   lang={thought.data.language}
   type="article"
+  width="wide"
+  reading={`The origin of ${thought.data.title}`}
 >
-  <article data-pagefind-body data-pagefind-filter="kind:origin">
-    <VersionSwitch
-      slug={slug}
-      current="original"
-      medium={origins[0]?.data.medium}
-      recorded={origins[0]?.data.recorded}
-    />
-    <h1>Where “{thought.data.title}” came from</h1>
-    <p class="quiet">
-      This is the origin. Nothing on this page has been edited, and nothing converted it.
-    </p>
+  <article
+    data-pagefind-body
+    data-pagefind-filter="kind:origin"
+    data-reading-body
+    data-post={slug}
+    data-post-title={thought.data.title}
+  >
+    <header class="frame opening">
+      <VersionSwitch
+        slug={slug}
+        current="original"
+        medium={first?.data.medium}
+        recorded={first?.data.recorded}
+      />
+      <p class="kicker">The origin</p>
+      <h1 data-reading-title>Where “{thought.data.title}” came from</h1>
+      <p class="small quiet meta" data-pagefind-ignore>
+        {
+          first && (
+            <span>
+              {first.data.medium === 'text' ? 'Written' : 'Recorded'}{' '}
+              <time datetime={first.data.recorded.toISOString()}>
+                {formatDate(first.data.recorded)}
+              </time>
+            </span>
+          )
+        }
+        {speakers.length > 0 && <span>{speakers.map(capital).join(' and ')}</span>}
+        <span>{readingLabel(minutes)} to read</span>
+        <span>Never edited</span>
+      </p>
+    </header>
 
-    {
-      rendered.map(({ origin, Content }) => (
-        <section class="origin">
-          <p class="small quiet">
-            {origin.data.medium === 'text' ? 'Written' : 'Recorded'}{' '}
-            {formatDate(origin.data.recorded)}, {origin.data.medium === 'text' ? 'by' : 'spoken by'}{' '}
-            {origin.data.speakers.join(' and ')}
-          </p>
-          {origin.data.audio && (
-            // The transcript below is the caption, word for word; a captions track would duplicate it.
-            // eslint-disable-next-line astro/jsx-a11y/media-has-caption
-            <audio controls preload="none" src={`/api/audio/${origin.data.audio}`}>
-              Your browser cannot play this recording.{' '}
-              <a href={`/api/audio/${origin.data.audio}`}>Download it</a> instead.
-            </audio>
-          )}
-          <p class="why">
-            <span class="small quiet">Why this file exists</span>
-            <br />
-            {origin.data.why}
-          </p>
-          <div class="transcript">
-            <Content />
-          </div>
-        </section>
-      ))
-    }
+    <div class="frame layout">
+      {
+        sections.length > 1 && (
+          <nav class="rail contents" aria-labelledby="contents-label" data-pagefind-ignore>
+            <details class="fold" open data-contents>
+              <summary class="control">
+                <span class="fold-name">Contents</span>
+                <span class="quiet">{sections.length} notes</span>
+              </summary>
+              <div class="sticky">
+                <p class="label" id="contents-label">
+                  In this note
+                </p>
+                <ol class="ways">
+                  {sections.map((h, i) => (
+                    <li>
+                      <a href={`#${h.slug}`}>
+                        <span class="n">{pad(i + 1)}</span>
+                        <span>{noteName(h.text)}</span>
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </details>
+          </nav>
+        )
+      }
+
+      <div class="text">
+        {
+          rendered.length === 0 && (
+            <p class="quiet">The origin for this thought is not on the site yet.</p>
+          )
+        }
+        {
+          rendered.map(({ origin, Content }) => (
+            <section class:list={['origin', { written: origin.data.medium === 'text' }]}>
+              <div class="why">
+                <p class="label">Why this file exists</p>
+                <p>{origin.data.why}</p>
+              </div>
+              {origin.data.audio && (
+                // The transcript below is the caption, word for word; a captions track would duplicate it.
+                // eslint-disable-next-line astro/jsx-a11y/media-has-caption
+                <audio controls preload="none" src={`/api/audio/${origin.data.audio}`}>
+                  Your browser cannot play this recording.{' '}
+                  <a href={`/api/audio/${origin.data.audio}`}>Download it</a> instead.
+                </audio>
+              )}
+              <div class="transcript">
+                <Content />
+              </div>
+            </section>
+          ))
+        }
+      </div>
+
+      <aside class="rail thought" aria-label="This thought" data-pagefind-ignore>
+        <div class="sticky">
+          <section>
+            <h2 class="label">Tidied from this</h2>
+            <p class="small">
+              The post keeps the thought and gives it a shape. Read it on one screen or the whole
+              way.
+            </p>
+            <div class="stack">
+              <a class="control" href={`${postHref}#idea`}>
+                <Image src={ideaIcon} alt="" width={20} height={20} />
+                The idea
+              </a>
+              {
+                hasRoad && (
+                  <a class="control" href={`${postHref}#road`}>
+                    <Image src={roadIcon} alt="" width={20} height={20} />
+                    The road
+                  </a>
+                )
+              }
+            </div>
+          </section>
+          {
+            chatOn && (
+              <section>
+                <h2 class="label">Questions?</h2>
+                <button type="button" class="control filled wide-control" data-ask-post>
+                  <Image src={askIcon} alt="" width={20} height={20} />
+                  Ask about this note
+                </button>
+              </section>
+            )
+          }
+        </div>
+      </aside>
+    </div>
+
+    <nav class="frame end" aria-label="Back to the post" data-pagefind-ignore>
+      <a class="back" href={`${postHref}#idea`}>
+        <span class="back-label">Back to the post</span>
+        <span class="back-name">
+          <Image src={ideaIcon} alt="" width={28} height={28} />
+          {thought.data.title}
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 16 16" fill="none">
+            <path d="M2 8h12M9 3l5 5-5 5" stroke="currentColor" stroke-width="2"></path>
+          </svg>
+        </span>
+        <span class="small quiet">The same thought, tidied and structured with AI.</span>
+      </a>
+    </nav>
   </article>
 </Page>
 
 <style>
-  h1 {
+  .opening {
+    padding-top: var(--space-5);
+  }
+  .kicker {
+    margin: var(--space-5) 0 0;
+    font-size: var(--size-label);
+    font-weight: 700;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+  }
+  .opening h1 {
+    margin: var(--space-2) 0 0;
+    max-width: 22ch;
+    font-size: clamp(2.25rem, 1.4rem + 3.2vw, 4rem);
+    line-height: 1.05;
+    letter-spacing: var(--tracking-display);
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-3);
+    margin: var(--space-3) 0 0;
+    padding-bottom: var(--space-5);
+    border-bottom: var(--rule-heavy) solid var(--ink);
+    max-width: none;
+  }
+
+  /* Three columns on a desk, as on the post: contents, the words, this thought. */
+  .layout {
+    display: grid;
+    grid-template-columns: var(--rail) minmax(0, var(--measure)) var(--rail);
+    justify-content: space-between;
+    column-gap: var(--space-5);
+    align-items: start;
+  }
+  .contents {
+    grid-column: 1;
+  }
+  .text {
+    grid-column: 2;
+    padding-top: var(--space-5);
+  }
+  .thought {
+    grid-column: 3;
+  }
+  .rail {
+    grid-row: 1;
+    align-self: stretch;
+  }
+  .sticky {
+    position: sticky;
+    top: 6rem;
+    max-height: calc(100dvh - 7rem);
+    overflow-y: auto;
+    padding-top: var(--space-5);
+  }
+  .fold > summary {
+    display: none;
+  }
+  .ways {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-width: none;
+  }
+  .ways a {
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+    min-height: var(--tap);
+    padding-block: var(--space-1);
+    border-bottom: var(--rule-width) solid var(--rule);
+    font-size: var(--size-small);
+    line-height: 1.3;
+    text-decoration: none;
+  }
+  .ways a:hover {
+    text-decoration: underline;
+  }
+  .n {
+    min-width: 1.5rem;
+    color: var(--quiet);
+    font-variant-numeric: tabular-nums;
+  }
+  .thought section + section {
     margin-top: var(--space-5);
   }
-  .origin {
-    margin-top: var(--space-5);
+  .thought p.small {
+    margin: var(--space-3) 0 0;
   }
-  .why {
-    border-left: var(--rule-width) solid var(--rule);
-    padding-left: var(--space-3);
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+  }
+  .stack .control {
+    justify-content: flex-start;
+  }
+  .wide-control {
+    width: 100%;
+    margin-top: var(--space-3);
+  }
+
+  /* The why on top: a label on a strong rule, then the file's own sentence. */
+  .origin + .origin {
+    margin-top: var(--space-6);
+  }
+  .why p:not(.label) {
+    margin: var(--space-3) 0 0;
+    color: var(--quiet);
   }
   audio {
     display: block;
     width: 100%;
-    margin: var(--space-3) 0;
+    margin: var(--space-4) 0 0;
   }
-  .transcript :global(h1) {
-    font-size: var(--size-h2);
+
+  /* The words: each voice note opens on a strong rule, like the sections of the road. */
+  .transcript {
     margin-top: var(--space-5);
   }
+  .transcript :global(p) {
+    max-width: none;
+  }
+  .written .transcript :global(p) {
+    white-space: pre-line;
+  }
+  .transcript :global(h1) {
+    margin: var(--space-6) 0 var(--space-4);
+    padding-top: var(--space-3);
+    border-top: var(--rule-strong) solid var(--ink);
+    font-size: 1.875rem;
+    scroll-margin-top: 6rem;
+  }
+  .transcript :global(h1:first-child) {
+    margin-top: 0;
+  }
+
+  /* The way back: one ruled row, like the way on at the end of each depth of the post. */
+  .end {
+    margin-top: var(--space-6);
+  }
+  .back {
+    display: grid;
+    gap: var(--space-1);
+    padding-block: var(--space-4);
+    border-top: var(--rule-heavy) solid var(--ink);
+    border-bottom: var(--rule-width) solid var(--ink);
+    text-decoration: none;
+  }
+  .back-label {
+    font-size: var(--size-label);
+    font-weight: 700;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--quiet);
+  }
+  .back-name {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: var(--leading-tight);
+  }
+  .back-name :global(img) {
+    flex: none;
+    width: 28px;
+    height: 28px;
+    filter: var(--drawing-filter);
+  }
+  .back-name svg {
+    flex: none;
+  }
+  .back:hover .back-name {
+    text-decoration: underline;
+    text-decoration-thickness: 0.08em;
+  }
+
+  /* Narrower than a desk: one column, the contents above the words, this thought after them. */
+  @media (max-width: 64rem) {
+    .layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .contents,
+    .text,
+    .thought {
+      grid-column: 1;
+      grid-row: auto;
+    }
+    .sticky {
+      position: static;
+      max-height: none;
+      overflow: visible;
+    }
+    .thought .sticky {
+      padding-top: var(--space-6);
+    }
+    /* The contents fold into one control above the words, as on the post. */
+    .contents {
+      margin-top: var(--space-4);
+    }
+    .contents .sticky {
+      padding-top: var(--space-2);
+    }
+    .contents .label {
+      display: none;
+    }
+    .fold > summary {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      list-style: none;
+      border-width: 2px;
+    }
+    .fold > summary::-webkit-details-marker {
+      display: none;
+    }
+    .fold-name {
+      font-size: var(--size-label);
+      font-weight: 700;
+      letter-spacing: var(--tracking-label);
+      text-transform: uppercase;
+    }
+    .fold[open] > summary,
+    .fold[open] > summary .quiet {
+      background: var(--ink);
+      color: var(--paper);
+    }
+  }
 </style>
+
+<script>
+  // Why: "Ask about this note" opens the same chat as the header's Ask, scoped to this thought. On a phone
+  // the contents start folded, and fold again once you pick a note.
+  document.querySelector('[data-ask-post]')?.addEventListener('click', () => {
+    dispatchEvent(new CustomEvent('ask:open'));
+  });
+  const narrow = matchMedia('(max-width: 64rem)');
+  const fold = document.querySelector<HTMLDetailsElement>('[data-contents]');
+  if (fold && narrow.matches) fold.open = false;
+  fold?.addEventListener('click', (event) => {
+    if (narrow.matches && event.target instanceof HTMLElement && event.target.closest('a'))
+      fold.open = false;
+  });
+</script>
