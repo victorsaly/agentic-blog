@@ -1,0 +1,65 @@
+---
+// Why: the header and footer offer Themes as a way to read, so there is one page that lists them all:
+// each theme with how many thoughts carry it and their titles, ruled like the rest of the site.
+import { getCollection } from 'astro:content';
+import Page from '../../layouts/Page.astro';
+import { thoughtSlugOf } from '../../lib/content';
+import { themeCounts, themeLabel } from '../../lib/themes';
+
+const all = (await getCollection('thoughts', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime(),
+);
+const themes = themeCounts(all.map((t) => t.data.themes));
+---
+
+<Page title="Themes" description="Every theme the thoughts carry, and the thoughts under each.">
+  <h1>Themes</h1>
+  {themes.length === 0 && <p class="quiet">No thoughts published yet, so no themes either.</p>}
+  {
+    themes.map(([theme, count]) => (
+      <section>
+        <h2 class="label">
+          <a href={`/themes/${theme}`}>{themeLabel(theme)}</a> <span class="quiet">{count}</span>
+        </h2>
+        <ul>
+          {all
+            .filter((t) => t.data.themes.includes(theme))
+            .map((t) => (
+              <li>
+                <a href={`/thoughts/${thoughtSlugOf(t.id)}`}>{t.data.title}</a>
+              </li>
+            ))}
+        </ul>
+      </section>
+    ))
+  }
+</Page>
+
+<style>
+  section {
+    margin-top: var(--space-5);
+  }
+  .label a {
+    text-decoration: none;
+  }
+  .label a:hover {
+    text-decoration: underline;
+  }
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  li {
+    border-bottom: var(--rule-width) solid var(--ink);
+  }
+  li a {
+    display: flex;
+    align-items: center;
+    min-height: 3rem;
+    text-decoration: none;
+  }
+  li a:hover {
+    text-decoration: underline;
+  }
+</style>

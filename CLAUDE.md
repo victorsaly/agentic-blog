@@ -7,7 +7,7 @@
 
 A blog for blog.victorsaly.com where every post starts as a raw voice note (the **origin**) and every
 published form (short, long, LinkedIn, another language, voice, image) is a **conversion** that links back
-to it. The badge says "Converted with AI, not made by AI". Agents do the converting; a human decides.
+to it. The tagline is "Talked out loud, tidied by AI." Agents do the converting; a human decides.
 
 The full idea is the first post: `thoughts/2026-10-23-converted-with-ai/`.
 
@@ -20,7 +20,8 @@ The full idea is the first post: `thoughts/2026-10-23-converted-with-ai/`.
 4. **Private by default.** `settings.yml → index: false` keeps robots out until Victor flips it.
 5. **Accessibility is the floor.** WCAG 2.2 AA; axe runs in CI; keyboard reaches everything; one font switch.
 6. **Monochrome.** Black on white (and white on black). One colour, marigold: on a post it marks the message,
-   once; on a list page it marks each post's title. Drawings are linocut prints, inverted in dark mode.
+   once; on a list page it marks each post's title; in search it marks the match. Drawings are linocut
+   prints, inverted in dark mode.
 
 ## Stack
 
@@ -60,7 +61,9 @@ npm run agent -- <name> <thought-slug>   # run one agent locally
 - Tokens live in `site/src/styles/tokens.css`. No hex values anywhere else.
 - Type: Atkinson Hyperlegible by default; the switch goes to Lexend. Body 19px, line height 1.6, about 70 characters a line (the `--measure` token).
 - Three depths on every post: **message** (2–3 lines, highlighted), **idea** (one screen), **road** (everything).
-- No decoration. No shadows, no gradients, no cards. Structure is shown by spacing and rules.
+- No decoration. No shadows, no gradients, no cards. Structure is shown by spacing and ink rules in three
+  weights: heavy (8px) opens a big moment, strong (3px) sits under a label or above a section, a hairline
+  (1px) separates rows. Controls are one bordered box with an icon and a word, filled black when on.
 - Motion only when the reader asked for it (opening, expanding). Respect `prefers-reduced-motion`.
 - Before any UI work: run Impeccable and Emil Kowalski's `emil-design-eng`; run `/impeccable critique` before merge.
 
