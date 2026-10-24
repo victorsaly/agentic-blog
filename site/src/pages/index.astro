@@ -7,7 +7,7 @@ import { getCollection } from 'astro:content';
 import { Image } from 'astro:assets';
 import Page from '../layouts/Page.astro';
 import { settings } from '../lib/settings';
-import { coversBySlug } from '../lib/covers';
+import { coversBySlug, firstSectionPrint } from '../lib/covers';
 import { formatDate, leafOf, readingLabel, readingMinutes, thoughtSlugOf } from '../lib/content';
 import { picturesFrom } from '../lib/pictures';
 import { themeCounts, themeLabel } from '../lib/themes';
@@ -39,7 +39,12 @@ const leadSources = (await getCollection('sources', ({ id }) => thoughtSlugOf(id
 const leadPictures = (
   await getCollection('pictures', ({ id }) => thoughtSlugOf(id) === leadSlug)
 )[0];
-const leadCover = covers.get(leadSlug);
+// The masthead already shows the newest cover, so the lead never shows the same print twice.
+const ownCover = covers.get(leadSlug);
+const leadCover =
+  ownCover && ownCover.image === portrait?.image
+    ? ((await firstSectionPrint(leadSlug)) ?? ownCover)
+    : ownCover;
 const drawingCount = picturesFrom(leadPictures?.data).length;
 const leadMinutes = readingMinutes(leadLong?.body ?? leadShort?.body ?? lead?.body ?? '');
 const ways = [
