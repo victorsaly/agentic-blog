@@ -4,7 +4,8 @@
 // panel is open at a time.
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-const NARROW = '(max-width: 64rem)';
+/** Narrower than this the panel covers the screen instead of docking beside the page. */
+export const NARROW = '(max-width: 64rem)';
 
 export interface Dock {
   dialog: React.RefObject<HTMLDialogElement | null>;

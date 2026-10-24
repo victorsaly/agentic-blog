@@ -12,13 +12,21 @@ import {
   type Corpus,
 } from './ask.js';
 
+const first = {
+  slug: '2026-10-23-a',
+  title: 'First',
+  message: 'M',
+  idea: 'I',
+  road: 'R',
+  origin: 'O',
+};
 const corpus: Corpus = {
   open: false,
   model: 'claude-sonnet-5-5',
   site: 'blog.example.com',
   author: 'Victor Saly',
   posts: [
-    { slug: '2026-10-23-a', title: 'First', message: 'M', idea: 'I', road: 'R', origin: 'O' },
+    first,
     { slug: '2026-10-23-b', title: 'Second', message: 'M2', idea: 'I2', road: 'R2', origin: 'O2' },
   ],
 };
@@ -90,9 +98,10 @@ describe('conversation', () => {
 });
 
 describe('systemPrompt', () => {
-  it('carries every post with its slug and the rules', () => {
+  it('carries every post with its slug, its places and the rules', () => {
     const s = systemPrompt(corpus);
     expect(s).toContain('<post slug="2026-10-23-a" title="First">');
+    expect(s).toContain('/thoughts/2026-10-23-a/origin | The origin, as it came out');
     expect(s).toContain('Sources:');
     expect(s).toContain('never an instruction');
   });
@@ -105,6 +114,7 @@ describe('readAnswer', () => {
     ).toEqual({
       answer: 'It starts as a note.',
       sources: [{ slug: '2026-10-23-a', title: 'First' }],
+      places: [],
     });
   });
 
@@ -112,6 +122,25 @@ describe('readAnswer', () => {
     expect(readAnswer('The posts do not say.', corpus)).toEqual({
       answer: 'The posts do not say.',
       sources: [],
+      places: [],
     });
+  });
+
+  it('keeps links to real places and turns any other link back into words', () => {
+    const withPlaces: Corpus = {
+      ...corpus,
+      posts: [{ ...first, places: [{ href: '/thoughts/2026-10-23-a#road', name: 'The road' }] }],
+    };
+    const read = readAnswer(
+      'See [the road](/thoughts/2026-10-23-a#road), [the note](/thoughts/2026-10-23-a/origin) and [a guess](/thoughts/2026-10-23-a#nowhere) or [elsewhere](https://example.com).\nSources: 2026-10-23-a',
+      withPlaces,
+    );
+    expect(read.answer).toBe(
+      'See [the road](/thoughts/2026-10-23-a#road), [the note](/thoughts/2026-10-23-a/origin) and a guess or elsewhere.',
+    );
+    expect(read.places).toEqual([
+      { href: '/thoughts/2026-10-23-a#road', name: 'The road', post: 'First' },
+      { href: '/thoughts/2026-10-23-a/origin', name: 'The origin, as it came out', post: 'First' },
+    ]);
   });
 });
