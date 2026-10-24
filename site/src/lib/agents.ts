@@ -55,32 +55,26 @@ function whysFrom(prompts: string[]): Map<string, string> {
   return whys;
 }
 
-/** One entry per card matched to its prompt rationale; by phase, then by name. */
+/** One entry per card, with the why from its prompt; by phase, then by name. A card without a why or a
+ * phase stops the build with its name, so an agent never drops off the page without anyone noticing. An
+ * agent that reads or writes nothing is still listed: that is a fact about it, not a fault. */
 export function rosterFrom(agentFacts: AgentCardFacts[], prompts: string[]): AgentCard[] {
   const whys = whysFrom(prompts);
-  const roster: AgentCard[] = [];
-  for (const facts of agentFacts) {
+  const roster = agentFacts.map((facts): AgentCard => {
     const why = whys.get(facts.name);
-    if (
-      facts.name.trim() === '' ||
-      why === undefined ||
-      why === '' ||
-      !Number.isInteger(facts.phase) ||
-      facts.phase < 1 ||
-      facts.reads.length === 0 ||
-      facts.writes.length === 0
-    ) {
-      continue;
-    }
-    roster.push({
+    if (why === undefined || why === '')
+      throw new Error(`agents/${facts.name}: PROMPT.md has no why. Add one to its front matter.`);
+    if (!Number.isInteger(facts.phase) || facts.phase < 1)
+      throw new Error(`agents/${facts.name}: card.ts needs a phase of 1 or more.`);
+    return {
       name: facts.name,
       why,
       phase: facts.phase,
       reads: facts.reads,
       writes: facts.writes,
       canHold: holders.has(facts.name),
-    });
-  }
+    };
+  });
   return roster.sort((a, b) => a.phase - b.phase || a.name.localeCompare(b.name));
 }
 

@@ -48,8 +48,19 @@ describe('rosterFrom', () => {
     });
   });
 
-  it('skips a card without its workflow facts or matching prompt rationale', () => {
-    expect(rosterFrom([{ name: 'x', phase: 2, reads: [], writes: [] }], [])).toEqual([]);
+  it('stops with the agent name when its prompt has no why, rather than dropping it', () => {
+    expect(() => rosterFrom([{ name: 'x', phase: 2, reads: [], writes: [] }], [])).toThrow(
+      'agents/x: PROMPT.md has no why',
+    );
+  });
+
+  it('still lists an agent that reads or writes nothing', () => {
+    expect(
+      rosterFrom(
+        [{ name: 'x', phase: 2, reads: [], writes: [] }],
+        [prompt('name: x\nwhy: Waits.')],
+      ),
+    ).toEqual([{ name: 'x', why: 'Waits.', phase: 2, reads: [], writes: [], canHold: false }]);
   });
 
   it('finds all 13 agents from their cards', () => {

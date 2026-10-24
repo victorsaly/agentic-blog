@@ -13,11 +13,11 @@
     "dev:fresh": "rm -f .astro/data-store.json node_modules/.astro/data-store.json .astro/content-assets.mjs && astro dev"
   },
   "dependencies": {
-    "@roadbook/core": "*",
     "@anthropic-ai/sdk": "^0.39.0",
     "@astrojs/markdown-satteri": "^0.4.5",
     "@astrojs/react": "^7.1.1",
     "@astrojs/sitemap": "^3.7.4",
+    "@roadbook/core": "*",
     "astro": "^7.4.2",
     "mermaid": "11.17.2",
     "react": "^19.0.0",
