@@ -89,11 +89,11 @@ const unnumbered = roadHeadings
   })
   .join('');
 
-// The order follows the blog's thesis: the thought, where it came from, the whole road.
+// Deeper left to right: the idea on one screen, the whole road, then the raw note it all came from.
 const tabs: Tab[] = [
   { id: 'idea', name: 'The idea', hint: 'one screen', icon: ideaIcon },
-  { id: 'origin', name: 'The origin', hint: 'the note it started from', icon: originIcon },
   ...(road ? [{ id: 'road', name: 'The road', hint: 'the whole piece', icon: roadIcon }] : []),
+  { id: 'origin', name: 'The origin', hint: 'the note it started from', icon: originIcon },
 ];
 const minutes = readingMinutes(long?.body ?? short?.body ?? thought.body ?? '');
 const description = metaDescription(thought.data.message);
@@ -262,7 +262,10 @@ const pad = (n: number): string => String(n).padStart(2, '0');
                 </p>
                 <blockquote>{excerpt(firstOrigin.body ?? '', 60)}</blockquote>
                 <p>
-                  <a href={originHref}>Read the whole original</a>
+                  <a class="control filled" href={originHref}>
+                    <Image src={originIcon} alt="" width={20} height={20} />
+                    Read the whole original
+                  </a>
                 </p>
               </>
             ) : (
@@ -371,13 +374,16 @@ const pad = (n: number): string => String(n).padStart(2, '0');
       <h2 class="visually-hidden" id="end-label">After this thought</h2>
       <div class="after">
         <p>
-          Open <a href={originHref}>the original</a> to see the note this came from{
+          {
             road ? (
               <>
-                , or walk <a href="#road">the road</a> for the whole piece
+                Walk <a href="#road">the road</a> for the whole piece, or open{' '}
               </>
-            ) : null
-          }.
+            ) : (
+              'Open '
+            )
+          }
+          <a href={originHref}>the original</a> to see the note it all came from.
         </p>
         <div class="row">
           <button type="button" class="control" data-copy={url}>Copy the link</button>

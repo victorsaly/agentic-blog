@@ -47,11 +47,12 @@ const leadCover =
     : ownCover;
 const drawingCount = picturesFrom(leadPictures?.data).length;
 const leadMinutes = readingMinutes(leadLong?.body ?? leadShort?.body ?? lead?.body ?? '');
+// Each way in opens the post on that tab, in the post's own order: the idea, the road, the origin.
 const ways = [
-  { name: 'Idea', icon: ideaIcon },
-  { name: 'Origin', icon: originIcon },
-  ...(leadLong ? [{ name: 'Road', icon: roadIcon }] : []),
-  ...(leadSources?.data.reviewed ? [{ name: 'Sources', icon: sourcesIcon }] : []),
+  { id: 'idea', name: 'Idea', icon: ideaIcon },
+  ...(leadLong ? [{ id: 'road', name: 'Road', icon: roadIcon }] : []),
+  { id: 'origin', name: 'Origin', icon: originIcon },
+  ...(leadSources?.data.reviewed ? [{ id: 'sources', name: 'Sources', icon: sourcesIcon }] : []),
 ];
 const pad = (n: number): string => String(n).padStart(2, '0');
 const short = (date: Date): string =>
@@ -147,19 +148,23 @@ const short = (date: Date): string =>
                   </a>
                 </h3>
                 <p class="summary">{lead.data.message}</p>
-                <p class="ways small">
-                  {ways.map((w) => (
-                    <span>
-                      <Image src={w.icon} alt="" width={22} height={22} />
-                      {w.name}
-                    </span>
-                  ))}
+                <nav class="ways" aria-label={`Ways into “${lead.data.title}”`}>
+                  <ul>
+                    {ways.map((w) => (
+                      <li>
+                        <a class="control" href={`/thoughts/${leadSlug}#${w.id}`}>
+                          <Image src={w.icon} alt="" width={22} height={22} />
+                          {w.name}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
                   {drawingCount > 0 && (
-                    <span class="quiet">
+                    <span class="small quiet">
                       {drawingCount === 1 ? 'one drawing' : `${String(drawingCount)} drawings`}
                     </span>
                   )}
-                </p>
+                </nav>
               </div>
             </article>
           </section>
@@ -430,24 +435,25 @@ const short = (date: Date): string =>
     line-height: 1.55;
   }
   .ways {
-    max-width: none;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--space-1) var(--space-4);
+    gap: var(--space-2) var(--space-4);
     margin: var(--space-4) 0 0;
     padding-top: var(--space-3);
     border-top: var(--rule-width) solid var(--ink);
   }
-  .ways span {
-    display: inline-flex;
-    align-items: center;
+  .ways ul {
+    display: flex;
+    flex-wrap: wrap;
     gap: var(--space-2);
+    list-style: none;
+    margin: 0;
+    padding: 0;
   }
   .ways :global(img) {
     width: 22px;
     height: 22px;
-    filter: var(--drawing-filter);
   }
 
   .index {

@@ -1,7 +1,8 @@
 ---
-// Why: a post has up to four ways in, and the reader picks one at a time: the idea, where it came from,
-// the whole road, and its sources. Tabs keep that choice in one row, each with a linocut icon so the row
-// reads at a glance, in the order of the blog's thesis: the thought, its raw source, then the conversion.
+// Why: a post has up to three ways in, and the reader picks one at a time: the idea, the whole road, and
+// the origin it came from. Tabs keep that choice in one row, each with a linocut icon so the row reads at a
+// glance, going deeper left to right: one screen, everything, then the raw note under it all. Each panel
+// ends with a link on to the next one, so finishing one depth leads into the next without going back up.
 // Without script every panel shows in order with its own heading, so nothing is lost; with script it is
 // the standard tabs pattern (arrow keys, Home, End), and a link to a heading inside a panel opens it. The
 // row is drawn as ruled cells, the chosen one filled black, and it tells the page which way is open.
@@ -45,12 +46,28 @@ const { tabs, label } = Astro.props;
     }
   </div>
   {
-    tabs.map((tab) => (
-      <section class="panel" id={tab.id} role="tabpanel" aria-labelledby={`tab-${tab.id}`}>
-        <h2 class="panel-name">{tab.name}</h2>
-        <slot name={tab.id} />
-      </section>
-    ))
+    tabs.map((tab, i) => {
+      const next = tabs[i + 1];
+      return (
+        <section class="panel" id={tab.id} role="tabpanel" aria-labelledby={`tab-${tab.id}`}>
+          <h2 class="panel-name">{tab.name}</h2>
+          <slot name={tab.id} />
+          {next && (
+            <a class="next" href={`#${next.id}`} data-next={next.id}>
+              <span class="next-label">Next</span>
+              <span class="next-name">
+                <Image class="icon" src={next.icon} alt="" width={28} height={28} />
+                {next.name}
+                <svg aria-hidden="true" width="20" height="20" viewBox="0 0 16 16" fill="none">
+                  <path d="M2 8h12M9 3l5 5-5 5" stroke="currentColor" stroke-width="2" />
+                </svg>
+              </span>
+              <span class="next-hint">{next.hint}</span>
+            </a>
+          )}
+        </section>
+      );
+    })
   }
 </div>
 
@@ -128,6 +145,53 @@ const { tabs, label } = Astro.props;
   .panel-name {
     margin-top: var(--space-5);
   }
+  /* The way on: one ruled row closing the panel, the next depth's icon and name, an arrow. */
+  .next {
+    display: grid;
+    gap: var(--space-1);
+    margin-top: var(--space-6);
+    padding-block: var(--space-3) var(--space-4);
+    border-top: var(--rule-strong) solid var(--ink);
+    border-bottom: var(--rule-width) solid var(--ink);
+    text-decoration: none;
+  }
+  .next-label {
+    font-size: var(--size-label);
+    font-weight: 700;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--quiet);
+  }
+  .next-name {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: var(--leading-tight);
+  }
+  .next-name svg {
+    flex: none;
+    transition: translate var(--duration-press) var(--ease-out);
+  }
+  .next:hover .next-name {
+    text-decoration: underline;
+    text-decoration-thickness: 0.08em;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .next:hover .next-name svg {
+      translate: 4px 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .next-name svg {
+      transition: none;
+    }
+  }
+  .next-hint {
+    color: var(--quiet);
+    font-size: var(--size-small);
+  }
   /* Once the tabs work, the row names each panel, so the panel's own heading is for screen readers only. */
   .post-tabs.ready .panel-name {
     position: absolute;
@@ -187,17 +251,37 @@ const { tabs, label } = Astro.props;
       );
     };
 
+    // A panel's own start is the row of tabs above it, so the reader sees which way is now open.
+    const reveal = (target: HTMLElement): void => {
+      (panels.includes(target) ? list : target).scrollIntoView();
+    };
+
     // A link to a heading inside a panel (search results, the contents list) opens that panel first.
     const openForHash = (): void => {
       const id = decodeURIComponent(location.hash.slice(1));
       if (!id) return;
       const target = document.getElementById(id);
       const index = panels.findIndex((p) => p && target && (p === target || p.contains(target)));
-      if (index >= 0) {
+      if (index >= 0 && target) {
         select(index, false);
-        target?.scrollIntoView();
+        reveal(target);
       }
     };
+
+    // The way on at the end of a panel opens the next one at its top, without a jump to the panel's edge.
+    for (const link of root.querySelectorAll<HTMLAnchorElement>('[data-next]')) {
+      link.addEventListener('click', (event) => {
+        if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)
+          return;
+        const index = panels.findIndex((p) => p?.id === link.dataset['next']);
+        if (index < 0) return;
+        event.preventDefault();
+        select(index, false);
+        history.pushState(null, '', `#${link.dataset['next'] ?? ''}`);
+        list.scrollIntoView();
+        tabs[index]?.focus({ preventScroll: true });
+      });
+    }
 
     tabs.forEach((tab, i) => {
       tab.addEventListener('click', () => {
