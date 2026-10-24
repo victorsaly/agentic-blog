@@ -28,8 +28,11 @@ const title = by
       stroke-width="1.25"
       stroke-dasharray="1.5 3.2"></circle>
   </svg>
-  <span>{settings.publishing.badge_text}</span>
-  <span class="visually-hidden">. Read the origin.</span>
+  <span
+    ><span class="text">{settings.publishing.badge_text}</span> · <span class="to"
+      >see the origin</span
+    ></span
+  >
 </a>
 
 <style>
@@ -42,9 +45,14 @@ const title = by
     min-height: var(--tap);
     color: var(--quiet);
   }
-  .badge:hover,
-  .badge:focus-visible {
+  /* The promise is the link: "see the origin" is always underlined, so touch readers find it too. */
+  .badge .to {
     color: var(--ink);
     text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+  .badge:hover .text,
+  .badge:focus-visible .text {
+    color: var(--ink);
   }
 </style>

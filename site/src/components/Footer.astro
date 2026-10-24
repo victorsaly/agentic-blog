@@ -5,14 +5,16 @@ import { settings } from '../lib/settings';
 
 <footer>
   <p class="small quiet">
-    {settings.site.tagline}. Every post starts as a voice note and links back to it. The engine is
-    open:
+    {settings.site.tagline}. Every post starts as a raw note, spoken or written, and links back to
+    it. The engine is open:{' '}
     <a href="https://github.com/victorsaly/agentic-blog">agentic-blog on GitHub</a>.
   </p>
 </footer>
 
 <style>
   footer {
+    width: 100%;
+    box-sizing: border-box;
     max-width: calc(var(--measure) + 2 * var(--gutter));
     margin: 0 auto;
     padding: var(--space-4) var(--gutter) var(--space-5);

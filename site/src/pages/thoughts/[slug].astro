@@ -79,6 +79,8 @@ const description = excerpt(thought.data.message, 40);
       <span>{readingLabel(minutes)} to walk the whole road</span>
     </p>
 
+    <p class="message"><mark>{thought.data.message}</mark></p>
+
     {
       cover && coverImage && (
         <figure class="cover">
@@ -95,8 +97,6 @@ const description = excerpt(thought.data.message, 40);
       )
     }
 
-    <p class="message"><mark>{thought.data.message}</mark></p>
-
     <Depth name="The idea" hint="one screen" open={true} id="idea">
       {idea ? <idea.Content /> : <Structure />}
     </Depth>
@@ -104,7 +104,8 @@ const description = excerpt(thought.data.message, 40);
     {
       road && (
         <Depth name="The road" hint="the whole piece" id="road">
-          {road.headings.filter((h) => h.depth === 2).length > 1 && (
+          {road.headings.filter((h) => h.depth === 2 && !/^what changed/i.test(h.text)).length >
+            1 && (
             <nav class="contents small" aria-label="In this road" data-pagefind-ignore>
               <p class="quiet">In this road</p>
               <ol>
