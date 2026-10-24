@@ -5,7 +5,7 @@ import type { Picture } from './workers-ai.js';
 import { toBlackOnWhite } from './workers-ai.js';
 
 /** Overridable with OPENAI_IMAGE_MODEL when OpenAI names a newer image model. */
-export const OPENAI_IMAGE_MODEL = process.env['OPENAI_IMAGE_MODEL'] ?? 'gpt-image-1';
+export const OPENAI_IMAGE_MODEL = process.env['OPENAI_IMAGE_MODEL'] ?? 'gpt-image-2';
 
 export function openAiAvailable(): boolean {
   return Boolean(process.env['OPENAI_API_KEY']);

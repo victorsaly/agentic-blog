@@ -18,6 +18,7 @@ on:
             structure,
             convert,
             image,
+            diagram,
             citations,
             drilldown,
             profile,

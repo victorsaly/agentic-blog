@@ -9,6 +9,7 @@ export const agentNames = [
   'structure',
   'convert',
   'image',
+  'diagram',
   'citations',
   'drilldown',
   'feedback',
