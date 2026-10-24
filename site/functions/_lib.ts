@@ -7,6 +7,11 @@ export interface Env {
   AI: { run: (model: string, inputs: Record<string, unknown>) => Promise<unknown> };
   GITHUB_REPO: string;
   GITHUB_TOKEN?: string;
+  /** The chat's key; a secret on the Worker, with a spend limit set on the key in the Anthropic console. */
+  ANTHROPIC_API_KEY?: string;
+  /** Cloudflare's in-memory rate limiter for the chat: a burst limit per visitor, nothing stored. */
+  CHAT_LIMIT?: { limit: (options: { key: string }) => Promise<{ success: boolean }> };
+  ASSETS: { fetch: (input: URL | Request | string) => Promise<Response> };
   /** Set to "1" in .dev.vars only. wrangler never deploys that file, so production never sees it. */
   DEV_SKIP_ACCESS?: string;
 }

@@ -1,13 +1,26 @@
 ---
-// Why: the header is the site name, search, and two switches a reader may need before reading anything:
-// the font for a dyslexic reader and the theme for a tired one. The graph will take the front door later.
+// Why: the header is the site name, the two ways to find something (search the posts, ask about them), and
+// two switches a reader may need before reading anything: the font for a dyslexic reader and the theme for a
+// tired one. Search and Ask carry linocut icons with their words, so they read at a glance and to a screen
+// reader alike. The graph will take the front door later.
+import { Image } from 'astro:assets';
 import { settings } from '../lib/settings';
+import { AskPanel } from '../islands/AskPanel';
+import searchIcon from '../assets/icons/search.png';
+import askIcon from '../assets/icons/ask.png';
+
+// The reader chat opens with the site: on when publishing.index is, and always in local development.
+const chatOn = settings.publishing.index || import.meta.env.DEV;
 ---
 
 <header>
   <a class="name" href="/">{settings.site.name}</a>
   <div class="switches">
-    <a class="search" href="/search">Search</a>
+    <a class="header-link" href="/search">
+      <Image class="header-icon" src={searchIcon} alt="" width={24} height={24} />
+      <span>Search</span>
+    </a>
+    {chatOn && <AskPanel client:idle iconSrc={askIcon.src} />}
     <!-- Each switch names what it turns on, in words, and says with aria-pressed whether it is on. -->
     <button type="button" id="font-switch" aria-pressed="false">
       <span class="glyph" aria-hidden="true">Aa</span>
@@ -44,11 +57,45 @@ import { settings } from '../lib/settings';
     align-items: center;
     gap: var(--space-2);
   }
-  .search {
+  .header-link,
+  :global(.header-link) {
     min-height: var(--tap);
     display: inline-flex;
     align-items: center;
+    gap: var(--space-1);
     padding: 0 var(--space-2);
+    border: 0;
+    background: none;
+    color: var(--ink);
+    font: inherit;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .header-link:hover span,
+  :global(.header-link:hover span),
+  :global(.header-link:focus-visible span) {
+    text-decoration: underline;
+  }
+  :global(.header-link:hover) {
+    background: none;
+    color: var(--ink);
+  }
+  :global(.header-icon) {
+    width: 24px;
+    height: 24px;
+    filter: var(--drawing-filter);
+  }
+  @media (max-width: 30rem) {
+    /* On a phone the icons carry the row; the words stay for screen readers. */
+    .header-link span,
+    :global(.header-link span) {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
   }
   button {
     display: inline-flex;
