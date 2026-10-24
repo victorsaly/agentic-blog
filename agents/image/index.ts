@@ -10,7 +10,6 @@ import { markdownFile } from '../_lib/files.js';
 import { kebab, readIfPresent, readOrThrow, userMessage } from '../_lib/generic.js';
 import { unfence } from '../_lib/claude.js';
 import type { AgentContext, AgentRun, OutputFile } from '../_lib/types.js';
-import { drawPicture } from '../_lib/workers-ai.js';
 import { reviewDrawing } from './review.js';
 
 export const MANIFEST = 'image/prompts.md';
@@ -160,8 +159,8 @@ export const run: AgentRun = async (ctx) => {
     let model = '';
     while (attempts < MAX_ATTEMPTS && kept === null) {
       attempts += 1;
-      const picture = await drawPicture(prompt, isCover ? reference : undefined);
-      model = picture.model;
+      const picture = await ctx.draw(prompt, isCover ? reference : undefined);
+      model = `${picture.provider}/${picture.model}${isCover && reference && picture.provider !== 'none' ? ' (asked to draw from the reference photo)' : ''}`;
       if (!picture.ok) {
         problems = [picture.reason];
         break; // a credentials or service problem; redrawing will not help
