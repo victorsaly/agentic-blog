@@ -1,16 +1,20 @@
 ---
-// Why: one post, three depths. The message is the only loud thing; the idea is open; the road and the origin
-// are a click away. Every converted version on the page carries the badge that points at the origin.
+// Why: one post, three depths, laid out like a printed page. The message is the only loud thing; the
+// switch beside it says this is the AI version and offers the original; the cover breaks out of the
+// column; the ways in sit in one ruled row. On a desk a contents column on the left and this thought's
+// column on the right stay in view as you read; on a phone they fold into the flow. The end of a post
+// offers what a blog should: the way back up, sharing, the thoughts before and after, and the same themes.
 import { getCollection, render } from 'astro:content';
 import { Image } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
 import Page from '../../layouts/Page.astro';
-import Badge from '../../components/Badge.astro';
+import VersionSwitch from '../../components/VersionSwitch.astro';
 import PostTabs, { type Tab } from '../../components/PostTabs.astro';
 import ideaIcon from '../../assets/icons/idea.png';
 import originIcon from '../../assets/icons/origin.png';
 import roadIcon from '../../assets/icons/road.png';
 import sourcesIcon from '../../assets/icons/sources.png';
+import askIcon from '../../assets/icons/ask.png';
 import { settings } from '../../lib/settings';
 import {
   excerpt,
@@ -67,9 +71,17 @@ const road = long ? await render(long) : null;
 const originHref = `/thoughts/${slug}/origin`;
 
 // The sections a reader walks; the notes on what changed are about the conversion, not the road.
-const readerSections = (road?.headings ?? []).filter(
-  (h) => h.depth === 2 && !/^what changed/i.test(h.text),
-);
+const isChangeNotes = (text: string): boolean => /^what changed/i.test(text);
+const roadHeadings = (road?.headings ?? []).filter((h) => h.depth === 2);
+const readerSections = roadHeadings.filter((h) => !isChangeNotes(h.text));
+// The road numbers its sections in the margin; the change notes at the end stand outside the count.
+const unnumbered = roadHeadings
+  .filter((h) => isChangeNotes(h.text))
+  .map((h) => {
+    const id = h.slug.replace(/[^a-zA-Z0-9_-]/g, (c) => `\\${c}`);
+    return `#road-body h2#${id}{counter-increment:none}#road-body h2#${id}::before{content:none}`;
+  })
+  .join('');
 
 // The order follows the blog's thesis: the thought, where it came from, the whole road, its sources.
 const tabs: Tab[] = [
@@ -84,6 +96,26 @@ const minutes = readingMinutes(long?.body ?? short?.body ?? thought.body ?? '');
 const description = excerpt(thought.data.message, 40);
 // The highlight covers the first sentence, the one a reader must get; the rest stands in plain ink.
 const message = splitFirstSentence(thought.data.message);
+
+// Before and after this one, and others on the same themes.
+const all = (await getCollection('thoughts', ({ data }) => !data.draft)).sort(
+  (a, b) => a.data.date.getTime() - b.data.date.getTime() || a.id.localeCompare(b.id),
+);
+const at = all.findIndex((t) => t.id === thought.id);
+const earlier = at > 0 ? all[at - 1] : undefined;
+const later = at >= 0 && at < all.length - 1 ? all[at + 1] : undefined;
+const related = all
+  .filter(
+    (t) => t.id !== thought.id && t.data.themes.some((th) => thought.data.themes.includes(th)),
+  )
+  .reverse()
+  .slice(0, 3);
+
+const url = new URL(`/thoughts/${slug}`, Astro.site).href;
+const linkedIn = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+const mail = `mailto:?subject=${encodeURIComponent(thought.data.title)}&body=${encodeURIComponent(url)}`;
+const chatOn = settings.publishing.index || import.meta.env.DEV;
+const pad = (n: number): string => String(n).padStart(2, '0');
 ---
 
 <Page
@@ -92,212 +124,708 @@ const message = splitFirstSentence(thought.data.message);
   lang={thought.data.language}
   type="article"
   publishedAt={thought.data.date}
+  width="wide"
+  reading={thought.data.title}
 >
-  <article data-pagefind-body>
-    <Badge
-      originHref={originHref}
-      by={long?.data.converted_by ?? short?.data.converted_by}
-      explain
-    />
-    <h1>{thought.data.title}</h1>
-    <p class="small quiet meta" data-pagefind-ignore>
-      <time datetime={thought.data.date.toISOString()}>{formatDate(thought.data.date)}</time>
-      <span>{readingLabel(minutes)} to read the whole road</span>
-    </p>
+  {unnumbered && <style is:inline set:html={unnumbered} />}
+  <article data-pagefind-body data-reading-body>
+    <header class="frame opening">
+      <VersionSwitch
+        slug={slug}
+        current="ai"
+        medium={firstOrigin?.data.medium}
+        recorded={firstOrigin?.data.recorded}
+      />
+      <h1 data-reading-title>{thought.data.title}</h1>
+      <p class="small quiet meta" data-pagefind-ignore>
+        <time datetime={thought.data.date.toISOString()}>{formatDate(thought.data.date)}</time>
+        <span>{readingLabel(minutes)} for the whole road</span>
+        <span>
+          {
+            thought.data.themes.map((theme, i) => (
+              <>
+                {i > 0 && ', '}
+                <a href={`/themes/${theme}`}>{themeLabel(theme)}</a>
+              </>
+            ))
+          }
+        </span>
+      </p>
+      <p class="message">
+        <mark>{message.first}</mark>
+        {message.rest && <span class="message-rest"> {message.rest}</span>}
+      </p>
+    </header>
 
-    <p class="message">
-      <mark>{message.first}</mark>
-      {message.rest && <span class="message-rest"> {message.rest}</span>}
-    </p>
-
-    <PostTabs label="Read this thought" tabs={tabs}>
-      <div slot="idea">
-        {
-          /* The print opens the idea, after the row of ways in, so the choice is never a screen away. */
-          cover && coverImage && (
-            <figure class="cover">
-              <Image
-                class="drawing"
-                src={coverImage}
-                alt={cover.alt}
-                width={720}
-                height={720}
-                loading="eager"
-              />
-              {cover.note && <figcaption class="small quiet">{cover.note}</figcaption>}
-            </figure>
-          )
-        }
-        {idea ? <idea.Content /> : <Structure />}
-      </div>
-
-      <div slot="origin">
-        {
-          firstOrigin ? (
-            <>
-              <p>
-                {firstOrigin.data.medium === 'text'
-                  ? `Written ${formatDate(firstOrigin.data.recorded)}, never edited.`
-                  : `Recorded ${formatDate(firstOrigin.data.recorded)}, ${
-                      firstOrigin.data.speakers.length === 1
-                        ? 'one voice'
-                        : `${String(firstOrigin.data.speakers.length)} voices`
-                    }, never edited.`}{' '}
-                It starts like this:
-              </p>
-              <blockquote>{excerpt(firstOrigin.body ?? '', 60)}</blockquote>
-              <p>
-                <a href={originHref}>Read the whole origin</a>
-              </p>
-            </>
-          ) : (
-            <p class="quiet">The origin for this thought is not on the site yet.</p>
-          )
-        }
-      </div>
-
-      {
-        road && (
-          <div slot="road" id="road-body">
-            {readerSections.length > 1 && (
-              <nav class="contents small" aria-label="In this road" data-pagefind-ignore>
-                <p class="quiet">In this road</p>
-                <ol>
-                  {readerSections.map((h) => (
-                    <li>
-                      <a href={`#${h.slug}`}>{h.text}</a>
-                    </li>
-                  ))}
-                </ol>
-              </nav>
-            )}
-            <road.Content />
-            {!long?.data.reviewed && (
-              <p class="small quiet">
-                This version has not yet been reviewed by {settings.site.author}. It can still
-                change.
-              </p>
-            )}
+    {
+      cover && coverImage && (
+        <figure class="frame cover">
+          <div class="plate">
+            <Image src={coverImage} alt={cover.alt} width={1200} height={1200} loading="eager" />
           </div>
-        )
-      }
+          {cover.note && <figcaption class="small quiet">{cover.note}</figcaption>}
+        </figure>
+      )
+    }
 
-      {
-        sources && sourcesEntry && (
-          <div slot="sources">
-            {!sourcesEntry.data.reviewed && (
-              <p class="small quiet">
-                Not reviewed yet. Only visible in local development until {settings.site.author} has
-                opened every link and set reviewed to true.
-              </p>
-            )}
-            <div class="sources">
-              <sources.Content />
+    <div class="frame layout">
+      <nav class="rail contents" aria-labelledby="contents-label" data-pagefind-ignore>
+        <details class="fold" open data-contents>
+          <summary class="control">
+            <span class="fold-name">Contents</span>
+            <span class="fold-where quiet" data-where></span>
+          </summary>
+          <div class="sticky">
+            <p class="label" id="contents-label">On this page</p>
+            <ol class="ways">
+              {
+                tabs.map((tab) => (
+                  <li>
+                    <a href={`#${tab.id}`} data-way={tab.id}>
+                      {tab.name}
+                    </a>
+                    {tab.id === 'road' && readerSections.length > 1 && (
+                      <ol class="sections">
+                        {readerSections.map((h, i) => (
+                          <li>
+                            <a href={`#${h.slug}`} data-section={h.slug}>
+                              <span class="n">{pad(i + 1)}</span>
+                              <span>{h.text}</span>
+                            </a>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                  </li>
+                ))
+              }
+            </ol>
+            <a class="control up" href="#content">
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M8 14V2M3 7l5-5 5 5" stroke="currentColor" stroke-width="2"></path>
+              </svg>
+              Back to the top
+            </a>
+          </div>
+        </details>
+      </nav>
+
+      <PostTabs label="Read this thought" tabs={tabs}>
+        <div slot="idea">
+          {idea ? <idea.Content /> : <Structure />}
+        </div>
+
+        <div slot="origin">
+          {
+            firstOrigin ? (
+              <>
+                <p>
+                  {firstOrigin.data.medium === 'text'
+                    ? `Written ${formatDate(firstOrigin.data.recorded)}, never edited.`
+                    : `Recorded ${formatDate(firstOrigin.data.recorded)}, ${
+                        firstOrigin.data.speakers.length === 1
+                          ? 'one voice'
+                          : `${String(firstOrigin.data.speakers.length)} voices`
+                      }, never edited.`}{' '}
+                  It starts like this:
+                </p>
+                <blockquote>{excerpt(firstOrigin.body ?? '', 60)}</blockquote>
+                <p>
+                  <a href={originHref}>Read the whole original</a>
+                </p>
+              </>
+            ) : (
+              <p class="quiet">The origin for this thought is not on the site yet.</p>
+            )
+          }
+        </div>
+
+        {
+          road && (
+            <div slot="road" id="road-body">
+              <road.Content />
+              {!long?.data.reviewed && (
+                <p class="small quiet">
+                  This version has not yet been reviewed by {settings.site.author}. It can still
+                  change.
+                </p>
+              )}
             </div>
-          </div>
+          )
+        }
+
+        {
+          sources && sourcesEntry && (
+            <div slot="sources">
+              {!sourcesEntry.data.reviewed && (
+                <p class="small quiet">
+                  Not reviewed yet. Only visible in local development until {settings.site.author}{' '}
+                  has opened every link and set reviewed to true.
+                </p>
+              )}
+              <div class="sources">
+                <sources.Content />
+              </div>
+            </div>
+          )
+        }
+      </PostTabs>
+
+      <aside class="rail thought" aria-label="This thought" data-pagefind-ignore>
+        <div class="sticky">
+          <section>
+            <h2 class="label">This thought</h2>
+            <p class="small">
+              {
+                firstOrigin
+                  ? `From ${firstOrigin.data.medium === 'text' ? 'a text note' : 'a voice note'} of ${formatDate(firstOrigin.data.recorded)}, kept as it came out.`
+                  : 'Converted from a note.'
+              }{' '}
+              <a href={originHref}>Read the original</a>
+            </p>
+          </section>
+          <section>
+            <h2 class="label">Share</h2>
+            <div class="stack">
+              <button type="button" class="control" data-share hidden>Share…</button>
+              <button type="button" class="control" data-copy={url}>Copy the link</button>
+              <a class="control" href={linkedIn}>Post on LinkedIn</a>
+              <a class="control" href={mail}>Send by email</a>
+            </div>
+            <p class="small quiet copied" role="status" data-copied></p>
+          </section>
+          {
+            chatOn && (
+              <section>
+                <h2 class="label">Questions?</h2>
+                <button type="button" class="control filled wide-control" data-ask-post>
+                  <Image src={askIcon} alt="" width={20} height={20} />
+                  Ask about this post
+                </button>
+              </section>
+            )
+          }
+        </div>
+      </aside>
+    </div>
+
+    <section class="frame end" aria-labelledby="end-label" data-pagefind-ignore>
+      <h2 class="visually-hidden" id="end-label">After this thought</h2>
+      <div class="after">
+        <p>
+          Open <a href={originHref}>the original</a> to see the note this came from{
+            road ? (
+              <>
+                , or walk <a href="#road">the road</a> for the whole piece
+              </>
+            ) : null
+          }.
+        </p>
+        <div class="row">
+          <button type="button" class="control" data-copy={url}>Copy the link</button>
+          <a class="control" href={linkedIn}>LinkedIn</a>
+          <a class="control filled" href="#content">
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 14V2M3 7l5-5 5 5" stroke="currentColor" stroke-width="2"></path>
+            </svg>
+            Back to the top
+          </a>
+        </div>
+      </div>
+
+      <nav class="neighbours" aria-label="More thoughts">
+        {
+          earlier ? (
+            <a href={`/thoughts/${thoughtSlugOf(earlier.id)}`}>
+              <span class="label-plain quiet">← Earlier thought</span>
+              <span class="neighbour-title">
+                <mark>{earlier.data.title}</mark>
+              </span>
+            </a>
+          ) : (
+            <p>
+              <span class="label-plain quiet">← Earlier thought</span>
+              <span class="quiet">This is the first thought.</span>
+            </p>
+          )
+        }
+        {
+          later ? (
+            <a href={`/thoughts/${thoughtSlugOf(later.id)}`}>
+              <span class="label-plain quiet">Later thought →</span>
+              <span class="neighbour-title">
+                <mark>{later.data.title}</mark>
+              </span>
+            </a>
+          ) : (
+            <p>
+              <span class="label-plain quiet">Later thought →</span>
+              <span class="quiet">
+                This is the newest. <a href="/rss.xml">Follow the feed</a> to hear of the next.
+              </span>
+            </p>
+          )
+        }
+      </nav>
+
+      {
+        related.length > 0 && (
+          <section class="related">
+            <h2 class="label">Same themes</h2>
+            <ul>
+              {related.map((t) => (
+                <li>
+                  <a href={`/thoughts/${thoughtSlugOf(t.id)}`}>{t.data.title}</a>
+                  <span class="small quiet">{t.data.themes.map(themeLabel).join(', ')}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
         )
       }
-    </PostTabs>
-
-    <nav class="small quiet themes" aria-label="Themes of this thought" data-pagefind-ignore>
-      Themes:{' '}
-      {
-        thought.data.themes.map((theme, i) => (
-          <>
-            {i > 0 && ', '}
-            <a href={`/themes/${theme}`}>{themeLabel(theme)}</a>
-          </>
-        ))
-      }
-    </nav>
+    </section>
   </article>
+
+  <a class="control filled to-top" href="#content" data-to-top hidden data-pagefind-ignore>
+    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 16 16" fill="none">
+      <path d="M8 14V2M3 7l5-5 5 5" stroke="currentColor" stroke-width="2"></path>
+    </svg>
+    <span class="visually-hidden">Back to the top</span>
+  </a>
 </Page>
 
 <style>
+  /* The opening: the switch, the title at display size, the message as the one loud thing. */
+  .opening {
+    padding-top: var(--space-5);
+  }
+  .opening h1 {
+    margin: var(--space-5) 0 0;
+    max-width: 20ch;
+    font-size: var(--size-display);
+    line-height: 1.02;
+    letter-spacing: var(--tracking-display);
+  }
   .meta {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-3);
+    gap: var(--space-1) var(--space-3);
+    margin: var(--space-3) 0 0;
+    max-width: none;
+  }
+  .opening .message {
+    margin: var(--space-5) 0 0;
+    max-width: 52rem;
+    font-size: clamp(1.375rem, 1rem + 1.6vw, 1.875rem);
+    line-height: 1.4;
+  }
+
+  /* The cover breaks out of the reading column, between a heavy rule and a hairline. */
+  .cover {
+    max-width: 75rem;
+    margin-top: var(--space-6);
     margin-bottom: 0;
   }
-  .themes {
-    margin-top: var(--space-5);
+  .plate {
+    border-top: var(--rule-heavy) solid var(--ink);
+    border-bottom: var(--rule-width) solid var(--ink);
+    padding-block: var(--space-4);
   }
-  .contents {
-    margin: 0 0 var(--space-4);
-    padding-bottom: var(--space-3);
-    border-bottom: var(--rule-width) solid var(--rule);
-  }
-  .contents p {
-    margin: 0 0 var(--space-1);
-  }
-  .contents ol {
-    margin: 0;
-    padding-left: var(--space-4);
-  }
-  .contents a {
-    display: inline-block;
-    padding: var(--space-1) 0;
-  }
-  /* Drawings: black ink on white, inverted with the theme, never wider than the text. */
-  .drawing,
-  article :global(#road-body img) {
+  /* The whole print, never cropped: the plate is wide, the drawing keeps its own shape inside it. */
+  .plate :global(img) {
     display: block;
-    width: 100%;
-    max-width: var(--measure);
+    width: auto;
+    max-width: 100%;
     height: auto;
+    max-height: min(42rem, 75vh);
+    margin-inline: auto;
     filter: var(--drawing-filter);
-  }
-  .cover {
-    margin: 0 0 var(--space-5);
   }
   .cover figcaption {
     margin-top: var(--space-2);
     max-width: var(--measure);
   }
+
+  /* Three columns on a desk: contents, the text, this thought. The ways-in row spans all three. */
+  .layout {
+    display: grid;
+    grid-template-columns: var(--rail) minmax(0, var(--measure)) var(--rail);
+    justify-content: space-between;
+    column-gap: var(--space-5);
+    align-items: start;
+  }
+  .layout :global(.post-tabs) {
+    display: contents;
+  }
+  .layout :global(.tablist) {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  .layout :global(.panel) {
+    grid-column: 2;
+    padding-top: var(--space-4);
+  }
+  .rail {
+    grid-row: 2 / span 4;
+    align-self: stretch;
+  }
+  .contents {
+    grid-column: 1;
+  }
+  .thought {
+    grid-column: 3;
+  }
+  /* The rails stay in view as you read. */
+  .sticky,
+  .fold {
+    position: sticky;
+    top: 6rem;
+    max-height: calc(100dvh - 7rem);
+    overflow-y: auto;
+  }
+  .sticky {
+    padding-top: var(--space-5);
+  }
+  .fold .sticky {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+  .fold > summary {
+    display: none;
+  }
+
+  .ways,
+  .sections {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-width: none;
+  }
+  .ways a {
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+    min-height: var(--tap);
+    padding-block: var(--space-1);
+    border-bottom: var(--rule-width) solid var(--rule);
+    font-size: var(--size-small);
+    line-height: 1.3;
+    text-decoration: none;
+  }
+  .ways a:hover {
+    text-decoration: underline;
+  }
+  .ways a[aria-current] {
+    font-weight: 700;
+    border-bottom: var(--rule-strong) solid var(--ink);
+  }
+  .n {
+    min-width: 1.5rem;
+    color: var(--quiet);
+    font-variant-numeric: tabular-nums;
+  }
+  .ways a[aria-current] .n {
+    color: var(--ink);
+  }
+  .up {
+    width: 100%;
+    margin-top: var(--space-4);
+  }
+
+  .thought section + section {
+    margin-top: var(--space-5);
+  }
+  .thought p.small {
+    margin: var(--space-3) 0 0;
+  }
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+  }
+  .stack .control {
+    justify-content: flex-start;
+  }
+  .wide-control {
+    width: 100%;
+    margin-top: var(--space-3);
+  }
+  .copied {
+    min-height: 1.5em;
+  }
+
+  /* The text: the road numbers its sections on a strong rule; its prints sit between hairlines. */
+  .layout :global(.panel > div > p),
+  .layout :global(.panel > div > ul),
+  .layout :global(.panel > div > ol) {
+    max-width: none;
+  }
+  .layout :global(#road-body) {
+    counter-reset: section;
+  }
+  .layout :global(#road-body h2) {
+    counter-increment: section;
+    display: flex;
+    gap: var(--space-4);
+    align-items: baseline;
+    margin: var(--space-6) 0 var(--space-4);
+    padding-top: var(--space-3);
+    border-top: var(--rule-strong) solid var(--ink);
+    font-size: 1.875rem;
+  }
+  .layout :global(#road-body h2:first-child) {
+    margin-top: var(--space-4);
+  }
+  .layout :global(#road-body h2::before) {
+    content: counter(section, decimal-leading-zero);
+    font-size: var(--size-body);
+  }
+  .layout :global(#road-body p:has(> img)) {
+    margin: var(--space-4) 0 var(--space-2);
+    padding-block: var(--space-3);
+    border-top: var(--rule-width) solid var(--ink);
+    border-bottom: var(--rule-width) solid var(--ink);
+  }
+  .layout :global(#road-body img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    filter: var(--drawing-filter);
+  }
   /* The line a drawing shows, then the artist's note: quiet, close to the drawing it belongs to. */
-  article :global(#road-body .caption) {
-    margin: calc(-1 * var(--space-3)) 0 var(--space-4);
-    max-width: 30ch;
+  .layout :global(#road-body .caption) {
+    margin: 0 0 var(--space-5);
     font-size: var(--size-small);
     color: var(--quiet);
   }
-  /* Section drawings are square with generous white space; half the measure keeps the road readable. */
-  article :global(#road-body img) {
-    max-width: min(100%, 30ch);
-    margin: var(--space-3) 0 var(--space-4);
+
+  /* The end of a post. */
+  .end {
+    margin-top: var(--space-6);
   }
+  .after {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3) var(--space-4);
+    align-items: center;
+    justify-content: space-between;
+    padding-block: var(--space-4);
+    border-top: var(--rule-heavy) solid var(--ink);
+    border-bottom: var(--rule-width) solid var(--ink);
+  }
+  .after p {
+    margin: 0;
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .neighbours {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-bottom: var(--rule-width) solid var(--ink);
+  }
+  .neighbours > * {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin: 0;
+    max-width: none;
+    padding: var(--space-4) var(--space-4) var(--space-4) 0;
+    text-decoration: none;
+  }
+  .neighbours > * + * {
+    padding-left: var(--space-4);
+    border-left: var(--rule-width) solid var(--ink);
+  }
+  .label-plain {
+    font-size: var(--size-label);
+    font-weight: 700;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+  }
+  .neighbour-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .neighbour-title mark {
+    background: var(--mark);
+    color: var(--mark-ink);
+    padding: 0.05em 0.2em;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+  .neighbours a:hover mark {
+    text-decoration: underline;
+  }
+  .related {
+    margin-top: var(--space-5);
+  }
+  .related ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-width: none;
+  }
+  .related li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-4);
+    align-items: baseline;
+    padding-block: var(--space-3);
+    border-bottom: var(--rule-width) solid var(--ink);
+  }
+  .related a {
+    font-size: 1.3125rem;
+    font-weight: 700;
+  }
+
+  /* Back to the top, for a phone, once you have scrolled a screen. */
+  .to-top {
+    position: fixed;
+    right: var(--space-3);
+    bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
+    z-index: 9;
+    width: 3.25rem;
+    height: 3.25rem;
+    padding: 0;
+    border: 2px solid var(--paper);
+    outline: var(--rule-width) solid var(--ink);
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity 150ms ease,
+      visibility 150ms;
+  }
+  .to-top[data-shown='true'] {
+    opacity: 1;
+    visibility: visible;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .to-top {
+      transition: none;
+    }
+  }
+
+  @media (min-width: 64.0625rem) {
+    .to-top {
+      display: none;
+    }
+  }
+
+  /* Narrower than a desk: one column. The contents fold into a button above the text; this thought's
+     column follows the text. */
+  @media (max-width: 64rem) {
+    .layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .layout :global(.tablist),
+    .layout :global(.panel),
+    .rail {
+      grid-column: 1;
+      grid-row: auto;
+    }
+    .layout :global(.tablist) {
+      order: 0;
+    }
+    .contents {
+      order: 1;
+      margin-top: var(--space-4);
+    }
+    .layout :global(.panel) {
+      order: 2;
+    }
+    .thought {
+      order: 3;
+      margin-top: var(--space-5);
+    }
+    .sticky,
+    .fold {
+      position: static;
+      max-height: none;
+      overflow: visible;
+    }
+    .sticky {
+      padding-top: 0;
+    }
+    .fold > summary {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      list-style: none;
+      border-width: 2px;
+    }
+    .fold > summary::-webkit-details-marker {
+      display: none;
+    }
+    .fold-name {
+      font-size: var(--size-label);
+      font-weight: 700;
+      letter-spacing: var(--tracking-label);
+      text-transform: uppercase;
+    }
+    .fold[open] > summary {
+      background: var(--ink);
+      color: var(--paper);
+    }
+    .fold[open] .fold-where {
+      color: var(--paper);
+    }
+    .fold .label,
+    .up {
+      display: none;
+    }
+    .fold .sticky {
+      padding-top: var(--space-2);
+    }
+  }
+
+  @media (max-width: 40rem) {
+    .neighbours {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .neighbours > * + * {
+      padding-left: 0;
+      border-left: 0;
+      border-top: var(--rule-width) solid var(--ink);
+    }
+  }
+
   /* Diagrams the diagram agent described: real text, drawn with rules and spacing only. */
-  article :global(.diagram) {
+  .layout :global(.diagram) {
     margin: var(--space-4) 0 var(--space-5);
     max-width: var(--measure);
   }
-  article :global(.diagram-title) {
+  .layout :global(.diagram-title) {
     font-weight: 700;
     margin: 0 0 var(--space-3);
   }
-  article :global(.diagram figcaption) {
+  .layout :global(.diagram figcaption) {
     margin-top: var(--space-3);
     font-size: var(--size-small);
     color: var(--quiet);
   }
-  article :global(.flow) {
+  .layout :global(.flow) {
     list-style: none;
     counter-reset: step;
     margin: 0;
     padding: 0;
   }
-  article :global(.flow li) {
+  .layout :global(.flow li) {
     counter-increment: step;
     position: relative;
     border: var(--rule-width) solid var(--ink);
     padding: var(--space-2) var(--space-3);
   }
-  article :global(.flow li + li) {
+  .layout :global(.flow li + li) {
     margin-top: var(--space-4);
   }
   /* The arrow between two steps: a short rule and a tip, in the ink colour. */
-  article :global(.flow li + li::before) {
+  .layout :global(.flow li + li::before) {
     content: '';
     position: absolute;
     left: var(--space-4);
@@ -305,7 +833,7 @@ const message = splitFirstSentence(thought.data.message);
     height: var(--space-4);
     border-left: var(--rule-width) solid var(--ink);
   }
-  article :global(.flow li + li::after) {
+  .layout :global(.flow li + li::after) {
     content: '';
     position: absolute;
     left: calc(var(--space-4) - 0.3rem);
@@ -314,32 +842,32 @@ const message = splitFirstSentence(thought.data.message);
     border-top-color: var(--ink);
     border-bottom: 0;
   }
-  article :global(.flow .step) {
+  .layout :global(.flow .step) {
     display: block;
     font-weight: 700;
   }
-  article :global(.flow .step::before) {
+  .layout :global(.flow .step::before) {
     content: counter(step) '. ';
   }
-  article :global(.flow .detail) {
+  .layout :global(.flow .detail) {
     display: block;
     font-size: var(--size-small);
     color: var(--quiet);
   }
-  article :global(.compare) {
+  .layout :global(.compare) {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
     gap: var(--space-3);
   }
-  article :global(.compare .side) {
+  .layout :global(.compare .side) {
     border-top: calc(2 * var(--rule-width)) solid var(--ink);
     padding-top: var(--space-2);
   }
-  article :global(.compare .side-label) {
+  .layout :global(.compare .side-label) {
     font-weight: 700;
     margin: 0 0 var(--space-2);
   }
-  article :global(.compare ul) {
+  .layout :global(.compare ul) {
     margin: 0;
     padding-left: var(--space-4);
   }
@@ -348,3 +876,141 @@ const message = splitFirstSentence(thought.data.message);
     overflow-x: auto;
   }
 </style>
+
+<script>
+  // Why: the parts of a post that need a script, each one optional: the contents follow where you are,
+  // copy and share the link, ask about this post, fold the contents on a phone, and back to the top.
+  const narrow = matchMedia('(max-width: 64rem)');
+
+  // Copy the link: the button says so, and a status line tells a screen reader.
+  const status = document.querySelector<HTMLElement>('[data-copied]');
+  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-copy]')) {
+    const label = button.textContent;
+    button.addEventListener('click', () => {
+      const done = (text: string): void => {
+        button.textContent = text;
+        if (status) status.textContent = text;
+        setTimeout(() => {
+          button.textContent = label;
+          if (status) status.textContent = '';
+        }, 2000);
+      };
+      navigator.clipboard
+        .writeText(button.dataset['copy'] ?? location.href)
+        .then(() => {
+          done('Link copied');
+        })
+        .catch(() => {
+          done('Copy failed: the link is in the address bar');
+        });
+    });
+  }
+
+  // Share, where the device has its own share sheet (most phones).
+  const share = document.querySelector<HTMLButtonElement>('[data-share]');
+  if (share && 'share' in navigator && narrow.matches) {
+    share.hidden = false;
+    share.addEventListener('click', () => {
+      navigator
+        .share({ title: document.title, url: location.origin + location.pathname })
+        .catch(() => {
+          /* the reader closed the sheet */
+        });
+    });
+  }
+
+  // Ask about this post: the chat in the header listens for this.
+  document.querySelector('[data-ask-post]')?.addEventListener('click', () => {
+    dispatchEvent(new CustomEvent('ask:open'));
+  });
+
+  // The contents: which way in is open, and which section of the road you are in.
+  const fold = document.querySelector<HTMLDetailsElement>('[data-contents]');
+  const where = document.querySelector<HTMLElement>('[data-where]');
+  const ways = [...document.querySelectorAll<HTMLAnchorElement>('[data-way]')];
+  const sections = [...document.querySelectorAll<HTMLAnchorElement>('[data-section]')];
+  const mark = (links: HTMLAnchorElement[], on: HTMLAnchorElement | undefined): void => {
+    for (const link of links) {
+      if (link === on) link.setAttribute('aria-current', 'true');
+      else link.removeAttribute('aria-current');
+    }
+  };
+  let way = '';
+  const setSection = (slug: string | null): void => {
+    const link = sections.find((a) => a.dataset['section'] === slug);
+    mark(sections, link);
+    const at = link ? sections.indexOf(link) + 1 : 0;
+    const name = ways.find((a) => a.dataset['way'] === way)?.textContent.trim() ?? '';
+    if (where) where.textContent = at > 0 ? `${String(at)} of ${String(sections.length)}` : name;
+  };
+  const setWay = (id: string): void => {
+    way = id;
+    mark(
+      ways,
+      ways.find((a) => a.dataset['way'] === id),
+    );
+    setSection(null);
+  };
+  const tabsRoot = document.querySelector('[data-tabs]');
+  tabsRoot?.addEventListener('tabchange', (event) => {
+    if (event instanceof CustomEvent && typeof event.detail === 'string') setWay(event.detail);
+  });
+  setWay(
+    document.querySelector('[role="tab"][aria-selected="true"]')?.getAttribute('aria-controls') ??
+      'idea',
+  );
+  const headings = sections
+    .map((a) => document.getElementById(a.dataset['section'] ?? ''))
+    .filter((h): h is HTMLElement => h !== null);
+  // The section you are in is the last heading above the top of the screen (under the header).
+  if (headings.length > 0) {
+    let queued = false;
+    const follow = (): void => {
+      queued = false;
+      if (way !== 'road') return;
+      let current: HTMLElement | undefined;
+      for (const heading of headings)
+        if (heading.getBoundingClientRect().top < 140) current = heading;
+      setSection(current?.id ?? null);
+    };
+    addEventListener(
+      'scroll',
+      () => {
+        if (queued) return;
+        queued = true;
+        requestAnimationFrame(follow);
+      },
+      { passive: true },
+    );
+    tabsRoot?.addEventListener('tabchange', follow);
+    follow();
+  }
+
+  // On a phone the contents start folded, and fold again once you pick a place.
+  if (fold && narrow.matches) fold.open = false;
+  fold?.addEventListener('click', (event) => {
+    if (narrow.matches && event.target instanceof HTMLElement && event.target.closest('a'))
+      fold.open = false;
+  });
+
+  // Back to the top, on a phone, once you have scrolled a screen.
+  const toTop = document.querySelector<HTMLElement>('[data-to-top]');
+  if (toTop) {
+    toTop.hidden = false;
+    let queued = false;
+    const update = (): void => {
+      queued = false;
+      toTop.dataset['shown'] = String(scrollY > innerHeight);
+    };
+    addEventListener(
+      'scroll',
+      () => {
+        if (queued) return;
+        queued = true;
+        requestAnimationFrame(update);
+      },
+      { passive: true },
+    );
+    update();
+  }
+</script>

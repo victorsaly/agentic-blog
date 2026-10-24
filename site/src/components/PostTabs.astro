@@ -3,7 +3,8 @@
 // the whole road, and its sources. Tabs keep that choice in one row, each with a linocut icon so the row
 // reads at a glance, in the order of the blog's thesis: the thought, its raw source, then the conversion.
 // Without script every panel shows in order with its own heading, so nothing is lost; with script it is
-// the standard tabs pattern (arrow keys, Home, End), and a link to a heading inside a panel opens it.
+// the standard tabs pattern (arrow keys, Home, End), and a link to a heading inside a panel opens it. The
+// row is drawn as ruled cells, the chosen one filled black, and it tells the page which way is open.
 import { Image } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
 
@@ -34,9 +35,11 @@ const { tabs, label } = Astro.props;
           aria-selected={i === 0 ? 'true' : 'false'}
           tabindex={i === 0 ? 0 : -1}
         >
-          <Image class="icon" src={tab.icon} alt="" width={36} height={36} />
-          <span class="name">{tab.name}</span>
-          <span class="hint">{tab.hint}</span>
+          <Image class="icon" src={tab.icon} alt="" width={28} height={28} />
+          <span class="words">
+            <span class="name">{tab.name}</span>
+            <span class="hint">{tab.hint}</span>
+          </span>
         </button>
       ))
     }
@@ -46,9 +49,6 @@ const { tabs, label } = Astro.props;
       <section class="panel" id={tab.id} role="tabpanel" aria-labelledby={`tab-${tab.id}`}>
         <h2 class="panel-name">{tab.name}</h2>
         <slot name={tab.id} />
-        <p class="small back">
-          <a href="#ways-in">Back to the top of this thought</a>
-        </p>
       </section>
     ))
   }
@@ -56,65 +56,77 @@ const { tabs, label } = Astro.props;
 
 <style>
   .tablist {
-    display: grid;
     grid-auto-flow: column;
-    grid-auto-columns: 1fr;
-    border-bottom: var(--rule-width) solid var(--rule);
-    margin: var(--space-5) 0 var(--space-4);
+    grid-auto-columns: minmax(0, 1fr);
+    border-top: var(--rule-strong) solid var(--ink);
+    border-bottom: var(--rule-width) solid var(--ink);
+    margin: var(--space-5) 0 0;
   }
   .tablist:not([hidden]) {
     display: grid;
   }
   [role='tab'] {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: var(--space-1);
-    min-height: var(--tap);
-    padding: var(--space-2) var(--space-1) var(--space-2);
+    gap: var(--space-3);
+    min-height: 4.5rem;
+    padding: 0 var(--space-3);
     border: 0;
-    border-bottom: 3px solid transparent;
-    margin-bottom: -1px;
-    background: none;
-    color: var(--quiet);
+    background: var(--paper);
+    color: var(--ink);
     font: inherit;
+    text-align: left;
     cursor: pointer;
   }
+  [role='tab'] + [role='tab'] {
+    border-left: var(--rule-width) solid var(--ink);
+  }
   [role='tab']:hover {
-    background: none;
+    background: var(--paper);
     color: var(--ink);
   }
-  [role='tab'][aria-selected='true'] {
-    color: var(--ink);
-    border-bottom-color: var(--ink);
+  @media (hover: hover) and (pointer: fine) {
+    [role='tab']:hover {
+      background: var(--hover);
+    }
   }
-  [role='tab'][aria-selected='true'] .name {
-    font-weight: 700;
+  [role='tab'][aria-selected='true'],
+  [role='tab'][aria-selected='true']:hover {
+    background: var(--ink);
+    color: var(--paper);
   }
   .icon {
-    width: 36px;
-    height: 36px;
+    width: 28px;
+    height: 28px;
+    flex: none;
     filter: var(--drawing-filter);
-    opacity: 0.55;
   }
-  [aria-selected='true'] .icon,
-  [role='tab']:hover .icon {
-    opacity: 1;
+  [aria-selected='true'] .icon {
+    filter: var(--drawing-filter-on-ink);
   }
-  /* A name that wraps keeps every hint on one line, at the foot of the row. */
+  .words {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
   .name {
-    flex: 1;
+    font-size: var(--size-body);
+    line-height: var(--leading-tight);
+  }
+  [aria-selected='true'] .name {
+    font-weight: 700;
   }
   .hint {
-    font-size: var(--size-small);
+    font-size: 0.875rem;
+    line-height: var(--leading-tight);
     color: var(--quiet);
+    margin-top: var(--space-1);
+  }
+  [aria-selected='true'] .hint {
+    color: var(--paper);
   }
   .panel-name {
     margin-top: var(--space-5);
-  }
-  /* The way back up from the end of a long panel: a plain jump, no motion. */
-  .back {
-    margin: var(--space-5) 0 0;
   }
   /* Once the tabs work, the row names each panel, so the panel's own heading is for screen readers only. */
   .post-tabs.ready .panel-name {
@@ -128,13 +140,27 @@ const { tabs, label } = Astro.props;
   .post-tabs.ready .panel[hidden] {
     display: none;
   }
-  @media (max-width: 30rem) {
+  /* On a phone: two by two, names only. */
+  @media (max-width: 40rem) {
+    .tablist:not([hidden]) {
+      grid-auto-flow: row;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    [role='tab'] {
+      min-height: 3.5rem;
+      gap: var(--space-2);
+      padding: 0 var(--space-2);
+      border-bottom: var(--rule-width) solid var(--ink);
+      margin-bottom: -1px;
+    }
+    [role='tab'] + [role='tab'] {
+      border-left: 0;
+    }
+    [role='tab']:nth-child(even) {
+      border-left: var(--rule-width) solid var(--ink);
+    }
     .hint {
       display: none;
-    }
-    .name {
-      font-size: var(--size-small);
-      text-align: center;
     }
   }
 </style>
@@ -156,6 +182,9 @@ const { tabs, label } = Astro.props;
         if (panel) panel.hidden = !on;
       });
       if (focus) tabs[index]?.focus();
+      root.dispatchEvent(
+        new CustomEvent('tabchange', { detail: tabs[index]?.getAttribute('aria-controls') ?? '' }),
+      );
     };
 
     // A link to a heading inside a panel (search results, the contents list) opens that panel first.
