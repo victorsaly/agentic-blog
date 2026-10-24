@@ -6,9 +6,17 @@ import { rssXml } from '../lib/feed';
 import { thoughtSlugOf } from '../lib/content';
 import { settings } from '../lib/settings';
 
+// Typed at the boundary: on a fresh checkout Astro has not generated its content types yet when lint runs.
+interface ThoughtEntry {
+  id: string;
+  data: { title: string; message: string; date: Date; draft: boolean };
+}
+
 export const GET: APIRoute = async ({ site }) => {
   const base = site ?? new URL(`https://${settings.site.domain}`);
-  const thoughts = await getCollection('thoughts', ({ data }) => !data.draft);
+  const thoughts = ((await getCollection('thoughts')) as unknown as ThoughtEntry[]).filter(
+    (t) => !t.data.draft,
+  );
   const xml = rssXml({
     title: settings.site.name,
     link: base.href,
