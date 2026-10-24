@@ -15,6 +15,7 @@ import originIcon from '../../assets/icons/origin.png';
 import roadIcon from '../../assets/icons/road.png';
 import askIcon from '../../assets/icons/ask.png';
 import { settings } from '../../lib/settings';
+import { metaDescription } from '../../lib/meta';
 import {
   excerpt,
   formatDate,
@@ -95,7 +96,20 @@ const tabs: Tab[] = [
   ...(road ? [{ id: 'road', name: 'The road', hint: 'the whole piece', icon: roadIcon }] : []),
 ];
 const minutes = readingMinutes(long?.body ?? short?.body ?? thought.body ?? '');
-const description = excerpt(thought.data.message, 40);
+const description = metaDescription(thought.data.message);
+
+// What a search engine or an answer engine reads about the post: who wrote it, when, in what language.
+const postUrl = new URL(`/thoughts/${slug}`, Astro.site).href;
+const jsonLd = {
+  '@type': 'Article',
+  headline: thought.data.title,
+  description,
+  author: { '@type': 'Person', name: settings.site.author, url: new URL('/', Astro.site).href },
+  datePublished: thought.data.date.toISOString().slice(0, 10),
+  inLanguage: thought.data.language,
+  mainEntityOfPage: postUrl,
+  ...(coverImage ? { image: new URL(coverImage.src, Astro.site).href } : {}),
+};
 // The highlight covers the first sentence, the one a reader must get; the rest stands in plain ink.
 const message = splitFirstSentence(thought.data.message);
 
@@ -126,6 +140,7 @@ const pad = (n: number): string => String(n).padStart(2, '0');
   lang={thought.data.language}
   type="article"
   publishedAt={thought.data.date}
+  jsonLd={jsonLd}
   width="wide"
   reading={thought.data.title}
 >
