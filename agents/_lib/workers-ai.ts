@@ -43,12 +43,12 @@ function imageField(data: unknown): string | null {
 }
 
 /** Every pixel to pure black or pure white, so the house style holds whatever the model drew. */
-async function toBlackOnWhite(jpeg: Uint8Array): Promise<Uint8Array> {
+export async function toBlackOnWhite(image: Uint8Array): Promise<Uint8Array> {
   const dir = await mkdtemp(join(tmpdir(), 'agentic-image-'));
   try {
-    const input = join(dir, 'in.jpg');
+    const input = join(dir, 'in.img');
     const output = join(dir, 'out.png');
-    await writeFile(input, jpeg);
+    await writeFile(input, image);
     await run('ffmpeg', [
       '-y',
       '-loglevel',
@@ -101,4 +101,13 @@ export async function generatePicture(prompt: string): Promise<Picture> {
   } catch (error) {
     return { ok: false, reason: `ffmpeg could not make it black on white: ${String(error)}` };
   }
+}
+
+/** Draws with OpenAI when OPENAI_API_KEY is set, otherwise with Workers AI. */
+export async function drawPicture(prompt: string): Promise<Picture & { model: string }> {
+  const { openAiAvailable, generateWithOpenAi, OPENAI_IMAGE_MODEL } =
+    await import('./openai-images.js');
+  if (openAiAvailable())
+    return { ...(await generateWithOpenAi(prompt)), model: `openai/${OPENAI_IMAGE_MODEL}` };
+  return { ...(await generatePicture(prompt)), model: IMAGE_MODEL };
 }
