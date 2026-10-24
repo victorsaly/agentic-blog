@@ -8,9 +8,11 @@ interface Props {
   originHref: string;
   /** Who or what did the converting, for the title text. */
   by?: string | undefined;
+  /** On a post, one plain sentence under the badge saying what an origin is, for a reader who lands here. */
+  explain?: boolean;
 }
 
-const { originHref, by } = Astro.props;
+const { originHref, by, explain = false } = Astro.props;
 const title = by
   ? `${settings.publishing.badge_text}. Converted by ${by}. Read the origin.`
   : `${settings.publishing.badge_text}. Read the origin.`;
@@ -34,8 +36,19 @@ const title = by
     ></span
   >
 </a>
+{
+  explain && (
+    <p class="explain small quiet" data-pagefind-ignore>
+      {settings.site.author} spoke or wrote this as a note. This page is a conversion of it; the
+      note, never edited, is the origin.
+    </p>
+  )
+}
 
 <style>
+  .explain {
+    margin: calc(-1 * var(--space-2)) 0 var(--space-3);
+  }
   .badge {
     display: inline-flex;
     align-items: center;

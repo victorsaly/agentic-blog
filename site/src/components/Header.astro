@@ -8,14 +8,12 @@ import { settings } from '../lib/settings';
   <a class="name" href="/">{settings.site.name}</a>
   <div class="switches">
     <a class="search" href="/search">Search</a>
+    <!-- Each switch names what it turns on, in words, and says with aria-pressed whether it is on. -->
     <button type="button" id="font-switch" aria-pressed="false">
-      <span aria-hidden="true">Aa</span>
-      <span class="visually-hidden">Switch reading font</span>
+      <span class="glyph" aria-hidden="true">Aa</span>
+      Lexend
     </button>
-    <button type="button" id="theme-switch" aria-pressed="false">
-      <span aria-hidden="true">◐</span>
-      <span class="visually-hidden">Switch between light and dark</span>
-    </button>
+    <button type="button" id="theme-switch" aria-pressed="false">Dark</button>
   </div>
 </header>
 
@@ -53,8 +51,20 @@ import { settings } from '../lib/settings';
     padding: 0 var(--space-2);
   }
   button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
     min-width: var(--tap);
     padding: 0 var(--space-2);
+    font-size: var(--size-small);
+  }
+  .glyph {
+    font-weight: 700;
+  }
+  @media (max-width: 30rem) {
+    .glyph {
+      display: none;
+    }
   }
   button[aria-pressed='true'] {
     background: var(--ink);
