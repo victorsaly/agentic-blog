@@ -1,6 +1,7 @@
 // Why: the interview agent's card: what it is for, what it may never do, and how its work is judged.
 // The framework reads this; it is the instruction, not a description of it.
 import { defineAgentCard } from '@roadbook/core';
+import { coreStep, standardMetrics } from '../_lib/card-presets.js';
 
 export const card = defineAgentCard({
   name: 'interview',
@@ -24,7 +25,15 @@ export const card = defineAgentCard({
   qualityBar: { approvedWithoutRewrite: 0.8 },
   model: { default: 'writer', allowed: ['writer'] },
   budget: { usdPerRun: 0.03, secondsPerRun: 45 },
-  gateAfter: true,
+  behaviour: coreStep(true),
+  metrics: standardMetrics(0.8, 0.03),
+  variables: {
+    maxQuestions: {
+      type: 'number',
+      default: 8,
+      why: 'How many questions at most; fewer is better when the note already says enough.',
+    },
+  },
   data: { sends: ['text'] },
   owner: 'Victor Saly',
   version: '1.0.0',

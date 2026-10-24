@@ -1,5 +1,6 @@
 // Why: the citations agent's card. Every claim gets a door out, and no door is published unopened.
 import { defineAgentCard } from '@roadbook/core';
+import { optionalStep, standardMetrics } from '../_lib/card-presets.js';
 
 export const card = defineAgentCard({
   name: 'citations',
@@ -30,7 +31,15 @@ export const card = defineAgentCard({
   qualityBar: { approvedWithoutRewrite: 0.8 },
   model: { default: 'writer', allowed: ['writer'] },
   budget: { usdPerRun: 0.15, secondsPerRun: 240 },
-  gateAfter: false,
+  behaviour: optionalStep(),
+  metrics: standardMetrics(0.8, 0.15),
+  variables: {
+    maxSources: {
+      type: 'number',
+      default: 12,
+      why: 'Enough doors out to check every claim, few enough that each one gets opened.',
+    },
+  },
   data: { sends: ['text'] },
   owner: 'Victor Saly',
   version: '1.0.0',

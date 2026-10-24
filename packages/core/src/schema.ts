@@ -89,6 +89,54 @@ export const doneMeans = z.object({
   says: z.string().min(10),
 });
 
+/** A value an agent can be tuned with, per node, without editing its prompt. */
+export const variableValue = z.union([z.number(), z.string(), z.boolean(), z.array(z.string())]);
+
+export const variable = z.object({
+  type: z.enum(['number', 'text', 'boolean', 'list']),
+  default: variableValue,
+  why,
+});
+
+/** What to do when a run of this agent goes wrong, decided up front instead of in the moment. */
+export const behaviour = z.object({
+  /** A person must approve this agent's output before the next step uses it. */
+  needsApproval: z.boolean(),
+  retry: z.object({
+    /** Extra attempts after the first. Each one is paid for and recorded. */
+    max: z.number().int().min(0).max(5),
+    /** Wait between attempts. */
+    backoffSeconds: z.number().int().min(0).default(0),
+    /** The retry is told why the last attempt failed (the failed check, the error). */
+    withFeedback: z.boolean().default(true),
+    on: z.array(z.enum(['check-failed', 'provider-error', 'timeout'])).min(1),
+  }),
+  /** When retries are used up: stop the run, skip this node, or try the fallback provider once. */
+  onFailure: z.enum(['stop-run', 'skip-node', 'use-fallback']),
+  /** A provider from model.allowed, used once when onFailure is use-fallback. */
+  fallback: z.string().regex(/^[a-z][a-z0-9-]*$/).optional(),
+  escalate: z.object({
+    when: z.array(z.enum(['retries-exhausted', 'held', 'over-budget', 'timeout'])).min(1),
+    /** Who is told: the owner, a gate in the workflow, or a named person. */
+    to: z.union([
+      z.literal('owner'),
+      z.object({ gate: z.string().regex(/^[a-z][a-z0-9-]*$/) }),
+      z.object({ email: z.string().email() }),
+    ]),
+    /** What they are told, in plain words. The live reason is added to it. */
+    says: z.string().min(10),
+  }),
+});
+
+/** A number this agent is scored on, with the target it must hold. */
+export const metric = z.object({
+  id,
+  says: z.string().min(10),
+  target: z.number(),
+  direction: z.enum(['at-least', 'at-most']),
+  unit: z.string().min(1),
+});
+
 export const agentCard = z.object({
   name: id,
   purpose: z.string().min(10).max(200),
@@ -110,7 +158,11 @@ export const agentCard = z.object({
     usdPerRun: z.number().positive(),
     secondsPerRun: z.number().positive(),
   }),
-  gateAfter: z.boolean(),
+  behaviour,
+  /** What the scorecard tracks for this agent. The quality bar is the first; cost and checks follow. */
+  metrics: z.array(metric).min(1, 'an agent needs at least one metric it is scored on'),
+  /** Settings a workflow may tune per node, each with a default and a why. */
+  variables: z.record(z.string().regex(/^[a-z][a-zA-Z0-9]*$/), variable).default({}),
   data: z.object({ sends: z.array(dataKind).min(1) }),
   owner: z.string().min(1),
   version: z.string().regex(/^\d+\.\d+\.\d+$/, 'a version is major.minor.patch'),
@@ -143,6 +195,8 @@ export const node = z.discriminatedUnion('kind', [
     ...base,
     card: agentCard,
     provider: id.optional(),
+    /** Values for the card's variables, for this node only. */
+    vars: z.record(z.string(), variableValue).default({}),
   }),
   z.object({ kind: z.literal('tool'), ...base, does: z.string().min(10) }),
   z.object({
@@ -158,7 +212,13 @@ export const node = z.discriminatedUnion('kind', [
     then: id,
     otherwise: id,
   }),
-  z.object({ kind: z.literal('guard'), ...base, card: agentCard, provider: id.optional() }),
+  z.object({
+    kind: z.literal('guard'),
+    ...base,
+    card: agentCard,
+    provider: id.optional(),
+    vars: z.record(z.string(), variableValue).default({}),
+  }),
   z.object({ kind: z.literal('sink'), ...base, target: sink }),
 ]);
 

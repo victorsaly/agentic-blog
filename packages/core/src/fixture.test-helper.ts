@@ -14,7 +14,15 @@ export function card(name: string, overrides: Partial<AgentCardInput> = {}): Age
     qualityBar: { approvedWithoutRewrite: 0.9 },
     model: { default: 'writer', allowed: ['writer'] },
     budget: { usdPerRun: 0.05, secondsPerRun: 60 },
-    gateAfter: true,
+    behaviour: {
+      needsApproval: true,
+      retry: { max: 1, on: ['check-failed', 'provider-error'] },
+      onFailure: 'stop-run',
+      escalate: { when: ['retries-exhausted', 'held'], to: 'owner', says: 'The draft could not be written; have a look.' },
+    },
+    metrics: [
+      { id: 'approved-without-rewrite', says: 'Share of drafts approved as written.', target: 0.9, direction: 'at-least', unit: 'share' },
+    ],
     data: { sends: ['text'] },
     owner: 'Test Owner',
     version: '1.0.0',

@@ -244,3 +244,84 @@ describe('flow rules', () => {
     expect(rulesOf({ ...p, flow: { capacity: { write: { perDay: 2 } } } })).toContain('RB050');
   });
 });
+
+describe('behaviour rules', () => {
+  const fail = card('write').behaviour;
+
+  it('RB033: refuses a fallback that is not a different allowed model', () => {
+    const input = withNodes((nodes) => ({
+      ...nodes,
+      write: {
+        kind: 'agent',
+        why: 'Falls back to the very model that just failed.',
+        after: ['origin'],
+        card: card('write', { behaviour: { ...fail, onFailure: 'use-fallback', fallback: 'writer' } }),
+      },
+    }));
+    expect(rulesOf(input)).toContain('RB033');
+  });
+
+  it('RB034: refuses a guard that would be skipped when it fails', () => {
+    const input = withNodes((nodes) => ({
+      ...nodes,
+      check: {
+        kind: 'guard',
+        why: 'A safety guard set to step aside when it breaks, which would wave work through.',
+        after: ['write'],
+        card: card('check', {
+          behaviour: { ...fail, needsApproval: false, onFailure: 'skip-node' },
+        }),
+      },
+      approve: {
+        kind: 'gate',
+        why: 'Approves after the guard has looked.',
+        after: ['write', 'check'],
+        asks: 'approve',
+        question: 'Publish this draft?',
+      },
+    }));
+    expect(rulesOf(input)).toContain('RB034');
+  });
+
+  it('RB035: refuses escalation to a gate that does not exist', () => {
+    const input = withNodes((nodes) => ({
+      ...nodes,
+      write: {
+        kind: 'agent',
+        why: 'Escalates to a gate nobody added.',
+        after: ['origin'],
+        card: card('write', { behaviour: { ...fail, escalate: { ...fail.escalate, to: { gate: 'nowhere' } } } }),
+      },
+    }));
+    expect(rulesOf(input)).toContain('RB035');
+  });
+
+  it('RB036: refuses a node setting the card does not declare, or of the wrong type', () => {
+    const tuned = card('write', {
+      variables: { maxWords: { type: 'number', default: 250, why: 'How long the draft may be, in words.' } },
+    });
+    const unknown = withNodes((nodes) => ({
+      ...nodes,
+      write: { kind: 'agent', why: 'Sets a variable its card never declared.', after: ['origin'], card: tuned, vars: { tone: 'warm' } },
+    }));
+    const wrongType = withNodes((nodes) => ({
+      ...nodes,
+      write: { kind: 'agent', why: 'Sets a number variable to a word.', after: ['origin'], card: tuned, vars: { maxWords: 'many' } },
+    }));
+    const right = withNodes((nodes) => ({
+      ...nodes,
+      write: { kind: 'agent', why: 'Sets a declared variable with the right type.', after: ['origin'], card: tuned, vars: { maxWords: 180 } },
+    }));
+    expect(rulesOf(unknown)).toContain('RB036');
+    expect(rulesOf(wrongType)).toContain('RB036');
+    expect(rulesOf(right)).not.toContain('RB036');
+  });
+
+  it('refuses a card with no metric to score it on', () => {
+    const input = withNodes((nodes) => ({
+      ...nodes,
+      write: { kind: 'agent', why: 'An agent nobody could score.', after: ['origin'], card: card('write', { metrics: [] }) },
+    }));
+    expect(validate(input).ok).toBe(false);
+  });
+});

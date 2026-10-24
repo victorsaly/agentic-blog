@@ -38,6 +38,10 @@ export const rules = {
   RB030: 'An agent card is named after the node it describes.',
   RB031: 'Only active agents can reach a sink.',
   RB032: 'An agent whose card asks for a gate after it has one.',
+  RB033: 'A fallback provider is declared, allowed by the card, and different from the default.',
+  RB034: 'A guard that fails never lets work through.',
+  RB035: 'Escalation goes to the owner, a named person, or a gate that exists.',
+  RB036: 'Node settings match the variables its card declares.',
   RB040: 'An agent runs on a declared provider its card allows.',
   RB041: 'Every provider has a declared data exit.',
   RB042: 'Every exit processes data only in an allowed region.',
@@ -303,16 +307,97 @@ function checkWorkflow(p: Project, wf: Workflow, options: ValidateOptions): Issu
       );
     }
 
-    if (card.gateAfter && !g.successors(nodeId).some((s) => g.get(s)?.kind === 'gate')) {
+    const b = card.behaviour;
+    if (b.needsApproval && !g.successors(nodeId).some((s) => g.get(s)?.kind === 'gate')) {
       issues.push(
         issue(
           'RB032',
           'error',
           where,
           `The card for "${nodeId}" says a person approves its output, but no gate follows it.`,
-          `Add a gate whose after includes "${nodeId}", or change gateAfter on the card.`,
+          `Add a gate whose after includes "${nodeId}", or set behaviour.needsApproval to false on the card.`,
         ),
       );
+    }
+
+    // RB033: a fallback is declared, allowed and different
+    if (b.onFailure === 'use-fallback') {
+      const fb = b.fallback;
+      if (fb === undefined || !card.model.allowed.includes(fb) || fb === card.model.default) {
+        issues.push(
+          issue(
+            'RB033',
+            'error',
+            where,
+            `"${nodeId}" falls back to another provider on failure, but ${fb === undefined ? 'names none' : `"${fb}" is not a different allowed model`}.`,
+            'Set behaviour.fallback to a provider in model.allowed that is not the default.',
+          ),
+        );
+      } else if (!(fb in p.providers)) {
+        issues.push(
+          issue(
+            'RB033',
+            'error',
+            where,
+            `"${nodeId}" falls back to "${fb}", which is not one of the project's providers.`,
+            `Add "${fb}" to providers with its data exit, or choose another fallback.`,
+          ),
+        );
+      }
+    }
+
+    // RB034: a guard that fails must not let work through
+    if (n.kind === 'guard' && b.onFailure === 'skip-node') {
+      issues.push(
+        issue(
+          'RB034',
+          'error',
+          where,
+          `The guard "${nodeId}" would be skipped if it failed, letting unchecked work through.`,
+          'Set behaviour.onFailure to stop-run (or use-fallback) for every guard.',
+        ),
+      );
+    }
+
+    // RB035: escalation goes somewhere real
+    const to = b.escalate.to;
+    if (typeof to === 'object' && 'gate' in to && g.get(to.gate)?.kind !== 'gate') {
+      issues.push(
+        issue(
+          'RB035',
+          'error',
+          where,
+          `"${nodeId}" escalates to "${to.gate}", which is not a gate in this workflow.`,
+          'Escalate to the owner, to a named person, or to the id of a gate in this workflow.',
+        ),
+      );
+    }
+
+    // RB036: node settings match the card's variables
+    for (const [name, value] of Object.entries(n.vars)) {
+      const declared = card.variables[name];
+      const actual = Array.isArray(value) ? 'list' : typeof value === 'string' ? 'text' : typeof value;
+      if (!declared) {
+        issues.push(
+          issue(
+            'RB036',
+            'error',
+            where,
+            `"${nodeId}" sets "${name}", which its card does not declare.`,
+            `Declare "${name}" in the card's variables with a type, a default and a why, or remove it.`,
+          ),
+        );
+      } else if (declared.type !== actual) {
+        issues.push(
+          issue(
+            'RB036',
+            'error',
+            where,
+            `"${nodeId}" sets "${name}" to a ${actual}, but the card says it is a ${declared.type}.`,
+            `Give "${name}" a ${declared.type}.`,
+          ),
+        );
+      }
     }
 
     const providerName = n.provider ?? card.model.default;

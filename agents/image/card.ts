@@ -1,6 +1,7 @@
 // Why: the image agent's card. One picture style, the same hand every time, and no picture rather than
 // the wrong one.
 import { defineAgentCard } from '@roadbook/core';
+import { coreStep, standardMetrics } from '../_lib/card-presets.js';
 
 export const card = defineAgentCard({
   name: 'image',
@@ -27,7 +28,20 @@ export const card = defineAgentCard({
   qualityBar: { approvedWithoutRewrite: 0.7 },
   model: { default: 'images', allowed: ['images', 'workers'] },
   budget: { usdPerRun: 0.6, secondsPerRun: 300 },
-  gateAfter: false,
+  behaviour: {
+    ...coreStep(false),
+    retry: { max: 2, backoffSeconds: 30, withFeedback: true, on: ['check-failed', 'provider-error', 'timeout'] },
+    onFailure: 'use-fallback',
+    fallback: 'workers',
+  },
+  metrics: standardMetrics(0.7, 0.6),
+  variables: {
+    maxPrints: {
+      type: 'number',
+      default: 6,
+      why: 'A cover and one print per section that earns one, never more than this.',
+    },
+  },
   data: { sends: ['prompt', 'image'] },
   owner: 'Victor Saly',
   version: '1.0.0',

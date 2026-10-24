@@ -9,8 +9,13 @@ export interface PlannedNode {
   kind: Node['kind'];
   why: string;
   provider?: string;
+  /** Worst case: every retry used, and the fallback tried once if there is one. */
   maxUsdPerRun?: number;
   stage?: string;
+  needsApproval?: boolean;
+  retries?: number;
+  onFailure?: string;
+  escalatesTo?: string;
 }
 
 export interface PlannedWorkflow {
@@ -19,7 +24,7 @@ export interface PlannedWorkflow {
   nodes: PlannedNode[];
   gates: { id: string; asks: string; question: string; capacity?: string }[];
   sinks: { id: string; target: string }[];
-  /** Upper bound: the sum of every agent's and guard's budget, as if each ran once. */
+  /** Upper bound: every agent and guard runs, uses every retry, and tries its fallback. */
   maxUsdPerRun: number;
 }
 
@@ -86,8 +91,15 @@ function planWorkflow(p: Project, wf: Workflow): PlannedWorkflow {
     if (n.kind === 'agent' || n.kind === 'guard') {
       const provider = providerOf(n);
       if (provider !== undefined) planned.provider = provider;
-      planned.maxUsdPerRun = n.card.budget.usdPerRun;
+      const b = n.card.behaviour;
+      const attempts = 1 + b.retry.max + (b.onFailure === 'use-fallback' ? 1 : 0);
+      planned.maxUsdPerRun = n.card.budget.usdPerRun * attempts;
       planned.stage = n.card.stage;
+      planned.needsApproval = b.needsApproval;
+      planned.retries = b.retry.max;
+      planned.onFailure = b.onFailure;
+      const to = b.escalate.to;
+      planned.escalatesTo = to === 'owner' ? 'owner' : 'gate' in to ? `gate ${to.gate}` : to.email;
     }
     return planned;
   });

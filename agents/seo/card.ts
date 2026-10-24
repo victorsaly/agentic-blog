@@ -1,5 +1,6 @@
 // Why: the SEO agent's card. Findable on purpose, honestly, and only when the switch says so.
 import { defineAgentCard } from '@roadbook/core';
+import { optionalStep, standardMetrics } from '../_lib/card-presets.js';
 
 export const card = defineAgentCard({
   name: 'seo',
@@ -21,7 +22,8 @@ export const card = defineAgentCard({
   qualityBar: { approvedWithoutRewrite: 0.9 },
   model: { default: 'writer', allowed: ['writer'] },
   budget: { usdPerRun: 0.03, secondsPerRun: 45 },
-  gateAfter: false,
+  behaviour: optionalStep(),
+  metrics: standardMetrics(0.9, 0.03),
   data: { sends: ['text', 'metadata'] },
   owner: 'Victor Saly',
   version: '1.0.0',

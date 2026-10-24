@@ -1,5 +1,6 @@
 // Why: the diagram agent's card. Most posts need no diagram, and the card makes "none" a correct answer.
 import { defineAgentCard } from '@roadbook/core';
+import { optionalStep, standardMetrics } from '../_lib/card-presets.js';
 
 export const card = defineAgentCard({
   name: 'diagram',
@@ -21,7 +22,8 @@ export const card = defineAgentCard({
   qualityBar: { approvedWithoutRewrite: 0.8 },
   model: { default: 'writer', allowed: ['writer'] },
   budget: { usdPerRun: 0.05, secondsPerRun: 60 },
-  gateAfter: false,
+  behaviour: optionalStep(),
+  metrics: standardMetrics(0.8, 0.05),
   data: { sends: ['text'] },
   owner: 'Victor Saly',
   version: '1.0.0',

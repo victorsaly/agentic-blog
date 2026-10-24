@@ -1,5 +1,6 @@
 // Why: the safety guard's card. It never writes a word of the blog; it can only pass or hold, with a reason.
 import { defineAgentCard } from '@roadbook/core';
+import { guardStep, standardMetrics } from '../_lib/card-presets.js';
 
 export const card = defineAgentCard({
   name: 'safety',
@@ -28,7 +29,8 @@ export const card = defineAgentCard({
   qualityBar: { approvedWithoutRewrite: 0.95 },
   model: { default: 'writer', allowed: ['writer'] },
   budget: { usdPerRun: 0.05, secondsPerRun: 60 },
-  gateAfter: false,
+  behaviour: guardStep(),
+  metrics: standardMetrics(0.95, 0.05),
   data: { sends: ['text'] },
   owner: 'Victor Saly',
   version: '1.0.0',

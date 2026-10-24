@@ -1,5 +1,6 @@
 // Why: the publish agent's card. It assembles, it does not write, and a person merges what it assembles.
 import { defineAgentCard } from '@roadbook/core';
+import { coreStep, standardMetrics } from '../_lib/card-presets.js';
 
 export const card = defineAgentCard({
   name: 'publish',
@@ -24,7 +25,8 @@ export const card = defineAgentCard({
   qualityBar: { approvedWithoutRewrite: 0.9 },
   model: { default: 'writer', allowed: ['writer'] },
   budget: { usdPerRun: 0.03, secondsPerRun: 60 },
-  gateAfter: true,
+  behaviour: coreStep(true),
+  metrics: standardMetrics(0.9, 0.03),
   data: { sends: ['text', 'metadata'] },
   owner: 'Victor Saly',
   version: '1.0.0',

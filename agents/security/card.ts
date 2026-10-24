@@ -1,5 +1,6 @@
 // Why: the security guard's card. It holds anything that would carry someone else's data out of the repo.
 import { defineAgentCard } from '@roadbook/core';
+import { guardStep, standardMetrics } from '../_lib/card-presets.js';
 
 export const card = defineAgentCard({
   name: 'security',
@@ -28,7 +29,8 @@ export const card = defineAgentCard({
   qualityBar: { approvedWithoutRewrite: 0.95 },
   model: { default: 'writer', allowed: ['writer'] },
   budget: { usdPerRun: 0.05, secondsPerRun: 60 },
-  gateAfter: false,
+  behaviour: guardStep(),
+  metrics: standardMetrics(0.95, 0.05),
   data: { sends: ['text'] },
   owner: 'Victor Saly',
   version: '1.0.0',

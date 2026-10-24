@@ -95,6 +95,10 @@ function printPlan(p: Plan): void {
       const extra = [
         n.provider && `on ${n.provider}`,
         n.maxUsdPerRun !== undefined && `≤ ${usd(n.maxUsdPerRun)}`,
+        n.retries !== undefined && `${String(n.retries)} retr${n.retries === 1 ? 'y' : 'ies'}`,
+        n.onFailure !== undefined && `then ${n.onFailure}`,
+        n.escalatesTo !== undefined && `escalates to ${n.escalatesTo}`,
+        n.needsApproval === true && 'needs approval',
       ]
         .filter(Boolean)
         .join(', ');

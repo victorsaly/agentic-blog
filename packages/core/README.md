@@ -25,10 +25,37 @@ rules written as examples.
 
 ## The agent card
 
-Every agent and guard carries a card (`AgentCard` in `schema.ts`): purpose, why, inputs, outputs, must-nots,
-done-means checks, a quality bar, allowed models, a budget, whether a gate follows it, the data it sends, an
-owner, a version and a stage. Only *active* agents may reach a sink (`RB031`). An agent with no test set is
-a warning (`RB060`) until a project decides to make it an error.
+Every agent and guard carries a card (`AgentCard` in `schema.ts`). The framework will not run an agent whose
+card is incomplete.
+
+| Field | What it answers |
+| --- | --- |
+| purpose, why | the one job, and why the agent exists |
+| inputs, outputs | what it reads and produces, with types and limits |
+| mustNot | the lines it never crosses |
+| doneMeans | the checks every output must pass |
+| qualityBar, metrics | the numbers it is scored on and the target for each (approvals as written, checks passed, cost) |
+| model | the default provider and the ones it is allowed to use |
+| budget | cost and time per run |
+| behaviour | does a person approve its output; how many retries, on what, with feedback or not; what happens when retries run out (stop the run, skip the node, or try the fallback once); who is told, when, and what they are told |
+| variables | settings a workflow may tune per node (`vars`), each with a type, a default and a why |
+| data | the kinds of data it sends out |
+| owner, version, stage | who answers for it, which version runs, and whether it is draft, trial, active or retired |
+
+The rules that keep this honest:
+
+| Rule | What it refuses |
+| --- | --- |
+| RB031 | a draft or trial agent on a path to a sink |
+| RB032 | an agent whose card needs approval with no gate after it |
+| RB033 | a fallback that is missing, not allowed, or the same model that just failed |
+| RB034 | a guard that would be skipped when it fails, letting unchecked work through |
+| RB035 | escalation to a gate that does not exist |
+| RB036 | a node setting a variable its card does not declare, or with the wrong type |
+| RB060 | (warning) an agent with no test set |
+
+`plan` counts retries and fallbacks in the worst-case cost of every run, so a generous retry policy shows up
+in the budget before it shows up on the bill.
 
 ## Use
 

@@ -20,8 +20,8 @@ describe('plan', () => {
 
   it('puts an upper bound on cost and on runs within the monthly cap', () => {
     const p = plan(parsed);
-    expect(p.workflows[0]?.maxUsdPerRun).toBeCloseTo(0.05);
-    expect(p.budget).toEqual({ monthlyCapUsd: 10, runsAtCap: 200 });
+    expect(p.workflows[0]?.maxUsdPerRun).toBeCloseTo(0.1); // one try plus one retry
+    expect(p.budget).toEqual({ monthlyCapUsd: 10, runsAtCap: 100 });
   });
 
   it('shows every data exit and who uses it', () => {
@@ -54,5 +54,12 @@ describe('plan', () => {
       'access-application',
       'r2-bucket',
     ]);
+  });
+});
+
+describe('plan, behaviour', () => {
+  it('shows each agent\u2019s retries, failure policy and escalation', () => {
+    const write = plan(parsed).workflows[0]?.nodes.find((n) => n.id === 'write');
+    expect(write).toMatchObject({ retries: 1, onFailure: 'stop-run', escalatesTo: 'owner', needsApproval: true });
   });
 });

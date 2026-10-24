@@ -1,6 +1,7 @@
 // Why: the convert agent's card. Same core, different shape, and none of the shapes may pretend to be
 // the origin.
 import { defineAgentCard } from '@roadbook/core';
+import { coreStep, standardMetrics } from '../_lib/card-presets.js';
 
 export const card = defineAgentCard({
   name: 'convert',
@@ -33,7 +34,20 @@ export const card = defineAgentCard({
   qualityBar: { approvedWithoutRewrite: 0.75 },
   model: { default: 'writer', allowed: ['writer'] },
   budget: { usdPerRun: 0.25, secondsPerRun: 180 },
-  gateAfter: false,
+  behaviour: coreStep(false),
+  metrics: standardMetrics(0.75, 0.25),
+  variables: {
+    shortMaxWords: {
+      type: 'number',
+      default: 250,
+      why: 'The idea depth has to fit one phone screen.',
+    },
+    linkedinMaxWords: {
+      type: 'number',
+      default: 180,
+      why: 'LinkedIn readers decide in the first lines; past this they scroll on.',
+    },
+  },
   data: { sends: ['text', 'metadata'] },
   owner: 'Victor Saly',
   version: '1.0.0',
