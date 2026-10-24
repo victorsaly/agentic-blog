@@ -51,3 +51,16 @@ export const prices: PriceList = {
 export function hasPrice(model: string): boolean {
   return model in prices;
 }
+
+/**
+ * A run's cost shared across the files it wrote, to a millionth of a dollar, so the receipts add up to
+ * exactly what the run cost. The last file takes what rounding leaves over.
+ */
+export function shares(usd: number, count: number): number[] {
+  if (count <= 0) return [];
+  const micros = Math.round(usd * 1_000_000);
+  const each = Math.floor(micros / count);
+  return Array.from({ length: count }, (_, i) =>
+    i === count - 1 ? (micros - each * (count - 1)) / 1_000_000 : each / 1_000_000,
+  );
+}

@@ -2,18 +2,36 @@
 //   npm run agent -- <agent> <thought-slug>
 // It loads the context, runs the agent, writes what it returns (never under origin/), and prints a
 // summary the workflow turns into a pull request body. A held result exits non-zero on purpose.
-// Every run is recorded in the thought's ledger (thoughts/<slug>/ledger.jsonl and ledger.head): that it
-// started, the state it moved through, what it cost as the model reported it, and each file it wrote with a
-// receipt. A run that fails is recorded as failed before the error goes on.
+// Every run is recorded in its own file in the thought's ledger (thoughts/<slug>/ledger/<run>.jsonl, with its
+// head in <run>.head): that it started, the state it moved through, what it cost as each provider reported
+// it, and each file it wrote with a receipt. A run that fails at any point after it starts is recorded as
+// failed, and saved, before the error goes on.
 // Agents never call a provider themselves: ask() and draw() go to the providers the agent's card allows,
 // declared once in roadbook.config.ts, and every call's usage is logged and priced the same way.
 import { resolve } from 'node:path';
-import { UsageLog, costOf, describeUsage, hashOf, type AgentCardInput } from '@roadbook/core';
-import { openLedger, saveLedger } from './_lib/ledger-file.js';
-import { adapterFor, choose, connect, textModel, unpriced } from './_lib/models.js';
-import { prices } from './_lib/prices.js';
-import { assertNotLedger, endState, lastState, originOf, startedBy, whyOf } from './_lib/record.js';
 import {
+  Ledger,
+  LedgerError,
+  UsageLog,
+  costOf,
+  describeUsage,
+  hashOf,
+  type AgentCardInput,
+} from '@roadbook/core';
+import { readRuns, runId, saveRun } from '@roadbook/core/node';
+import { adapterFor, choose, connect, textModel, unpriced } from './_lib/models.js';
+import { prices, shares } from './_lib/prices.js';
+import {
+  assertNotLedger,
+  endState,
+  lastState,
+  originOf,
+  startStates,
+  startedBy,
+  whyOf,
+} from './_lib/record.js';
+import {
+  originFiles,
   loadProfile,
   loadPrompt,
   loadSettings,
@@ -76,22 +94,19 @@ async function main(): Promise<void> {
     today: new Date().toISOString().slice(0, 10),
   };
 
-  // A ledger that does not verify stops the run here, before anything is spent or written.
-  const open = await openLedger(thought.dir);
-  const { ledger } = open;
+  // A past run that does not verify stops this one here, before anything is spent or written.
+  const past = await readRuns(thought.dir, `thoughts/${slug}`);
+  if (past.issues.length > 0) throw new LedgerError(`refused: ${past.issues.join(' ')}`);
   const node = agent;
-  const origin = originOf(slug, thought.files.keys());
-  const from = lastState(ledger.events, node);
-  await ledger.append({
-    type: 'run.started',
-    workflow: 'blog-post',
-    origin,
-    by: startedBy(process.env),
-  });
-  await ledger.append({ type: 'node.state', node, from, to: 'running' });
+  const origin = originOf(slug, await originFiles(thought.dir));
+  const ledger = new Ledger();
+  const run = runId(new Date(), agent);
 
   // One cost event per provider and model, from the usage each reported; returns the run's total.
+  // Recorded once.
+  let costed: number | null = null;
   const recordCosts = async (): Promise<number> => {
+    if (costed !== null) return costed;
     let total = 0;
     for (const used of log.totals()) {
       const usd = costOf(prices, used.model, used.usage);
@@ -104,75 +119,99 @@ async function main(): Promise<void> {
         units: describeUsage(used.model, used.usage),
       });
     }
-    return Math.round(total * 1_000_000) / 1_000_000;
+    costed = Math.round(total * 1_000_000) / 1_000_000;
+    return costed;
   };
 
   const fallback = agent === 'profile' || agent === 'drilldown' ? 'repo' : 'thought';
   let result: Awaited<ReturnType<AgentRun>>;
   let written: string[];
+  let usd: number;
+  let ended = false;
   try {
+    await ledger.append({
+      type: 'run.started',
+      workflow: 'blog-post',
+      origin,
+      by: startedBy(process.env),
+    });
+    for (const body of startStates(
+      node,
+      lastState(
+        past.runs.flatMap((r) => r.events),
+        node,
+      ),
+    ))
+      await ledger.append(body);
+
     const module = (await import(`./${agent}/index.js`)) as { run: AgentRun };
     result = await module.run(ctx);
     assertNotLedger(result.files);
     written = await writeOutputs({ thought: thought.dir, repo: root, fallback }, result.files);
-  } catch (error: unknown) {
-    const reason = error instanceof Error ? error.message : String(error);
-    await recordCosts();
+
+    usd = await recordCosts();
+    const receipt = {
+      origin,
+      inputsHash: await hashOf({
+        files: Object.fromEntries([...thought.files].sort(([a], [b]) => a.localeCompare(b))),
+        profile,
+        settings,
+      }),
+      agent,
+      cardVersion: card.version,
+      promptHash: await hashOf(system),
+      provider: chosen.writer.provider,
+      model,
+      at: new Date().toISOString(),
+    };
+    // A picture names the provider that drew it; the text the writer wrote names the writer.
+    const drawers = new Set(chosen.drawers.map((d) => d.provider));
+    const drew = log.totals().find((t) => drawers.has(t.provider));
+    // The run's cost is shared across the files it wrote, so adding up receipts gives the run's cost once.
+    const kept = result.files.filter((file) => file.remove !== true);
+    const split = shares(usd, kept.length);
+    for (const [index, file] of kept.entries()) {
+      const base = file.base ?? fallback;
+      await ledger.append({
+        type: 'node.output',
+        node,
+        why: whyOf(file, result.summary, prompt.meta.why),
+        receipt: {
+          ...(file.bytes !== undefined && drew
+            ? { ...receipt, provider: drew.provider, model: drew.model }
+            : receipt),
+          usd: split[index] ?? 0,
+        },
+        ref: base === 'thought' ? `thoughts/${slug}/${file.path}` : file.path,
+        authoredBy: 'agent',
+      });
+    }
+    const end = endState(result);
     await ledger.append({
       type: 'node.state',
       node,
       from: 'running',
-      to: 'failed',
-      reason: reason.slice(0, 300),
+      to: end.to,
+      ...(end.reason ? { reason: end.reason } : {}),
     });
-    await saveLedger(thought.dir, open);
+    ended = true;
+  } catch (error: unknown) {
+    // Whatever went wrong after the run started, the run is recorded as failed, with what it cost.
+    if (!ended) {
+      const reason = error instanceof Error ? error.message : String(error);
+      await recordCosts();
+      await ledger.append({
+        type: 'node.state',
+        node,
+        from: 'running',
+        to: 'failed',
+        reason: reason.slice(0, 300),
+      });
+    }
     throw error;
+  } finally {
+    await saveRun(thought.dir, run, ledger);
   }
-
-  const usd = await recordCosts();
-  const receipt = {
-    origin,
-    inputsHash: await hashOf({
-      files: Object.fromEntries([...thought.files].sort(([a], [b]) => a.localeCompare(b))),
-      profile,
-      settings,
-    }),
-    agent,
-    cardVersion: card.version,
-    promptHash: await hashOf(system),
-    provider: chosen.writer.provider,
-    model,
-    at: new Date().toISOString(),
-    // What the whole run cost; every file it wrote carries the same figure.
-    usd,
-  };
-  // A picture names the provider that drew it; the text the writer wrote names the writer.
-  const drawers = new Set(chosen.drawers.map((d) => d.provider));
-  const drew = log.totals().find((t) => drawers.has(t.provider));
-  for (const file of result.files) {
-    if (file.remove === true) continue;
-    const base = file.base ?? fallback;
-    await ledger.append({
-      type: 'node.output',
-      node,
-      why: whyOf(file, result.summary, prompt.meta.why),
-      receipt:
-        file.bytes !== undefined && drew
-          ? { ...receipt, provider: drew.provider, model: drew.model }
-          : receipt,
-      ref: base === 'thought' ? `thoughts/${slug}/${file.path}` : file.path,
-      authoredBy: 'agent',
-    });
-  }
-  const end = endState(result);
-  await ledger.append({
-    type: 'node.state',
-    node,
-    from: 'running',
-    to: end.to,
-    ...(end.reason ? { reason: end.reason } : {}),
-  });
-  await saveLedger(thought.dir, open);
 
   console.info(
     JSON.stringify({
