@@ -1,0 +1,7 @@
+{
+  "why": "The first post's structure, reviewed and kept; the message and small ideas set the bar for this agent.",
+  "kind": "approved-past",
+  "input": { "thought": "2026-10-23-talked-out-loud-tidied-by-ai", "files": ["origin/"] },
+  "approved": "structure.md",
+  "expect": ["message-length", "idea-length", "themes-known"]
+}

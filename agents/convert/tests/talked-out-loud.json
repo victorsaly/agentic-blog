@@ -1,0 +1,7 @@
+{
+  "why": "The first post's short and long versions as merged; the long one lists every change from the origin.",
+  "kind": "approved-past",
+  "input": { "thought": "2026-10-23-talked-out-loud-tidied-by-ai", "files": ["structure.md", "origin/"] },
+  "approved": "versions/",
+  "expect": ["short-length", "changes-listed", "converted-from"]
+}

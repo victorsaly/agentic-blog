@@ -1,0 +1,21 @@
+{
+  "name": "@roadbook/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agentic Roadbook: the record of every turn an agent took, who decided it, and why.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

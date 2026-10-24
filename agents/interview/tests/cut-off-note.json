@@ -1,0 +1,9 @@
+{
+  "why": "A note that stops mid-sentence; the agent should ask how it ends, not guess.",
+  "kind": "edge",
+  "input": {
+    "inline": "So I was at the exhibition and the thing that stayed with me was the way the"
+  },
+  "expect": ["count", "one-line"],
+  "mustAsk": "how the cut-off sentence ends"
+}
