@@ -1,41 +1,43 @@
 ---
 why: >
-  One sketchbook that follows the post: the blogger speaking his thought into a
-  phone on the cover, then one plain scene per section (paper, sandpaper, stamp,
-  thread, path, door, a conversation), none repeated and none of them a symbol
-  of AI. Each scene is small enough to draw as a few bold linocut shapes.
+  One sketchbook that follows the post: a hand and a phone with a spoken
+  thought pouring into it on the cover, then one plain scene per section
+  (paper, sandpaper, stamp, thread, path, door, a conversation), none repeated
+  and none of them a symbol of AI. Each scene is small enough to draw as a few
+  bold linocut shapes.
 generated_by: image
 drawn: '2026-10-24'
 images:
-  - file: image/00-man-speaking-into-phone-outdoors.png
+  - file: image/00-hand-speaking-into-phone.png
     section: cover
     subject: >-
-      Victor walking along a quiet path, smiling, holding a plain phone up to
-      his mouth with his hand wrapped around it, speaking his thought into it.
+      A close-up of one relaxed hand holding a plain phone upright, with a few
+      flowing carved lines of breath and voice drifting in from the left and
+      pouring into the phone. No face, nothing beyond the hand and wrist.
     alt: >-
-      A smiling man with round glasses walks along a path and speaks into a
-      phone held close to his mouth.
+      A hand holds a phone while flowing lines of breath, like a spoken
+      thought, pour into it.
     drawn: true
-    model: openai/gpt-image-2 (from the reference photo)
+    model: openai/gpt-image-2
     reviewed_by: claude
     attempts: 1
     quote: >-
       Every post here starts as a messy voice note, kept exactly as it was
       spoken.
     note: >-
-      He is drawn at the moment the post starts, talking into the phone while he
-      walks, because the message is that the spoken note is where everything
-      begins.
+      Redrawn on 2026-10-24 at Victor's request: the first cover, him walking at
+      the camera, read as a stiff stock pose. A hand and a voice going into the
+      phone shows the moment the post starts without posing anyone.
     prompt: >-
       A linocut print: bold carved black shapes and white cut lines, strong
       contrast, hand-printed texture, only black and white, no grey, no text.
-      One idea per picture. Generous empty space. If a person appears, it is
-      always this person: Victor: a man with short dark hair swept up at the
-      front, light stubble along the jaw, round glasses and a warm, wide smile.
-      Dressed simply, a dark jacket or jumper over a shirt. Always the same man,
-      drawn the same way. Victor walking along a quiet path, smiling, holding a
-      plain phone up to his mouth with his hand wrapped around it, speaking his
-      thought into it. Generous empty space, nothing else. Square image.
+      One idea per picture. Generous empty space. A close-up of one relaxed hand
+      holding a plain phone upright, bottom edge of the phone tilted towards the
+      upper left, where three or four flowing carved lines of breath and voice
+      drift in from the left edge of the frame and pour into the phone, like a
+      spoken thought going in. No face, no person beyond the hand and wrist.
+      Calm and casual, not posed. Generous empty space, nothing else. Square
+      image.
   - file: image/01-scribbled-page-beside-clean-page.png
     section: Every post should have a before and an after
     subject: >-
@@ -232,7 +234,7 @@ images:
 
 | File | Section | What it shows |
 |---|---|---|
-| image/00-man-speaking-into-phone-outdoors.png | cover | A smiling man with round glasses walks along a path and speaks into a phone held close to his mouth. |
+| image/00-hand-speaking-into-phone.png | cover | A hand holds a phone while flowing lines of breath, like a spoken thought, pour into it. |
 | image/01-scribbled-page-beside-clean-page.png | Every post should have a before and an after | Two sheets of paper on a table: one crumpled and covered in scribbles, the other flat and neatly lined. |
 | image/02-hand-sanding-rough-wooden-board.png | The rusty version is the real one | A hand pushes a sanding block along a wooden board, rough and knotted on one side and smooth on the other. |
 | image/03-hand-stamping-blank-round-mark.png | Talked out loud, tidied by AI | A hand pressing a round stamp onto the corner of a sheet of paper, leaving a plain circle. |
