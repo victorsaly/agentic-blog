@@ -2,3 +2,4 @@
 # .dev.vars in dev and never deploys it.
 DEV_SKIP_ACCESS=1
 GITHUB_TOKEN=
+ANTHROPIC_API_KEY=
