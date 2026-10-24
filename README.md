@@ -3,8 +3,9 @@
 The engine behind **blog.victorsaly.com**: a blog where every post starts as a raw voice note and every
 published version links back to it.
 
-> **Converted with AI, not made by AI.** A human had the thought. A tool changed its shape so more people
-> could receive it. The badge is a link: click it and you land on the origin.
+> **Talked out loud, tidied by AI.** The thought is real and stays the writer's. AI helps tidy it and give
+> it structure, so anyone can say what they think freely and still publish a clear, well-documented blog.
+> Every post has a switch to its original, kept exactly as it came out.
 
 ## How a thought moves
 
