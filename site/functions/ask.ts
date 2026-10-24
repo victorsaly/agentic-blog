@@ -1,9 +1,17 @@
-// Why: the reader's side of the chat. It answers one question from the published posts and keeps nothing:
-// no question, answer or address is stored or logged. It is closed until the site is public (the corpus
+// Why: the reader's side of the chat. It answers a question from the published posts, or from the one post
+// the reader is on, with the earlier turns the reader's own page sends back, and keeps nothing: no question,
+// answer or address is stored or logged. It is closed until the site is public (the corpus
 // says so), except in local development; a per-visitor burst limit runs in Cloudflare's memory, and the
 // spend cap lives on the Anthropic key itself.
 import Anthropic from '@anthropic-ai/sdk';
-import { readAnswer, readQuestion, systemPrompt, type Corpus } from '../src/lib/ask';
+import {
+  conversation,
+  corpusFor,
+  readAnswer,
+  readQuestion,
+  systemPrompt,
+  type Corpus,
+} from '../src/lib/ask';
 import { json, problem, type Handler } from './_lib';
 
 function isCorpus(data: unknown): data is Corpus {
@@ -29,14 +37,15 @@ export const onRequestPost: Handler = async ({ request, env }) => {
 
   const asked = readQuestion(await request.json().catch(() => null));
   if (!asked.ok) return problem(asked.error, 400);
+  const scoped = corpusFor(corpus, asked.post);
 
   const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
   try {
     const response = await client.messages.create({
       model: corpus.model,
       max_tokens: 1200,
-      system: [{ type: 'text', text: systemPrompt(corpus), cache_control: { type: 'ephemeral' } }],
-      messages: [{ role: 'user', content: asked.question }],
+      system: [{ type: 'text', text: systemPrompt(scoped), cache_control: { type: 'ephemeral' } }],
+      messages: conversation(asked),
     });
     if ((response.stop_reason as string) === 'refusal')
       return json({ answer: 'I cannot answer that one. Try asking about a post.', sources: [] });
@@ -44,7 +53,7 @@ export const onRequestPost: Handler = async ({ request, env }) => {
       .filter((b): b is Anthropic.TextBlock => b.type === 'text')
       .map((b) => b.text)
       .join('\n');
-    return json(readAnswer(text, corpus));
+    return json(readAnswer(text, scoped));
   } catch (error) {
     if (error instanceof Anthropic.RateLimitError)
       return problem('The chat is busy. Try again in a minute.', 429);

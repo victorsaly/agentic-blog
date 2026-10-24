@@ -9,6 +9,7 @@ import { satteri } from '@astrojs/markdown-satteri';
 import { sectionPictures } from './src/lib/section-pictures-plugin';
 import { sectionDiagrams } from './src/lib/section-diagrams-plugin';
 import { dropLeadHeading } from './src/lib/lead-heading-plugin';
+import { sourceNotes } from './src/lib/source-notes-plugin';
 
 const settings = parse(readFileSync(new URL('../settings.yml', import.meta.url), 'utf8'));
 const domain = settings.site.domain;
@@ -25,9 +26,12 @@ export default defineConfig({
   ],
   // The drawings are already small black-and-white PNGs; served as they are, no image library needed.
   image: { service: passthroughImageService() },
-  // Each section's drawing goes under its heading in the long version (see the plugin's why).
+  // Each section's drawing goes under its heading in the long version, and each claim gets its source
+  // number (see the plugins' whys). The notes run first, so they never land in a drawing's caption.
   markdown: {
-    processor: satteri({ mdastPlugins: [dropLeadHeading, sectionPictures, sectionDiagrams] }),
+    processor: satteri({
+      mdastPlugins: [dropLeadHeading, sourceNotes, sectionPictures, sectionDiagrams],
+    }),
   },
   server: { port: 4321 },
   vite: {

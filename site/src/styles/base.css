@@ -3,11 +3,17 @@
    the message. Everything is reachable by keyboard and nothing moves unless the reader asked it to. */
 
 @import './tokens.css';
+@import './panels.css';
 
 *,
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+/* Hidden means hidden, whatever display a class gives the element. */
+[hidden] {
+  display: none !important;
 }
 
 html {
@@ -16,7 +22,8 @@ html {
   font-family: var(--font);
   font-size: 100%;
   -webkit-text-size-adjust: 100%;
-  scroll-padding-top: var(--space-5);
+  /* Room for the header, which stays at the top, when a link jumps to a heading. */
+  scroll-padding-top: 6rem;
 }
 
 body {
@@ -34,6 +41,20 @@ main {
   max-width: calc(var(--measure) + 2 * var(--gutter));
   margin: 0 auto;
   padding: var(--space-5) var(--gutter) var(--space-6);
+}
+
+/* A wide page lays out its own columns inside the frame. */
+main.wide {
+  max-width: none;
+  padding: 0 0 var(--space-6);
+}
+
+/* The frame: header, footer and wide pages share one width and one side margin. */
+.frame {
+  width: 100%;
+  max-width: var(--wide);
+  margin-inline: auto;
+  padding-inline: var(--pad);
 }
 
 h1,
@@ -151,6 +172,94 @@ button {
 button:hover {
   background: var(--ink);
   color: var(--paper);
+}
+
+/* A label: bold capitals standing on a strong rule, naming the block beneath it. */
+.label {
+  font-size: var(--size-label);
+  font-weight: 700;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  line-height: var(--leading-tight);
+  margin: 0;
+  padding-bottom: var(--space-2);
+  border-bottom: var(--rule-strong) solid var(--ink);
+  max-width: none;
+}
+
+/* A control: a bordered box with an icon and a word, the same everywhere. Filled when it is on or open. */
+.control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--tap);
+  min-width: var(--tap);
+  padding: 0 0.75rem;
+  border: var(--rule-width) solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--size-small);
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    transform var(--duration-press) var(--ease-out);
+}
+
+.control:hover {
+  background: var(--paper);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .control:hover {
+    background: var(--hover);
+  }
+}
+
+.control:active {
+  transform: scale(0.97);
+}
+
+.control img {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  filter: var(--drawing-filter);
+}
+
+.control svg {
+  flex: none;
+}
+
+.control[aria-pressed='true'],
+.control[aria-expanded='true'],
+.control.filled,
+.control[aria-pressed='true']:hover,
+.control[aria-expanded='true']:hover,
+.control.filled:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.control[aria-pressed='true'] img,
+.control[aria-expanded='true'] img,
+.control.filled img {
+  filter: var(--drawing-filter-on-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .control {
+    transition: none;
+  }
+  .control:active {
+    transform: none;
+  }
 }
 
 .visually-hidden {
