@@ -143,9 +143,11 @@ export const run: AgentRun = async (ctx) => {
   const failures: string[] = [];
   for (const [index, image] of parsed.data.images.entries()) {
     const file = fileNameFor(index, image.name);
+    // The blogger appears once, on the cover; every other panel is the idea of its section.
+    const isCover = image.section === 'cover';
     const prompt = drawingPrompt(
       ctx.settings.media.image_style,
-      ctx.settings.media.image_character,
+      isCover ? ctx.settings.media.image_character : undefined,
       image.subject,
     );
     const quote = verifiedQuote(
@@ -158,7 +160,7 @@ export const run: AgentRun = async (ctx) => {
     let model = '';
     while (attempts < MAX_ATTEMPTS && kept === null) {
       attempts += 1;
-      const picture = await drawPicture(prompt, reference);
+      const picture = await drawPicture(prompt, isCover ? reference : undefined);
       model = picture.model;
       if (!picture.ok) {
         problems = [picture.reason];
