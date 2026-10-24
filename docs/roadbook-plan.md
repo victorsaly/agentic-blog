@@ -21,10 +21,14 @@ where each lives). This file says what to build next and in what order.
 - **Slice 2 is built** (`feat/roadbook-ledger`): every `npm run agent` run is recorded in its own file,
   `thoughts/<slug>/ledger/<run>.jsonl` with `<run>.head` beside it, and CI runs `roadbook verify-ledgers`
   and refuses a pull request that changes or removes a merged run. One file per run (not one chain per
-  thought) is what lets two branches run agents on the same thought and both merge. Cost
-  comes from the usage Claude reports, priced from `agents/_lib/costs.ts`; a model with no price is refused
-  before anything is spent. Known gap: the image agent's drawing calls (OpenAI, Workers AI) are not costed
-  yet; its Claude review calls are. Slice 5's adapters close that.
+  thought) is what lets two branches run agents on the same thought and both merge.
+- **Model adapters are built** (`feat/model-adapters`, most of Slice 5): every model call goes through one
+  contract in `packages/core/src/models.ts` (an adapter that writes or draws and reports its usage in named
+  meters). Adapters exist for `claude`, `openai-images` and `workers-ai`; the runner picks them from the
+  card's providers in order, and `agents/_lib/prices.ts` prices every meter, refusing an unpriced model
+  before anything is spent. Image calls are now costed too. Left for Slice 5: a card listing the writer it
+  uses for review (the image agent reviews with `writer`, which its card does not name), and adapters for
+  the other provider kinds.
 - **Nothing runs through Roadbook yet.** The agents still run through `agents/run.ts` and their
   `PROMPT.md`; the cards describe them alongside. That is deliberate: the existing logic keeps working
   while the framework grows under it.

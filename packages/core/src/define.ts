@@ -30,7 +30,9 @@ export function openaiImages(options: { model?: string } = {}): Provider {
   return { kind: 'openai-images', secret: 'OPENAI_API_KEY', ...options };
 }
 
-export function workersAi(options: { model?: string } = {}): Provider {
+export function workersAi(
+  options: { model?: string; drawModel?: string; secret?: string } = {},
+): Provider {
   return { kind: 'workers-ai', ...options };
 }
 

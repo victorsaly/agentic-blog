@@ -3,14 +3,24 @@
 // It loads the context, runs the agent, writes what it returns (never under origin/), and prints a
 // summary the workflow turns into a pull request body. A held result exits non-zero on purpose.
 // Every run is recorded in its own file in the thought's ledger (thoughts/<slug>/ledger/<run>.jsonl, with its
-// head in <run>.head): that it started, the state it moved through, what it cost as the model reported it,
-// and each file it wrote with a receipt. A run that fails at any point after it starts is recorded as failed,
-// and saved, before the error goes on.
+// head in <run>.head): that it started, the state it moved through, what it cost as each provider reported
+// it, and each file it wrote with a receipt. A run that fails at any point after it starts is recorded as
+// failed, and saved, before the error goes on.
+// Agents never call a provider themselves: ask() and draw() go to the providers the agent's card allows,
+// declared once in roadbook.config.ts, and every call's usage is logged and priced the same way.
 import { resolve } from 'node:path';
-import { Ledger, LedgerError, hashOf, type AgentCardInput } from '@roadbook/core';
+import {
+  Ledger,
+  LedgerError,
+  UsageLog,
+  costOf,
+  describeUsage,
+  hashOf,
+  type AgentCardInput,
+} from '@roadbook/core';
 import { readRuns, runId, saveRun } from '@roadbook/core/node';
-import { createAskClient } from './_lib/claude.js';
-import { shares, unitsOf, usdFor } from './_lib/costs.js';
+import { adapterFor, choose, connect, textModel, unpriced } from './_lib/models.js';
+import { prices, shares } from './_lib/prices.js';
 import {
   assertNotLedger,
   endState,
@@ -51,12 +61,24 @@ async function main(): Promise<void> {
     loadThought(root, slug),
   ]);
 
-  const model = prompt.meta.model ?? settings.agents.model;
   const { card } = (await import(`./${agent}/card.js`)) as { card: AgentCardInput };
+  const project = await import('../roadbook.config.js');
+  const adapters = new Map(
+    Object.entries(project.default.providers).map(([name, p]) => [name, adapterFor(name, p)]),
+  );
+  const chosen = choose(card, adapters);
+  const model = textModel(chosen, prompt.meta.model, settings.agents.model);
+  // Every model this run may bill for has a price, or nothing is spent.
+  const missing = unpriced(chosen, model);
+  if (missing.length > 0)
+    throw new Error(
+      `no price for ${missing.join(', ')}; add it to agents/_lib/prices.ts before running ${agent}`,
+    );
 
   const system = systemMessage(profile, prompt, settings);
-  // Refuses a model with no price, before anything is spent.
-  const client = createAskClient(system, {
+  const log = new UsageLog();
+  const calls = connect(chosen, log, {
+    system,
     model,
     maxOutputTokens: prompt.meta.max_output_tokens ?? settings.agents.max_output_tokens,
   });
@@ -67,7 +89,8 @@ async function main(): Promise<void> {
     settings,
     profile,
     thought,
-    ask: client.ask,
+    ask: calls.ask,
+    draw: calls.draw,
     today: new Date().toISOString().slice(0, 10),
   };
 
@@ -79,20 +102,21 @@ async function main(): Promise<void> {
   const ledger = new Ledger();
   const run = runId(new Date(), agent);
 
-  // One cost event per model, from the usage the model reported; returns the run's total. Recorded once.
+  // One cost event per provider and model, from the usage each reported; returns the run's total.
+  // Recorded once.
   let costed: number | null = null;
   const recordCosts = async (): Promise<number> => {
     if (costed !== null) return costed;
     let total = 0;
-    for (const [used, usage] of client.usage()) {
-      const usd = usdFor(used, usage);
+    for (const used of log.totals()) {
+      const usd = costOf(prices, used.model, used.usage);
       total += usd;
       await ledger.append({
         type: 'cost.incurred',
         node,
-        provider: client.provider,
+        provider: used.provider,
         usd,
-        units: unitsOf(used, usage),
+        units: describeUsage(used.model, used.usage),
       });
     }
     costed = Math.round(total * 1_000_000) / 1_000_000;
@@ -136,10 +160,13 @@ async function main(): Promise<void> {
       agent,
       cardVersion: card.version,
       promptHash: await hashOf(system),
-      provider: client.provider,
+      provider: chosen.writer.provider,
       model,
       at: new Date().toISOString(),
     };
+    // A picture names the provider that drew it; the text the writer wrote names the writer.
+    const drawers = new Set(chosen.drawers.map((d) => d.provider));
+    const drew = log.totals().find((t) => drawers.has(t.provider));
     // The run's cost is shared across the files it wrote, so adding up receipts gives the run's cost once.
     const kept = result.files.filter((file) => file.remove !== true);
     const split = shares(usd, kept.length);
@@ -149,7 +176,12 @@ async function main(): Promise<void> {
         type: 'node.output',
         node,
         why: whyOf(file, result.summary, prompt.meta.why),
-        receipt: { ...receipt, usd: split[index] ?? 0 },
+        receipt: {
+          ...(file.bytes !== undefined && drew
+            ? { ...receipt, provider: drew.provider, model: drew.model }
+            : receipt),
+          usd: split[index] ?? 0,
+        },
         ref: base === 'thought' ? `thoughts/${slug}/${file.path}` : file.path,
         authoredBy: 'agent',
       });

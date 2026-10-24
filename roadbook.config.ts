@@ -59,7 +59,10 @@ export default defineProject({
   providers: {
     writer: claude({ model: 'claude-sonnet-5-5' }),
     images: openaiImages(),
-    workers: workersAi({ model: '@cf/openai/whisper-large-v3-turbo' }),
+    workers: workersAi({
+      model: '@cf/openai/whisper-large-v3-turbo',
+      drawModel: '@cf/black-forest-labs/flux-1-schnell',
+    }),
   },
 
   budget: { monthlyCapUsd: 30, atCap: 'queue' },

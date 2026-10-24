@@ -1,17 +1,14 @@
-// Why: one thin door to the model. Every agent asks through here, so the model, the token budget and the
-// system message are set in one place and a change to any of them is one commit. It also counts what every
-// call used, per model, so the runner can record what the run really cost.
+// Why: Claude behind the one model contract. The project's "writer" provider is this adapter: it sends the
+// system message, the pictures and the question, carries a paused web search on, and returns the text with
+// what every round used, read from the usage Claude reports, so the ledger can cost it exactly.
 import Anthropic from '@anthropic-ai/sdk';
-import { addUsage, noUsage, priceOf, type Usage } from './costs.js';
-import type { AskOptions } from './types.js';
-
-export interface AskClient {
-  /** Who bills these calls, as the ledger names it. */
-  provider: 'anthropic';
-  ask: (user: string, options?: AskOptions) => Promise<string>;
-  /** What the calls so far used, by model. */
-  usage: () => Map<string, Usage>;
-}
+import {
+  ModelCallError,
+  addUsage,
+  type ModelAdapter,
+  type Provider,
+  type Usage,
+} from '@roadbook/core';
 
 /** One response's usage. Web searches sit under server_tool_use, which this SDK version does not type. */
 function usageOf(response: Anthropic.Message): Usage {
@@ -30,33 +27,32 @@ function usageOf(response: Anthropic.Message): Usage {
   };
 }
 
-export function createAskClient(
-  system: string,
-  defaults: { model: string; maxOutputTokens: number },
-): AskClient {
-  // A model the ledger could not price is refused here, before the run starts or anything is spent.
-  priceOf(defaults.model);
-  const apiKey = process.env['ANTHROPIC_API_KEY'];
-  if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not set');
-  const client = new Anthropic({ apiKey });
-  const used = new Map<string, Usage>();
+export function claudeAdapter(name: string, provider: Provider): ModelAdapter {
+  const secret = provider.secret ?? 'ANTHROPIC_API_KEY';
+  const fallbackModel = provider.model ?? 'claude-sonnet-5-5';
+  let client: Anthropic | null = null;
 
   return {
-    provider: 'anthropic',
-    usage: () => new Map(used),
-    async ask(user, options = {}) {
+    provider: name,
+    available: () => Boolean(process.env[secret]),
+    models: () => [fallbackModel],
+    async write(request) {
+      const apiKey = process.env[secret];
+      if (!apiKey) throw new Error(`${secret} is not set`);
+      client ??= new Anthropic({ apiKey });
+      const model = request.model ?? fallbackModel;
       // The installed SDK predates the web search tool's types, so the tool goes in as plain data.
-      const tools = options.webSearch
+      const tools = request.webSearch
         ? ([
             {
               type: 'web_search_20260209',
               name: 'web_search',
-              max_uses: options.webSearch.maxUses,
+              max_uses: request.webSearch.maxUses,
             },
           ] as unknown as Anthropic.Tool[])
         : undefined;
       const content: Anthropic.ContentBlockParam[] = [
-        ...(options.images ?? []).map((png): Anthropic.ImageBlockParam => ({
+        ...(request.images ?? []).map((png): Anthropic.ImageBlockParam => ({
           type: 'image',
           source: {
             type: 'base64',
@@ -64,41 +60,52 @@ export function createAskClient(
             data: Buffer.from(png).toString('base64'),
           },
         })),
-        { type: 'text', text: user },
+        { type: 'text', text: request.user },
       ];
       const messages: Anthropic.MessageParam[] = [{ role: 'user', content }];
       const texts: string[] = [];
+      let usage: Usage = {};
 
       // A long search can pause the turn; resend it as it stands and the server carries on.
-      const model = options.model ?? defaults.model;
-      if (options.model) priceOf(options.model);
       for (let round = 0; round < 6; round += 1) {
-        const response = await client.messages.create({
-          model,
-          max_tokens: options.maxOutputTokens ?? defaults.maxOutputTokens,
-          system,
-          messages,
-          ...(tools ? { tools } : {}),
-        });
-        // Counted before anything else, so a refused or empty answer still shows what it cost.
-        used.set(model, addUsage(used.get(model) ?? noUsage(), usageOf(response)));
+        let response: Anthropic.Message;
+        try {
+          response = await client.messages.create({
+            model,
+            max_tokens: request.maxOutputTokens,
+            system: request.system,
+            messages,
+            ...(tools ? { tools } : {}),
+          });
+        } catch (error: unknown) {
+          // The rounds before this one were billed; the error carries them so the ledger still counts them.
+          if (round === 0) throw error;
+          const reason = error instanceof Error ? error.message : String(error);
+          throw new ModelCallError(`round ${String(round + 1)} failed: ${reason}`, {
+            provider: name,
+            model,
+            usage,
+          });
+        }
+        usage = addUsage(usage, usageOf(response));
         if ((response.stop_reason as string) === 'refusal')
-          throw new Error('the model declined this request; read the input before running again');
+          throw new ModelCallError(
+            'the model declined this request; read the input before running again',
+            { provider: name, model, usage },
+          );
         texts.push(
           ...response.content
             .filter((block): block is Anthropic.TextBlock => block.type === 'text')
             .map((block) => block.text),
         );
         if ((response.stop_reason as string) !== 'pause_turn') break;
-        messages.push({
-          role: 'assistant',
-          content: response.content,
-        });
+        messages.push({ role: 'assistant', content: response.content });
       }
 
       const text = texts.join('').trim();
-      if (text.length === 0) throw new Error('the model returned no text');
-      return text;
+      if (text.length === 0)
+        throw new ModelCallError('the model returned no text', { provider: name, model, usage });
+      return { provider: name, model, usage, text };
     },
   };
 }
