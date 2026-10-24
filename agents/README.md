@@ -41,7 +41,7 @@ the written files into a pull request. See `.github/workflows/agents.yml`.
 | seo       | metadata when the index switch is on                                                | 5     | real |
 | publish   | assembles the pull request, confirms the badge                                      | 5     | real |
 
-All twelve have code. citations and drilldown search the web through Claude's web search tool (no extra
+Every agent in the table has code; a new one gets a row here when it lands. citations and drilldown search the web through Claude's web search tool (no extra
 key). image draws with OpenAI's image model when `OPENAI_API_KEY` is set (`gpt-image-2` unless `OPENAI_IMAGE_MODEL` says otherwise;
 ), otherwise with Cloudflare Workers AI, which needs `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_AI_TOKEN`
 (a token with "Workers AI: Read"); without them it writes `image/prompt.md` and stops. It also needs
