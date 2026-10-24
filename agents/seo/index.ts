@@ -31,6 +31,9 @@ export const run: AgentRun = async (ctx) => {
   const head = html?.slice(0, html.indexOf('</head>') + 7);
   const message = userMessage(
     {
+      index_switch:
+        'settings.yml publishing.index is true: the site is public, so do the full checklist.',
+      site: `https://${ctx.settings.site.domain}, author ${ctx.settings.site.author}`,
       structure: readIfPresent(ctx, 'structure.md'),
       built_head: head ?? 'The page is not built yet (it is a draft, or the site was not built).',
     },
