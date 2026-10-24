@@ -1,10 +1,32 @@
 ---
 // Why: the studio is where an origin begins. One button to talk, one to talk back about an output, and
-// nothing else on the page. Cloudflare Access sits in front of /studio and /api/*; this page never indexes.
+// below them what the agents wrote that Victor has not read yet, so nothing waits unseen. Cloudflare
+// Access sits in front of /studio and /api/*; this page never indexes.
+import { getCollection } from 'astro:content';
 import Page from '../layouts/Page.astro';
 import { Recorder } from '../islands/Recorder';
 import { FeedbackStudio } from '../islands/FeedbackStudio';
 import { settings } from '../lib/settings';
+import { leafOf, thoughtSlugOf } from '../lib/content';
+import { waitingForReview } from '../lib/review';
+
+const thoughts = (await getCollection('thoughts', ({ data }) => !data.draft)).map((t) => ({
+  slug: thoughtSlugOf(t.id),
+  title: t.data.title,
+  date: t.data.date,
+}));
+const versions = (await getCollection('versions')).map((v) => ({
+  slug: thoughtSlugOf(v.id),
+  leaf: leafOf(v.id),
+  kind: v.data.kind,
+  reviewed: v.data.reviewed,
+}));
+const sources = (await getCollection('sources')).map((s) => ({
+  slug: thoughtSlugOf(s.id),
+  reviewed: s.data.reviewed,
+}));
+const waiting = waitingForReview(thoughts, versions, sources);
+const count = waiting.reduce((n, t) => n + t.waiting.length, 0);
 ---
 
 <Page title="Studio" description="A private room to talk in." noindex={true}>
@@ -24,10 +46,74 @@ import { settings } from '../lib/settings';
   </p>
   <FeedbackStudio client:visible />
 
+  <section class="review" aria-labelledby="review-label">
+    <h2 class="label" id="review-label">Waiting for your review</h2>
+    {
+      count === 0 ? (
+        <p class="quiet">Nothing. Every version and every list of sources has been read.</p>
+      ) : (
+        <>
+          <p class="quiet">
+            {count === 1 ? 'One file an agent wrote' : `${String(count)} files the agents wrote`}{' '}
+            {count === 1 ? 'is' : 'are'} not reviewed yet. Readers see each version with a "Not
+            reviewed yet" tag; unreviewed sources stay hidden. When you have read one, set{' '}
+            <code>reviewed: true</code> in its file.
+          </p>
+          {waiting.map((t) => (
+            <div class="thought">
+              <h3>
+                <a href={`/thoughts/${t.slug}`}>{t.title}</a>
+              </h3>
+              <ul>
+                {t.waiting.map((w) => (
+                  <li>
+                    {w.href ? <a href={w.href}>{w.name}</a> : <span>{w.name}</span>}
+                    <code class="small">{w.file}</code>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </>
+      )
+    }
+  </section>
+
   <p class="small quiet">
     Signed in as {settings.site.author}. This page is behind Cloudflare Access and is never indexed.
   </p>
 </Page>
+
+<style>
+  .review {
+    margin-top: var(--space-6);
+  }
+  .review > p {
+    margin-top: var(--space-3);
+  }
+  .thought h3 {
+    margin: var(--space-4) 0 0;
+    font-size: var(--size-body);
+  }
+  .thought ul {
+    list-style: none;
+    margin: var(--space-2) 0 0;
+    padding: 0;
+    max-width: none;
+  }
+  .thought li {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-1) var(--space-3);
+    padding-block: var(--space-2);
+    border-bottom: var(--rule-width) solid var(--rule);
+  }
+  .thought code {
+    color: var(--quiet);
+    overflow-wrap: anywhere;
+  }
+</style>
 
 <style is:global>
   .recorder {
