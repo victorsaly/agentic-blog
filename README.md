@@ -129,11 +129,17 @@ npm run test           # Vitest
 npm run check:why      # every content and agent file has a why
 ```
 
-Run one agent against one thought:
+Run one agent against one thought. The runner reads its keys from the shell, not from a file, so copy
+`.env.example` to `.env`, fill it in, and load it into the shell first:
 
 ```bash
-ANTHROPIC_API_KEY=… npm run agent -- interview 2026-10-23-converted-with-ai
+set -a; source .env; set +a     # exports every line of .env into this shell
+npm run agent -- interview 2026-10-23-converted-with-ai
 ```
+
+`.env` needs `ANTHROPIC_API_KEY`. For drawings add `OPENAI_API_KEY` (and optionally `OPENAI_IMAGE_MODEL`), or
+`CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_AI_TOKEN` for the Workers AI fallback. Without either, the image agent
+writes `image/prompt.md` and stops; it also needs `ffmpeg` on the path.
 
 Run the built site together with the edge functions (upload, transcription, Ask), with local R2 and AI bindings:
 
@@ -141,12 +147,11 @@ Run the built site together with the edge functions (upload, transcription, Ask)
 npm run worker:dev --workspace site
 ```
 
-Environment variables. For the agents, copy `.env.example` to `.env`: `ANTHROPIC_API_KEY` is required;
-for drawings add `OPENAI_API_KEY` (and optionally `OPENAI_IMAGE_MODEL`), or `CLOUDFLARE_ACCOUNT_ID` and
-`CLOUDFLARE_AI_TOKEN` for the Workers AI fallback. Without either, the image agent writes `image/prompt.md`
-and stops; it also needs `ffmpeg` on the path. For the Worker, copy `site/.dev.vars.example` to
-`site/.dev.vars`: `GITHUB_TOKEN` (a fine-grained token with Contents read and write on this repo, used to land
-origins) and `DEV_SKIP_ACCESS=1` to skip the Access check locally.
+The Worker does not read the root `.env`; wrangler reads `site/.dev.vars` instead. Copy
+`site/.dev.vars.example` to `site/.dev.vars` and fill in `ANTHROPIC_API_KEY` (Ask answers 503 without it),
+`GITHUB_TOKEN` (a fine-grained token with Contents read and write on this repo, used to land origins) and
+`DEV_SKIP_ACCESS=1` to skip the Access check locally. In production the two keys are Worker secrets
+(`npx wrangler secret put …` from `site/`).
 
 The Cloudflare setup (R2 bucket, secrets, custom domain, Access) is written out step by step in
 [site/README.md](site/README.md).
