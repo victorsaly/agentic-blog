@@ -1,5 +1,6 @@
 // Why: most agents are "read these files, ask once, write that file". This keeps each agent's index.ts to
 // the parts that are actually different: which inputs, which prompt, which output path.
+import matter from 'gray-matter';
 import { unfence } from './claude.js';
 import type { AgentContext, AgentResult, AskOptions, OutputFile } from './types.js';
 
@@ -12,6 +13,17 @@ export function readOrThrow(ctx: AgentContext, path: string): string {
 
 export function readIfPresent(ctx: AgentContext, path: string): string | undefined {
   return ctx.thought.files.get(path);
+}
+
+/** Why a guard has not passed the thought, or null when its verdict is `pass`. */
+export function verdictProblem(
+  ctx: AgentContext,
+  name: 'safety.md' | 'security.md',
+): string | null {
+  const file = readIfPresent(ctx, name);
+  if (file === undefined) return `${name} is missing; run that agent first.`;
+  const verdict: unknown = matter(file).data['verdict'];
+  return verdict === 'pass' ? null : `${name} says ${String(verdict)}.`;
 }
 
 /**

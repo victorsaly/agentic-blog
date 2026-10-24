@@ -36,6 +36,10 @@ export function workersAi(
   return { kind: 'workers-ai', ...options };
 }
 
+export function elevenlabs(options: { model?: string } = {}): Provider {
+  return { kind: 'elevenlabs', secret: 'ELEVENLABS_API_KEY', ...options };
+}
+
 export function azureOpenai(options: { endpoint: string; model?: string }): Provider {
   return { kind: 'azure-openai', secret: 'AZURE_OPENAI_API_KEY', ...options };
 }

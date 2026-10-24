@@ -24,6 +24,12 @@ export function adapterFor(name: string, provider: Provider): ModelAdapter {
       return openAiImagesAdapter(name, provider);
     case 'workers-ai':
       return workersAiAdapter(name, provider);
+    case 'elevenlabs': {
+      // Speech is made by the voice agent's own client, which also needs the clock of every word; this only
+      // declares the provider so the project can name it and the runner can tell whether its key is set.
+      const secret = provider.secret ?? 'ELEVENLABS_API_KEY';
+      return { provider: name, available: () => Boolean(process.env[secret]), models: () => [] };
+    }
     default:
       throw new Error(`provider "${name}" is ${provider.kind}, which has no adapter yet`);
   }

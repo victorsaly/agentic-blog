@@ -35,6 +35,7 @@ export const providerKind = z.enum([
   'azure-openai',
   'gemini',
   'workers-ai',
+  'elevenlabs',
   'openai-compatible',
 ]);
 

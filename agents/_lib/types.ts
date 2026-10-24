@@ -17,6 +17,7 @@ export const agentNames = [
   'safety',
   'security',
   'seo',
+  'voice',
   'publish',
 ] as const;
 

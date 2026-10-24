@@ -1,0 +1,10 @@
+{
+  "why": "The first post whose short version is read aloud: the audio must say the same words the page shows.",
+  "kind": "approved-past",
+  "input": {
+    "thought": "2026-10-23-productive-friction-counts-evidence",
+    "files": ["versions/short.md", "safety.md", "security.md"]
+  },
+  "approved": "voice/",
+  "expect": ["same-words", "every-word-timed", "listened"]
+}
