@@ -271,6 +271,8 @@ const { tabs, label } = Astro.props;
     // The way on at the end of a panel opens the next one at its top, without a jump to the panel's edge.
     for (const link of root.querySelectorAll<HTMLAnchorElement>('[data-next]')) {
       link.addEventListener('click', (event) => {
+        if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)
+          return;
         const index = panels.findIndex((p) => p?.id === link.dataset['next']);
         if (index < 0) return;
         event.preventDefault();
