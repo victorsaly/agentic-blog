@@ -9,8 +9,8 @@ date: 2026-10-23
 language: en
 themes: [ai-changing-work, accountability, credibility]
 message: >
-  Every post here starts as a messy voice note, kept exactly as it was spoken. Everything you read is a
-  conversion of it, badged as such, one click from the original. Your thinking is yours; the tool only
+  Every post here starts as a messy voice note, kept exactly as it was spoken. Everything you read is
+  tidied from it by AI, marked as such, one click from the original. Your thinking is yours; the tool only
   changes the shape.
 origins: [origin/transcript.md]
 draft: false
