@@ -22,14 +22,11 @@ where each lives). This file says what to build next and in what order.
   `PROMPT.md`; the cards describe them alongside. That is deliberate: the existing logic keeps working
   while the framework grows under it.
 
-## The open decision (settle before slice 1)
+## Decision (settled for Slice 1)
 
-An agent's phase, inputs and outputs are written twice: in `agents/<name>/PROMPT.md` front matter and in
-`agents/<name>/card.ts`. The /how-it-works page reads `PROMPT.md`.
-
-**Recommended:** `card.ts` holds the facts (phase, reads, writes, model, budget, stage); `PROMPT.md` keeps
-the why and the instructions to the model. Slice 1 adds a check that fails CI when the two disagree, then
-moves the page to read the cards. Victor decides; until then, change both together.
+Victor chose the recommended approach: `card.ts` holds the agent facts, including phase, reads and writes;
+`PROMPT.md` keeps the why and the instructions to the model. `roadbook check-cards` checks the shared
+phase, reads and writes facts, and `/how-it-works` reads its roster from the cards.
 
 ## The slices
 
@@ -40,7 +37,8 @@ green and every item below it holds.
 
 - `npm run roadbook -- check-cards` compares each `PROMPT.md` front matter (`phase`, `reads`, `writes`)
   with its card and prints each disagreement with the fix. CI runs it.
-- `site/src/lib/agents.ts` reads the cards instead of `PROMPT.md` (keep `rosterFrom` and its tests).
+- `site/src/lib/agents.ts` reads workflow facts from cards and the agent's why from `PROMPT.md`
+  (keep `rosterFrom` and its tests).
 - Done: changing a card's phase without its `PROMPT.md` fails CI; /how-it-works still lists 13 agents.
 - Good for: Copilot (well specified, mostly plumbing).
 

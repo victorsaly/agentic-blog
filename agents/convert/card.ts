@@ -5,6 +5,9 @@ import { coreStep, standardMetrics } from '../_lib/card-presets.js';
 
 export const card = defineAgentCard({
   name: 'convert',
+  phase: 2,
+  reads: ['structure.md', 'origin/*.md', 'origin/answers.md', 'profile.md', 'settings.yml'],
+  writes: ['versions/short.md', 'versions/long.md', 'versions/linkedin.md', 'versions/<lang>.md'],
   purpose:
     'Write each version a reader might take in: short, long, a social post, another language.',
   why: 'One honest minute of talking should reach a reader in whatever form they take in best.',

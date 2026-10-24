@@ -4,6 +4,9 @@ import { optionalStep, standardMetrics } from '../_lib/card-presets.js';
 
 export const card = defineAgentCard({
   name: 'citations',
+  phase: 4,
+  reads: ['structure.md', 'versions/long.md', 'web search'],
+  writes: ['sources.md'],
   purpose: 'Find what each claim in a post rests on and link to it where the name appears.',
   why: 'A thought with a source is worth more than one without, and the best a post can do is send you somewhere better.',
   inputs: [

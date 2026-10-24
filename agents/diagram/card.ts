@@ -4,6 +4,9 @@ import { optionalStep, standardMetrics } from '../_lib/card-presets.js';
 
 export const card = defineAgentCard({
   name: 'diagram',
+  phase: 4,
+  reads: ['structure.md', 'versions/long.md', 'profile.md'],
+  writes: ['diagram/diagrams.md'],
   purpose: 'Describe a diagram for the few places in a post where a process reads better as boxes.',
   why: 'A process or a change is faster to read as a picture; an opinion is not.',
   inputs: [

@@ -5,6 +5,9 @@ import { coreStep, standardMetrics } from '../_lib/card-presets.js';
 
 export const card = defineAgentCard({
   name: 'interview',
+  phase: 1,
+  reads: ['origin/*.md', 'profile.md'],
+  writes: ['interview.md'],
   purpose: 'Ask the few questions a stranger would need answered before the origin makes sense.',
   why: 'A raw note has the feeling and skips the facts; the context can only come from the blogger, and only while they remember.',
   inputs: [

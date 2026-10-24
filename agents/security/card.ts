@@ -4,6 +4,15 @@ import { guardStep, standardMetrics } from '../_lib/card-presets.js';
 
 export const card = defineAgentCard({
   name: 'security',
+  phase: 5,
+  reads: [
+    'package-lock.json',
+    'npm audit and GitHub advisories',
+    'versions/*.md',
+    'image/',
+    'sources.md',
+  ],
+  writes: ['security.md', 'dependency update pull requests'],
   purpose:
     'Check what is about to leave for other people’s data, secrets and internal links, and hold it if found.',
   why: 'A friend’s name, a face or an email must not leave until the blogger has confirmed it should.',

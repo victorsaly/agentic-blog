@@ -7,6 +7,7 @@
 import { readdir } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { checkCards } from './check-cards.js';
 import {
   plan,
   validate,
@@ -17,14 +18,15 @@ import {
 } from '@roadbook/core';
 
 interface Args {
-  command: 'validate' | 'plan' | 'help';
+  command: 'validate' | 'plan' | 'check-cards' | 'help';
   config: string;
   json: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
   const [first, ...rest] = argv;
-  const command = first === 'validate' || first === 'plan' ? first : 'help';
+  const command =
+    first === 'validate' || first === 'plan' || first === 'check-cards' ? first : 'help';
   let config = 'roadbook.config.ts';
   let json = false;
   for (let i = 0; i < rest.length; i += 1) {
@@ -151,6 +153,7 @@ const help = `roadbook: the record of every turn an agent took, who decided it, 
 
   roadbook validate   check roadbook.config.ts against every accountability rule
   roadbook plan       show what the project will do, cost, send and create
+  roadbook check-cards  check agent prompt facts against their cards
 
   --config <path>     a different setup file (default: ./roadbook.config.ts)
   --json              machine-readable output`;
@@ -159,6 +162,17 @@ async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   if (args.command === 'help') {
     console.info(help);
+    return;
+  }
+
+  if (args.command === 'check-cards') {
+    const issues = await checkCards(dirname(args.config));
+    for (const issue of issues) console.info(issue);
+    if (issues.length > 0) {
+      process.exitCode = 1;
+      return;
+    }
+    console.info('All agent cards match their prompts.');
     return;
   }
 

@@ -4,6 +4,9 @@ import { optionalStep, standardMetrics } from '../_lib/card-presets.js';
 
 export const card = defineAgentCard({
   name: 'drilldown',
+  phase: 4,
+  reads: ['sources.md', 'versions/long.md', 'wiki/'],
+  writes: ['wiki/<slug>.md'],
   purpose: 'Write a short wiki page for each book or person a post leans on.',
   why: 'A name a reader does not know should open onto a short, checked page instead of a dead end.',
   inputs: [

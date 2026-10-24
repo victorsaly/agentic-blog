@@ -4,6 +4,9 @@ import { guardStep, standardMetrics } from '../_lib/card-presets.js';
 
 export const card = defineAgentCard({
   name: 'safety',
+  phase: 5,
+  reads: ['versions/*.md', 'structure.md'],
+  writes: ['safety.md'],
   purpose:
     'Read everything about to leave, in every language, for hate, contempt or an attack, and hold it if found.',
   why: 'The blogger does not expect to write such things, but expects to be tired or careless in a language not his first.',

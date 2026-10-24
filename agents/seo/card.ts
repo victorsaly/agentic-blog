@@ -4,6 +4,9 @@ import { optionalStep, standardMetrics } from '../_lib/card-presets.js';
 
 export const card = defineAgentCard({
   name: 'seo',
+  phase: 5,
+  reads: ['structure.md', 'versions/*.md', 'settings.yml → publishing.index', 'the built site'],
+  writes: ['seo.md', 'pull requests to site/ when a page lacks its metadata'],
   purpose: 'Check that each page says what it is the way search and answer engines read it.',
   why: 'Private by default, public by decision; when public, a page should be as readable to a machine as to a child.',
   inputs: [

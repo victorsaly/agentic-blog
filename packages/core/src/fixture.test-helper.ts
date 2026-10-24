@@ -3,8 +3,11 @@
 import type { AgentCardInput, ProjectInput } from './schema.js';
 
 export function card(name: string, overrides: Partial<AgentCardInput> = {}): AgentCardInput {
-  return {
+  const defaults: AgentCardInput = {
     name,
+    phase: 1,
+    reads: ['origin'],
+    writes: ['draft'],
     purpose: `Does the ${name} step of the test workflow.`,
     why: 'A test agent, here so the rules have something real to check.',
     inputs: [{ name: 'origin', type: 'text' }],
@@ -38,7 +41,13 @@ export function card(name: string, overrides: Partial<AgentCardInput> = {}): Age
     version: '1.0.0',
     stage: 'active',
     tests: 3,
+  };
+  return {
+    ...defaults,
     ...overrides,
+    phase: overrides.phase ?? defaults.phase,
+    reads: overrides.reads ?? defaults.reads,
+    writes: overrides.writes ?? defaults.writes,
   };
 }
 

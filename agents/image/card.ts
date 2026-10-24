@@ -5,6 +5,9 @@ import { coreStep, standardMetrics } from '../_lib/card-presets.js';
 
 export const card = defineAgentCard({
   name: 'image',
+  phase: 4,
+  reads: ['structure.md', 'settings.yml → media.image_style', 'profile.md'],
+  writes: ['image/prompts.md', 'image/NN-<what-it-shows>.png'],
   purpose: 'Draw one linocut print per section that earns one, in the house style.',
   why: 'A picture carries the mood; continuity of style keeps every post recognisably the same person’s.',
   inputs: [

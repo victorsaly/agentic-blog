@@ -139,6 +139,9 @@ export const metric = z.object({
 
 export const agentCard = z.object({
   name: id,
+  phase: z.number().int().positive(),
+  reads: z.array(z.string().min(1)),
+  writes: z.array(z.string().min(1)),
   purpose: z.string().min(10).max(200),
   why,
   inputs: z.array(port).min(1),

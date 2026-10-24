@@ -1,6 +1,5 @@
-// Why: /how-it-works lists every agent with its why, what it reads and what it writes. That list is read
-// from each agents/*/PROMPT.md front matter at build time, not retyped, so the page cannot drift from the
-// agents it describes: change a prompt's why and the page changes with it.
+// Why: /how-it-works lists every agent with its why, what it reads and what it writes. Workflow facts come
+// from each agent's card; the agent's rationale stays in its prompt.
 import { parse } from 'yaml';
 
 export interface AgentCard {
@@ -11,6 +10,24 @@ export interface AgentCard {
   writes: string[];
   /** It can stop a post with a written reason (the runner exits 3 and the check fails). */
   canHold: boolean;
+}
+
+export interface AgentCardFacts {
+  name: string;
+  phase: number;
+  reads: string[];
+  writes: string[];
+}
+
+function isAgentWhy(value: unknown): value is { name: string; why: string } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'name' in value &&
+    typeof value.name === 'string' &&
+    'why' in value &&
+    typeof value.why === 'string'
+  );
 }
 
 /** What each phase is for, in the words the page uses. */
@@ -24,38 +41,41 @@ export const phases: Record<number, string> = {
 
 const holders = new Set(['safety', 'security']);
 
-function list(value: unknown): string[] {
-  return Array.isArray(value)
-    ? value
-        .filter((v): v is string => typeof v === 'string' && v.trim() !== '')
-        .map((v) => v.trim())
-    : [];
-}
-
-/** The front matter between the first two --- lines, parsed; null when there is none. */
-function frontMatter(markdown: string): unknown {
-  const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(markdown);
-  return match?.[1] === undefined ? null : parse(match[1]);
-}
-
-/** One card per PROMPT.md that names itself, has a why and a phase; by phase, then by name. */
-export function rosterFrom(prompts: string[]): AgentCard[] {
-  const cards: AgentCard[] = [];
-  for (const markdown of prompts) {
-    const meta = frontMatter(markdown);
-    if (typeof meta !== 'object' || meta === null) continue;
-    const { name, why, phase, reads, writes } = meta as Record<string, unknown>;
-    if (typeof name !== 'string' || typeof why !== 'string' || typeof phase !== 'number') continue;
-    cards.push({
-      name,
-      why: why.trim().replace(/\s+/g, ' '),
-      phase,
-      reads: list(reads),
-      writes: list(writes),
-      canHold: holders.has(name),
-    });
+function whysFrom(prompts: string[]): Map<string, string> {
+  const whys = new Map<string, string>();
+  for (const prompt of prompts) {
+    const frontMatter = /^---\r?\n([\s\S]*?)\r?\n---/.exec(prompt)?.[1];
+    if (frontMatter === undefined) continue;
+    const meta: unknown = parse(frontMatter);
+    if (!isAgentWhy(meta)) continue;
+    if (meta.name !== '' && meta.why !== '') {
+      whys.set(meta.name, meta.why.trim().replace(/\s+/g, ' '));
+    }
   }
-  return cards.sort((a, b) => a.phase - b.phase || a.name.localeCompare(b.name));
+  return whys;
+}
+
+/** One entry per card, with the why from its prompt; by phase, then by name. A card without a why or a
+ * phase stops the build with its name, so an agent never drops off the page without anyone noticing. An
+ * agent that reads or writes nothing is still listed: that is a fact about it, not a fault. */
+export function rosterFrom(agentFacts: AgentCardFacts[], prompts: string[]): AgentCard[] {
+  const whys = whysFrom(prompts);
+  const roster = agentFacts.map((facts): AgentCard => {
+    const why = whys.get(facts.name);
+    if (why === undefined || why === '')
+      throw new Error(`agents/${facts.name}: PROMPT.md has no why. Add one to its front matter.`);
+    if (!Number.isInteger(facts.phase) || facts.phase < 1)
+      throw new Error(`agents/${facts.name}: card.ts needs a phase of 1 or more.`);
+    return {
+      name: facts.name,
+      why,
+      phase: facts.phase,
+      reads: facts.reads,
+      writes: facts.writes,
+      canHold: holders.has(facts.name),
+    };
+  });
+  return roster.sort((a, b) => a.phase - b.phase || a.name.localeCompare(b.name));
 }
 
 /** The first sentence of a why: the line on a closed row. */
