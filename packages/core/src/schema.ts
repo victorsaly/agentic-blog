@@ -114,16 +114,13 @@ export const behaviour = z.object({
   /** When retries are used up: stop the run, skip this node, or try the fallback provider once. */
   onFailure: z.enum(['stop-run', 'skip-node', 'use-fallback']),
   /** A provider from model.allowed, used once when onFailure is use-fallback. */
-  fallback: z
-    .string()
-    .regex(/^[a-z][a-z0-9-]*$/)
-    .optional(),
+  fallback: id.optional(),
   escalate: z.object({
     when: z.array(z.enum(['retries-exhausted', 'held', 'over-budget', 'timeout'])).min(1),
     /** Who is told: the owner, a gate in the workflow, or a named person. */
     to: z.union([
       z.literal('owner'),
-      z.object({ gate: z.string().regex(/^[a-z][a-z0-9-]*$/) }),
+      z.object({ gate: id }),
       z.object({ email: z.string().email() }),
     ]),
     /** What they are told, in plain words. The live reason is added to it. */
@@ -166,7 +163,11 @@ export const agentCard = z.object({
   metrics: z.array(metric).min(1, 'an agent needs at least one metric it is scored on'),
   /** Settings a workflow may tune per node, each with a default and a why. */
   variables: z.record(z.string().regex(/^[a-z][a-zA-Z0-9]*$/), variable).default({}),
-  data: z.object({ sends: z.array(dataKind).min(1) }),
+  data: z.object({
+    sends: z.array(dataKind).min(1),
+    /** What goes to the fallback provider, when it is less than what goes to the default one. */
+    fallbackSends: z.array(dataKind).min(1).optional(),
+  }),
   owner: z.string().min(1),
   version: z.string().regex(/^\d+\.\d+\.\d+$/, 'a version is major.minor.patch'),
   stage: z.enum(['draft', 'trial', 'active', 'retired']),

@@ -145,3 +145,65 @@ describe('readings', () => {
     ]);
   });
 });
+
+describe('review fixes', () => {
+  const output = (node: string) =>
+    ({
+      type: 'node.output',
+      node,
+      why: 'A draft a stranger can follow, written from the origin only.',
+      receipt: receipt(node),
+      ref: `versions/${node}.md`,
+      authoredBy: 'agent',
+    }) as const;
+
+  it('keeps the chain whole when appends run at the same time', async () => {
+    const ledger = new Ledger({ now: fixedClock() });
+    await Promise.all([
+      ledger.append({ type: 'hold.raised', node: 'safety', reason: 'a' }),
+      ledger.append({ type: 'hold.raised', node: 'security', reason: 'b' }),
+      ledger.append({ type: 'hold.raised', node: 'seo', reason: 'c' }),
+    ]);
+    expect(ledger.events.map((e) => e.seq)).toEqual([0, 1, 2]);
+    expect(await Ledger.verify(ledger.events)).toBeNull();
+  });
+
+  it('cannot be rewritten through what it hands out or what it was given', async () => {
+    const ledger = new Ledger({ now: fixedClock() });
+    const given = output('write');
+    const mutableReceipt = { ...given.receipt };
+    const written = await ledger.append({ ...given, receipt: mutableReceipt });
+    mutableReceipt.usd = 99;
+    (written as { ref: string }).ref = 'elsewhere';
+    (ledger.events[0] as { ref: string }).ref = 'elsewhere';
+    const [kept] = ledger.events;
+    expect(kept?.type === 'node.output' && kept.receipt.usd).toBe(0.02);
+    expect(kept?.type === 'node.output' && kept.ref).toBe('versions/write.md');
+    expect(await Ledger.verify(ledger.events)).toBeNull();
+  });
+
+  it('finds a removed end when given the head kept from the run', async () => {
+    const ledger = await sampleRun();
+    const head = ledger.head;
+    const cut = ledger.events.slice(0, -1);
+    expect(await Ledger.verify(cut)).toBeNull(); // the chain alone cannot tell
+    expect(await Ledger.verify(cut, head)).toBe(cut.length);
+    expect(await Ledger.verify(ledger.events, head)).toBeNull();
+  });
+
+  it('does not carry an edit over to a newer output of the same node', async () => {
+    const ledger = new Ledger({ now: fixedClock() });
+    await ledger.append(output('convert'));
+    await ledger.append({
+      type: 'feedback.given',
+      node: 'convert',
+      kind: 'edit',
+      words: 'x',
+      by: 'owner',
+    });
+    await ledger.append(output('convert'));
+    const d = disclosure(ledger.events);
+    expect(d.byAgent).toEqual(['convert']);
+    expect(d.editedByPerson).toEqual([]);
+  });
+});

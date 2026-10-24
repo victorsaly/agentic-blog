@@ -3,6 +3,7 @@
 // what it will cost at most per run, what a person must approve, and what is still missing. Nothing here
 // touches the network; it only reads the project and the environment it is given.
 import type { Node, Project, Region, Workflow } from './schema.js';
+import { providerOf, providersOf } from './providers.js';
 
 export interface PlannedNode {
   id: string;
@@ -58,11 +59,6 @@ export interface Plan {
   resources: PlannedResource[];
   budget: { monthlyCapUsd: number; runsAtCap: number | null };
   capacity: { gate: string; limit: string }[];
-}
-
-function providerOf(n: Node): string | undefined {
-  if (n.kind !== 'agent' && n.kind !== 'guard') return undefined;
-  return n.provider ?? n.card.model.default;
 }
 
 function sinkLabel(n: Extract<Node, { kind: 'sink' }>): string {
@@ -157,9 +153,13 @@ export function plan(p: Project, env: Readonly<Record<string, string | undefined
   const usedBy = new Map<string, string[]>();
   for (const wf of p.workflows) {
     for (const [id, n] of Object.entries(wf.nodes)) {
-      const provider = providerOf(n);
-      if (provider !== undefined)
-        usedBy.set(provider, [...(usedBy.get(provider) ?? []), `${wf.id}/${id}`]);
+      if (n.kind !== 'agent' && n.kind !== 'guard') continue;
+      const [primary, ...fallbacks] = providersOf(n);
+      for (const provider of [primary, ...fallbacks]) {
+        if (provider === undefined) continue;
+        const label = provider === primary ? `${wf.id}/${id}` : `${wf.id}/${id} (fallback)`;
+        usedBy.set(provider, [...(usedBy.get(provider) ?? []), label]);
+      }
     }
   }
 

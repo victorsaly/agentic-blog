@@ -36,10 +36,10 @@ export default defineProject({
     personalData: 'hold-for-review',
     exits: {
       writer: {
-        sends: ['text', 'metadata', 'prompt'],
+        sends: ['text', 'metadata', 'prompt', 'image'],
         region: 'us',
         retention: 'provider-default',
-        why: 'Claude receives the origin and drafts to tidy them; nothing else. Retention follows Anthropic’s API terms.',
+        why: 'Claude receives the origin and drafts to tidy them, and each finished drawing to review it against its prompt. Retention follows Anthropic’s API terms.',
       },
       images: {
         sends: ['prompt', 'image'],

@@ -47,7 +47,9 @@ export const card = defineAgentCard({
       why: 'A cover and one print per section that earns one, never more than this.',
     },
   },
-  data: { sends: ['prompt', 'image'] },
+  // OpenAI gets the prompt and, on Victor's machine only, his reference photo; the Workers AI fallback takes
+  // the prompt alone (agents/_lib/workers-ai.ts).
+  data: { sends: ['prompt', 'image'], fallbackSends: ['prompt'] },
   owner: 'Victor Saly',
   version: '1.0.0',
   stage: 'active',

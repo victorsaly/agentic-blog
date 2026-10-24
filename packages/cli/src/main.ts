@@ -7,7 +7,14 @@
 import { readdir } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { plan, validate, type Issue, type Plan, type Validation } from '@roadbook/core';
+import {
+  plan,
+  validate,
+  type Issue,
+  type Plan,
+  type Project,
+  type Validation,
+} from '@roadbook/core';
 
 interface Args {
   command: 'validate' | 'plan' | 'help';
@@ -23,7 +30,14 @@ function parseArgs(argv: string[]): Args {
   for (let i = 0; i < rest.length; i += 1) {
     const arg = rest[i];
     if (arg === '--json') json = true;
-    if (arg === '--config') config = rest[i + 1] ?? config;
+    if (arg === '--config') {
+      const value = rest[i + 1];
+      if (value === undefined || value.startsWith('--')) {
+        throw new Error('--config needs a path, e.g. --config roadbook.config.ts');
+      }
+      config = value;
+      i += 1;
+    }
   }
   return { command, config: resolve(config), json };
 }
@@ -39,14 +53,11 @@ async function loadConfig(path: string): Promise<unknown> {
 }
 
 /** Counts *.json cases in agents/<name>/tests/ next to the config, for every card the project names. */
-async function countTests(configPath: string, input: unknown): Promise<Record<string, number>> {
+async function countTests(configPath: string, project: Project): Promise<Record<string, number>> {
   const names = new Set<string>();
-  const workflows = (
-    input as { workflows?: { nodes?: Record<string, { card?: { name?: unknown } }> }[] }
-  ).workflows;
-  for (const wf of workflows ?? []) {
-    for (const node of Object.values(wf.nodes ?? {})) {
-      if (typeof node.card?.name === 'string') names.add(node.card.name);
+  for (const wf of project.workflows) {
+    for (const node of Object.values(wf.nodes)) {
+      if (node.kind === 'agent' || node.kind === 'guard') names.add(node.card.name);
     }
   }
   const counts: Record<string, number> = {};
@@ -110,7 +121,7 @@ function printPlan(p: Plan): void {
       );
     }
     for (const s of wf.sinks) console.info(`  leaves by "${s.id}": ${s.target}`);
-    console.info(`  at most ${usd(wf.maxUsdPerRun)} a run if every agent runs once\n`);
+    console.info(`  at most ${usd(wf.maxUsdPerRun)} a run, if every retry and fallback is used\n`);
   }
   console.info(bold('Where data goes'));
   for (const e of p.exits) {
@@ -152,7 +163,12 @@ async function main(): Promise<void> {
   }
 
   const input = await loadConfig(args.config);
-  const result = validate(input, { testCounts: await countTests(args.config, input) });
+  // The shape is checked first (RB001), so a malformed file is reported as issues, never as a crash;
+  // the test sets are counted only from a project that parsed.
+  const shaped = validate(input);
+  const result = shaped.project
+    ? validate(input, { testCounts: await countTests(args.config, shaped.project) })
+    : shaped;
 
   if (args.command === 'validate') {
     if (args.json) console.info(JSON.stringify(result, null, 2));
@@ -162,7 +178,8 @@ async function main(): Promise<void> {
   }
 
   if (!result.project) {
-    printValidation(result);
+    if (args.json) console.info(JSON.stringify({ plan: null, issues: result.issues }, null, 2));
+    else printValidation(result);
     process.exitCode = 1;
     return;
   }

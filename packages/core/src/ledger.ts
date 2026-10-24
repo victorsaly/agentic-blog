@@ -64,6 +64,11 @@ export type LedgerEvent = EventBody & {
   hash: string;
 };
 
+export interface LedgerHead {
+  count: number;
+  hash: string;
+}
+
 const GENESIS = '0'.repeat(64);
 
 async function sha256(text: string): Promise<string> {
@@ -110,16 +115,32 @@ function refuse(body: EventBody): string | null {
 export class Ledger {
   readonly #events: LedgerEvent[] = [];
   readonly #now: () => Date;
+  /** Appends run one after another, so two at once never read the same position or previous hash. */
+  #queue: Promise<unknown> = Promise.resolve();
 
   constructor(options: { now?: () => Date } = {}) {
     this.#now = options.now ?? (() => new Date());
   }
 
+  /** A copy of the events: changing it cannot rewrite what was recorded. */
   get events(): readonly LedgerEvent[] {
-    return this.#events;
+    return structuredClone(this.#events);
   }
 
-  async append(body: EventBody): Promise<LedgerEvent> {
+  /** How many events there are and the hash of the last; keep it apart from the events to detect a cut end. */
+  get head(): LedgerHead {
+    return { count: this.#events.length, hash: this.#events.at(-1)?.hash ?? GENESIS };
+  }
+
+  append(body: EventBody): Promise<LedgerEvent> {
+    const next = this.#queue.then(() => this.#write(body));
+    this.#queue = next.catch(() => undefined);
+    return next;
+  }
+
+  async #write(input: EventBody): Promise<LedgerEvent> {
+    // A copy, so the caller changing its object (a receipt, say) afterwards cannot change the record.
+    const body = structuredClone(input);
     const reason = refuse(body);
     if (reason !== null) throw new LedgerError(`refused: ${reason}`);
     if (body.type === 'correction' && (body.of < 0 || body.of >= this.#events.length)) {
@@ -136,16 +157,27 @@ export class Ledger {
     };
     const event: LedgerEvent = { ...head, hash: await hashOf(head) };
     this.#events.push(event);
-    return event;
+    return structuredClone(event);
   }
 
-  /** Recomputes the chain. Returns the first broken position, or null when every event is intact. */
-  static async verify(events: readonly LedgerEvent[]): Promise<number | null> {
+  /**
+   * Recomputes the chain. Returns the first broken position, or null when every event is intact. The chain
+   * alone shows a change or a removal in the middle; a removed end leaves a valid shorter chain, so pass the
+   * head kept from the run (`ledger.head`, stored apart from the events) to detect that too. The position
+   * returned for a cut end is where the first missing event should have been.
+   */
+  static async verify(
+    events: readonly LedgerEvent[],
+    expected?: LedgerHead,
+  ): Promise<number | null> {
     let prev = GENESIS;
     for (const [index, event] of events.entries()) {
       const { hash, ...head } = event;
       if (event.seq !== index || event.prev !== prev || (await hashOf(head)) !== hash) return index;
       prev = hash;
+    }
+    if (expected && (events.length !== expected.count || prev !== expected.hash)) {
+      return Math.min(events.length, expected.count);
     }
     return null;
   }
@@ -182,14 +214,18 @@ export interface Disclosure {
 
 /**
  * What the published item may say about how it was made, computed from the ledger. It cannot claim more
- * human work than the events show: an output counts as edited only if an edit was recorded against it.
+ * human work than the events show: an output counts as edited only if an edit was recorded after it.
  */
 export function disclosure(events: readonly LedgerEvent[]): Disclosure {
   const authored = new Map<string, 'agent' | 'person'>();
   const edited = new Set<string>();
   const overrides: Disclosure['overrides'] = [];
   for (const e of events) {
-    if (e.type === 'node.output') authored.set(e.node, e.authoredBy);
+    if (e.type === 'node.output') {
+      // A new output replaces the one an edit was made to; the edit does not carry over to it.
+      authored.set(e.node, e.authoredBy);
+      edited.delete(e.node);
+    }
     if (e.type === 'feedback.given' && e.kind === 'edit') edited.add(e.node);
     if (e.type === 'override.given') overrides.push({ node: e.node, reason: e.reason, by: e.by });
   }

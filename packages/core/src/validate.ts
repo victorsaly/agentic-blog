@@ -3,6 +3,7 @@
 // server. Each rule has a stable id, says what is wrong in plain words, and says how to fix it.
 import type { ZodIssue } from 'zod';
 import { project as projectSchema, type Node, type Project, type Workflow } from './schema.js';
+import { providersOf } from './providers.js';
 
 export type Severity = 'error' | 'warning';
 
@@ -37,7 +38,7 @@ export const rules = {
   RB023: 'A branch sends work only to nodes that wait for it.',
   RB030: 'An agent card is named after the node it describes.',
   RB031: 'Only active agents can reach a sink.',
-  RB032: 'An agent whose card asks for a gate after it has one.',
+  RB032: 'An agent whose card asks for approval has an approve gate after it.',
   RB033: 'A fallback provider is declared, allowed by the card, and different from the default.',
   RB034: 'A guard that fails never lets work through.',
   RB035: 'Escalation goes to the owner, a named person, or a gate that exists.',
@@ -253,24 +254,31 @@ function checkWorkflow(p: Project, wf: Workflow, options: ValidateOptions): Issu
     }
   }
 
-  // RB010: the human gate before every sink. Only meaningful when the graph is sound.
+  // RB010: the human gate before every sink. Only meaningful when the graph is sound. Checked from every
+  // node that makes work (an input, an agent, a tool), not only from the inputs: an approval early in the
+  // run does not cover what an agent writes after it.
   if (!cycle) {
-    const open = openNodes(
-      g,
-      roots.filter((nodeId) => g.get(nodeId)?.kind === 'input'),
-    );
-    for (const sinkId of sinks) {
-      if (open.has(sinkId)) {
-        issues.push(
-          issue(
-            'RB010',
-            'error',
-            at(wf, sinkId),
-            `Work can reach the sink "${sinkId}" without a person approving it. Roadbook does not allow that, in any project.`,
-            `Put a gate that asks "approve" on every path into "${sinkId}".`,
-          ),
-        );
+    const makers = g.ids.filter((nodeId) => {
+      const kind = g.get(nodeId)?.kind;
+      return kind === 'input' || kind === 'agent' || kind === 'tool';
+    });
+    const unapproved = new Map<string, string[]>();
+    for (const maker of makers) {
+      const open = openNodes(g, g.successors(maker));
+      for (const sinkId of sinks) {
+        if (open.has(sinkId)) unapproved.set(sinkId, [...(unapproved.get(sinkId) ?? []), maker]);
       }
+    }
+    for (const [sinkId, from] of unapproved) {
+      issues.push(
+        issue(
+          'RB010',
+          'error',
+          at(wf, sinkId),
+          `Work from ${from.map((m) => `"${m}"`).join(', ')} can reach the sink "${sinkId}" without a person approving it. Roadbook does not allow that, in any project.`,
+          `Put a gate that asks "approve" between ${from.length === 1 ? 'it' : 'each of them'} and "${sinkId}".`,
+        ),
+      );
     }
   }
 
@@ -308,14 +316,19 @@ function checkWorkflow(p: Project, wf: Workflow, options: ValidateOptions): Issu
     }
 
     const b = card.behaviour;
-    if (b.needsApproval && !g.successors(nodeId).some((s) => g.get(s)?.kind === 'gate')) {
+    // Answering a question or picking an option is not approving: only an approve gate counts.
+    const approvedBy = (s: string): boolean => {
+      const next = g.get(s);
+      return next?.kind === 'gate' && next.asks === 'approve';
+    };
+    if (b.needsApproval && !g.successors(nodeId).some(approvedBy)) {
       issues.push(
         issue(
           'RB032',
           'error',
           where,
-          `The card for "${nodeId}" says a person approves its output, but no gate follows it.`,
-          `Add a gate whose after includes "${nodeId}", or set behaviour.needsApproval to false on the card.`,
+          `The card for "${nodeId}" says a person approves its output, but no gate that asks "approve" follows it.`,
+          `Add a gate that asks "approve" whose after includes "${nodeId}", or set behaviour.needsApproval to false on the card.`,
         ),
       );
     }
@@ -404,7 +417,7 @@ function checkWorkflow(p: Project, wf: Workflow, options: ValidateOptions): Issu
       }
     }
 
-    const providerName = n.provider ?? card.model.default;
+    const [providerName = card.model.default, ...fallbacks] = providersOf(n);
     if (!(providerName in p.providers)) {
       issues.push(
         issue(
@@ -427,17 +440,22 @@ function checkWorkflow(p: Project, wf: Workflow, options: ValidateOptions): Issu
       );
     }
 
-    const exit = p.data.exits[providerName];
-    if (exit) {
-      const extra = card.data.sends.filter((kind) => !exit.sends.includes(kind));
+    // RB043 for the provider it runs on and for its fallback: a fallback sends the same data.
+    for (const name of [providerName, ...fallbacks]) {
+      const exit = p.data.exits[name];
+      if (!exit) continue;
+      const sends =
+        name === providerName ? card.data.sends : (card.data.fallbackSends ?? card.data.sends);
+      const extra = sends.filter((kind) => !exit.sends.includes(kind));
       if (extra.length > 0) {
+        const role = name === providerName ? '' : ' when it falls back';
         issues.push(
           issue(
             'RB043',
             'error',
             where,
-            `"${nodeId}" sends ${extra.join(', ')} to "${providerName}", but that exit only allows ${exit.sends.join(', ')}.`,
-            `Widen the "${providerName}" exit on purpose, with a why, or stop the agent sending ${extra.join(', ')}.`,
+            `"${nodeId}" sends ${extra.join(', ')} to "${name}"${role}, but that exit only allows ${exit.sends.join(', ')}.`,
+            `Widen the "${name}" exit on purpose, with a why, or stop the agent sending ${extra.join(', ')}.`,
           ),
         );
       }

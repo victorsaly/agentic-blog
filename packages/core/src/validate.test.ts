@@ -354,3 +354,92 @@ describe('behaviour rules', () => {
     expect(validate(input).ok).toBe(false);
   });
 });
+
+describe('review fixes', () => {
+  const base = card('write');
+
+  it('RB010 refuses an agent that writes after the approval and before the sink', () => {
+    const input = withNodes(({ publish: _removed, ...rest }) => ({
+      ...rest,
+      polish: {
+        kind: 'agent',
+        why: 'Changes the draft after the person approved it, which must not reach the sink unseen.',
+        after: ['approve'],
+        card: card('polish', { behaviour: { ...base.behaviour, needsApproval: false } }),
+      },
+      publish: {
+        kind: 'sink',
+        why: 'Sends whatever the last agent wrote.',
+        after: ['polish'],
+        target: { kind: 'github-pr', repo: 'owner/repo' },
+      },
+    }));
+    const found = validate(input).issues.find((i) => i.rule === 'RB010');
+    expect(found?.message).toMatch(/"polish"/);
+  });
+
+  it('RB032 does not count an answer gate as approval', () => {
+    const input = withNodes((nodes) => ({
+      ...nodes,
+      approve: {
+        kind: 'gate',
+        why: 'The person answers questions here; nobody approves the draft.',
+        after: ['write'],
+        asks: 'answer',
+        question: 'What did you mean by the second line?',
+      },
+    }));
+    expect(rulesOf(input)).toContain('RB032');
+  });
+
+  function withFallback(write: Nodes[string]): ProjectInput {
+    const p = withNodes((nodes) => ({ ...nodes, write }));
+    return {
+      ...p,
+      providers: {
+        ...p.providers,
+        backup: { kind: 'claude', model: 'test-model-b', secret: 'ANTHROPIC_API_KEY' },
+      },
+      data: {
+        ...p.data,
+        exits: {
+          ...p.data.exits,
+          backup: {
+            sends: ['prompt'],
+            region: 'eu',
+            retention: 'zero',
+            why: 'The backup model receives a prompt only, never the text itself.',
+          },
+        },
+      },
+    };
+  }
+
+  const fallbackCard = (data: { sends: ['text']; fallbackSends?: ['prompt'] }) =>
+    card('write', {
+      model: { default: 'writer', allowed: ['writer', 'backup'] },
+      behaviour: { ...base.behaviour, onFailure: 'use-fallback', fallback: 'backup' },
+      data,
+    });
+
+  it('RB043 checks what a fallback provider receives', () => {
+    const input = withFallback({
+      kind: 'agent',
+      why: 'Writes the draft, falling back to a second model that may not receive the text.',
+      after: ['origin'],
+      card: fallbackCard({ sends: ['text'] }),
+    });
+    const found = validate(input).issues.find((i) => i.rule === 'RB043');
+    expect(found?.message).toMatch(/when it falls back/);
+  });
+
+  it('RB043 accepts a fallback that is declared to receive less', () => {
+    const input = withFallback({
+      kind: 'agent',
+      why: 'Writes the draft, falling back to a second model that only gets the prompt.',
+      after: ['origin'],
+      card: fallbackCard({ sends: ['text'], fallbackSends: ['prompt'] }),
+    });
+    expect(rulesOf(input)).not.toContain('RB043');
+  });
+});

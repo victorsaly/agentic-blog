@@ -25,7 +25,8 @@ export const card = defineAgentCard({
   qualityBar: { approvedWithoutRewrite: 0.8 },
   model: { default: 'writer', allowed: ['writer'] },
   budget: { usdPerRun: 0.03, secondsPerRun: 45 },
-  behaviour: coreStep(true),
+  // The owner answers these questions rather than approving them; the answer gate follows, not an approve gate.
+  behaviour: coreStep(false),
   metrics: standardMetrics(0.8, 0.03),
   variables: {
     maxQuestions: {
