@@ -32,7 +32,7 @@ A blog where every post starts as a raw voice or text note (the origin, never ed
 - Three depths per post: message (two or three lines), idea (one screen), road (everything), plus the origin and the sources. On the page these are tabs: The idea, Where it came from, The road, Sources.
 - Themes classify posts: AI changing work, Accountability, Credibility, Scalable and secure, Apps and workflows. A post can carry several. A graph view of themes and small ideas is planned for a later phase.
 - Home shows the newest ten posts; an archive lists all; a search page exists; theme pages exist.
-- Drawings: linocut prints in black and white, generated per post and reviewed; Victor is the recurring drawn person. Drawings invert in dark mode.
+- Drawings: linocut prints in black and white, generated per post and reviewed; Victor is the recurring drawn person. In dark mode drawings stay ink on paper, dimmed, on a paper margin; inverting turned faces dark and hair white. Small icons invert.
 - Font switch (Atkinson Hyperlegible to Lexend) and theme switch (light and dark) in the header.
 - Private by default: robots are kept out until Victor flips `index: true`.
 - Undecided: whether readers can talk back (chat with readers) and what privacy that implies; publishing languages beyond English; a reader voice version.

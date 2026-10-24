@@ -482,7 +482,9 @@ const pad = (n: number): string => String(n).padStart(2, '0');
     height: auto;
     max-height: min(42rem, 75vh);
     margin-inline: auto;
-    filter: var(--drawing-filter);
+    background: var(--print-paper);
+    padding: var(--print-pad);
+    filter: var(--print-filter);
   }
   .cover figcaption {
     margin-top: var(--space-2);
@@ -635,7 +637,9 @@ const pad = (n: number): string => String(n).padStart(2, '0');
     display: block;
     width: 100%;
     height: auto;
-    filter: var(--drawing-filter);
+    background: var(--print-paper);
+    padding: var(--print-pad);
+    filter: var(--print-filter);
   }
   /* The line a drawing shows, then the artist's note: quiet, close to the drawing it belongs to. */
   .layout :global(#road-body .caption) {

@@ -21,7 +21,7 @@ The full idea is the first post: `thoughts/2026-10-23-converted-with-ai/`.
 5. **Accessibility is the floor.** WCAG 2.2 AA; axe runs in CI; keyboard reaches everything; one font switch.
 6. **Monochrome.** Black on white (and white on black). One colour, marigold: on a post it marks the message,
    once; on a list page it marks each post's title; in search it marks the match. Drawings are linocut
-   prints, inverted in dark mode.
+   prints; in dark mode they stay ink on paper, dimmed, on a paper margin (never inverted). Icons invert.
 
 ## Stack
 
