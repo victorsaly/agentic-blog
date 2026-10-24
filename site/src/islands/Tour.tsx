@@ -17,6 +17,8 @@ export function Tour({ stations }: TourProps): React.JSX.Element {
   const [current, setCurrent] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
   const [sound, setSound] = useState(true);
+  // True only when the tour ran to the end by itself; then Play starts again from the first station.
+  const [finished, setFinished] = useState(false);
   const audio = useRef<HTMLAudioElement | null>(null);
   const timer = useRef<number | null>(null);
   const items = useRef<(HTMLLIElement | null)[]>([]);
@@ -33,14 +35,18 @@ export function Tour({ stations }: TourProps): React.JSX.Element {
     clearTimer();
     timer.current = window.setTimeout(() => {
       const i = currentRef.current;
-      if (i === null || i >= last) setPlaying(false);
-      else setCurrent(i + 1);
+      if (i === null || i >= last) {
+        setPlaying(false);
+        setFinished(true);
+      } else setCurrent(i + 1);
     }, BREATH_MS);
   }, [clearTimer, last]);
 
   // Each time the lit station changes while playing: say its line, or wait as long as reading it takes.
+  // A paused clip resumes where it stopped; only a new station (or a clip already finished) starts over.
   useEffect(() => {
     const el = audio.current;
+    let live = true; // false once this run is replaced, so a late play() failure cannot start a timer
     clearTimer();
     if (!playing || current === null) {
       el?.pause();
@@ -49,15 +55,26 @@ export function Tour({ stations }: TourProps): React.JSX.Element {
     const station = stations[current];
     if (!station) return;
     const silent = (): void => {
+      if (!live) return;
       timer.current = window.setTimeout(advance, readingTimeMs(station.line) - BREATH_MS);
     };
     if (!sound || !el) {
+      el?.pause();
       silent();
-      return;
+      return () => {
+        live = false;
+      };
     }
-    el.src = `/tour/${station.id}.mp3`;
-    el.currentTime = 0;
+    if (el.dataset.station !== station.id) {
+      el.src = `/tour/${station.id}.mp3`;
+      el.dataset.station = station.id;
+    } else if (el.ended) {
+      el.currentTime = 0;
+    }
     el.play().catch(silent); // blocked or missing: carry on in silence
+    return () => {
+      live = false;
+    };
   }, [current, playing, sound, stations, advance, clearTimer]);
 
   // While playing, bring the lit station to the top (below the sticky controls, see scroll-margin in
@@ -87,11 +104,13 @@ export function Tour({ stations }: TourProps): React.JSX.Element {
       setPlaying(false);
       return;
     }
-    setCurrent((i) => (i === null || i >= last ? 0 : i));
+    if (current === null || finished) setCurrent(0);
+    setFinished(false);
     setPlaying(true);
   };
 
   const go = (i: number): void => {
+    setFinished(false);
     setCurrent(Math.max(0, Math.min(last, i)));
   };
 
@@ -115,7 +134,7 @@ export function Tour({ stations }: TourProps): React.JSX.Element {
             ? 'Pause'
             : current === null
               ? 'Play the tour'
-              : current >= last
+              : finished
                 ? 'Play again'
                 : 'Play'}
         </button>

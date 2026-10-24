@@ -3,7 +3,7 @@
 // remake it (after changing its line in scenes.ts). The key is read from site/.env.local, never written here.
 // Usage: npm run pitch:voice
 import { createWriteStream, existsSync } from 'node:fs';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, rename, rm } from 'node:fs/promises';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
@@ -11,8 +11,16 @@ import { music, scenes, voice } from './scenes.js';
 
 const audio = new URL('./audio/', import.meta.url).pathname;
 
+/** Written beside the clip and renamed only when complete, so a failed download is never kept as a clip. */
 async function save(stream: ReadableStream<Uint8Array>, file: string): Promise<void> {
-  await pipeline(Readable.fromWeb(stream), createWriteStream(file));
+  const part = `${file}.part`;
+  try {
+    await pipeline(Readable.fromWeb(stream), createWriteStream(part));
+    await rename(part, file);
+  } catch (error) {
+    await rm(part, { force: true });
+    throw error;
+  }
 }
 
 async function main(): Promise<void> {
