@@ -965,10 +965,16 @@ const pad = (n: number): string => String(n).padStart(2, '0');
     display: none;
   }
 
-  /* The sources close the text: numbered, ruled, always open. */
+  /* The sources close the text: numbered, ruled, always open. They sit in the text's column on a desk only;
+     placed in column 2 of the one-column phone grid, they made a second column and squeezed the text to
+     nothing. */
   .source-list {
-    grid-column: 2;
     margin-top: var(--space-6);
+  }
+  @media (min-width: 64.0625rem) {
+    .source-list {
+      grid-column: 2;
+    }
   }
   .source-list ol {
     list-style: none;
