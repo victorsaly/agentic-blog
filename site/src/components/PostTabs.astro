@@ -98,6 +98,10 @@ const { tabs, label } = Astro.props;
   [role='tab']:hover .icon {
     opacity: 1;
   }
+  /* A name that wraps keeps every hint on one line, at the foot of the row. */
+  .name {
+    flex: 1;
+  }
   .hint {
     font-size: var(--size-small);
     color: var(--quiet);

@@ -8,6 +8,7 @@ import {
   plainText,
   readingLabel,
   readingMinutes,
+  splitFirstSentence,
   thoughtSlugOf,
 } from './content.js';
 
@@ -54,5 +55,27 @@ describe('text', () => {
   it('cuts an excerpt with an ellipsis', () => {
     expect(excerpt('one two three four', 2)).toBe('one two…');
     expect(excerpt('one two', 5)).toBe('one two');
+  });
+});
+
+describe('first sentence', () => {
+  it('splits a message at the end of its first sentence', () => {
+    expect(splitFirstSentence('Keep the note. Everything else is a conversion of it.')).toEqual({
+      first: 'Keep the note.',
+      rest: 'Everything else is a conversion of it.',
+    });
+  });
+
+  it('keeps a question or an exclamation as the first sentence', () => {
+    expect(splitFirstSentence('What do we reward? The job goal must change.').first).toBe(
+      'What do we reward?',
+    );
+  });
+
+  it('returns the whole message when it is one sentence', () => {
+    expect(splitFirstSentence('  One sentence, no full stop  ')).toEqual({
+      first: 'One sentence, no full stop',
+      rest: '',
+    });
   });
 });

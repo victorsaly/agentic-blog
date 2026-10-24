@@ -49,7 +49,7 @@ functions/              Pages Functions: upload, transcribe, audio, origin; _mid
 ## Design rules, short
 
 - Black on white, white on black. Marigold only behind the message.
-- Atkinson Hyperlegible, 19px, line height 1.6, 60 characters a line. The switch goes to Lexend.
+- Atkinson Hyperlegible, 19px, line height 1.6, about 70 characters a line. The switch goes to Lexend.
 - Three depths on every post. The idea is open; the road and the origin are a click away.
 - No cards, shadows, gradients or decoration. Rules and space show structure.
 - Nothing moves unless the reader asked for it. `prefers-reduced-motion` is respected.

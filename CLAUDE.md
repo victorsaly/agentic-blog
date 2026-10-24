@@ -58,7 +58,7 @@ npm run agent -- <name> <thought-slug>   # run one agent locally
 ## Design rules
 
 - Tokens live in `site/src/styles/tokens.css`. No hex values anywhere else.
-- Type: Atkinson Hyperlegible by default; the switch goes to Lexend. Body 19px, line height 1.6, max 60ch.
+- Type: Atkinson Hyperlegible by default; the switch goes to Lexend. Body 19px, line height 1.6, about 70 characters a line (the `--measure` token).
 - Three depths on every post: **message** (2–3 lines, highlighted), **idea** (one screen), **road** (everything).
 - No decoration. No shadows, no gradients, no cards. Structure is shown by spacing and rules.
 - Motion only when the reader asked for it (opening, expanding). Respect `prefers-reduced-motion`.
