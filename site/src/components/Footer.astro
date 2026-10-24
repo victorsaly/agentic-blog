@@ -46,6 +46,15 @@ const licence =
       <p class="head" id="footer-follow">Follow</p>
       <ul>
         <li><a href="/rss.xml">RSS feed</a></li>
+        {
+          settings.site.linkedin && (
+            <li>
+              <a href={settings.site.linkedin} rel="me">
+                LinkedIn
+              </a>
+            </li>
+          )
+        }
         <li><a href="https://github.com/victorsaly/agentic-blog">GitHub</a></li>
       </ul>
     </nav>

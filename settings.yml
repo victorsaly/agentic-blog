@@ -7,6 +7,7 @@ site:
   tagline: Talked out loud, tidied by AI
   author: Victor Saly
   email: info@victorsaly.com
+  linkedin: https://www.linkedin.com/in/victorsaly # in the footer, and tells search engines the profile is the author's
   timezone: Europe/London
 
 languages:

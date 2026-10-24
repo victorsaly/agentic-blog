@@ -104,7 +104,12 @@ const jsonLd = {
   '@type': 'Article',
   headline: thought.data.title,
   description,
-  author: { '@type': 'Person', name: settings.site.author, url: new URL('/', Astro.site).href },
+  author: {
+    '@type': 'Person',
+    name: settings.site.author,
+    url: new URL('/', Astro.site).href,
+    ...(settings.site.linkedin ? { sameAs: [settings.site.linkedin] } : {}),
+  },
   datePublished: thought.data.date.toISOString().slice(0, 10),
   inLanguage: thought.data.language,
   mainEntityOfPage: postUrl,

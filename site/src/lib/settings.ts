@@ -11,6 +11,7 @@ const settingsSchema = z.object({
     tagline: z.string().min(1),
     author: z.string().min(1),
     email: z.email(),
+    linkedin: z.url().optional(),
     timezone: z.string().min(1),
   }),
   languages: z.object({
