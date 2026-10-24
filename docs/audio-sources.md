@@ -61,6 +61,23 @@ The clips and the music are not committed (`.gitignore`): they live only on the 
 the finished `pitch.mp4`, its captions `pitch.vtt` and its still `pitch.jpg` are in the repo. On a fresh clone,
 `npm run pitch:voice` makes them again, which spends the credits again.
 
+## Read-aloud audio on a post (`thoughts/<slug>/voice/`)
+
+Made by the `voice` agent (`agents/voice/`), not by hand. It sends the approved `versions/short.md`, as written,
+to ElevenLabs and writes `short.mp3`, `short.json` (the start and end, in seconds, of every word) and `short.md`
+(the spoken text, the voice and model, and a fingerprint of the text). Unlike the tour, this runs in GitHub
+Actions on the `agent:voice` label and needs the `ELEVENLABS_API_KEY` secret; the site's build still never
+calls ElevenLabs.
+
+|       |                                                                                                     |
+| ----- | --------------------------------------------------------------------------------------------------- |
+| Model | `eleven_v3`                                                                                         |
+| Voice | "Chris W" (`hoSRtERLhFa8UfJ6P1JP`) unless `settings.yml` → `media.voice_id` names another           |
+| Redo  | only when the spoken text changes (its fingerprint differs) or a file is missing; otherwise skipped |
+
+Victor listens to the audio in the pull request before merging; `reviewed: false` in `short.md` is flipped by
+hand when he has.
+
 ## To replace a tour clip
 
 1. Change the station's `line` in `site/src/lib/tour.ts`.

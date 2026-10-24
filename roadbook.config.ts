@@ -2,7 +2,14 @@
 // deployment. `npm run roadbook -- validate` checks it against every accountability rule; `npm run
 // roadbook -- plan` says in plain words what it will do, send, cost and create. Today the gates are the
 // pull request reviews Victor already does; the live studio will open the same gates on its canvas.
-import { claude, defineProject, githubPullRequest, openaiImages, workersAi } from '@roadbook/core';
+import {
+  claude,
+  defineProject,
+  elevenlabs,
+  githubPullRequest,
+  openaiImages,
+  workersAi,
+} from '@roadbook/core';
 import { card as citations } from './agents/citations/card.js';
 import { card as convert } from './agents/convert/card.js';
 import { card as diagram } from './agents/diagram/card.js';
@@ -14,6 +21,7 @@ import { card as safety } from './agents/safety/card.js';
 import { card as security } from './agents/security/card.js';
 import { card as seo } from './agents/seo/card.js';
 import { card as structure } from './agents/structure/card.js';
+import { card as voice } from './agents/voice/card.js';
 
 export default defineProject({
   name: 'agentic-blog',
@@ -47,6 +55,12 @@ export default defineProject({
         retention: 'provider-default',
         why: 'OpenAI receives the drawing prompt and, on Victor’s machine only, his reference photo to draw from.',
       },
+      voices: {
+        sends: ['text'],
+        region: 'us',
+        retention: 'provider-default',
+        why: 'ElevenLabs receives the approved short version, as written, and returns it read aloud with the time of every word.',
+      },
       workers: {
         sends: ['audio', 'prompt'],
         region: 'global',
@@ -59,6 +73,7 @@ export default defineProject({
   providers: {
     writer: claude({ model: 'claude-sonnet-5-5' }),
     images: openaiImages(),
+    voices: elevenlabs({ model: 'eleven_v3' }),
     workers: workersAi({ model: '@cf/openai/whisper-large-v3-turbo' }),
   },
 
@@ -171,10 +186,16 @@ export default defineProject({
           after: ['convert', 'image', 'diagram', 'drilldown', 'seo'],
           card: security,
         },
+        voice: {
+          kind: 'agent',
+          why: 'Reads the approved short version aloud, after the guards have passed it, so no audio is paid for on text that is held.',
+          after: ['safety', 'security'],
+          card: voice,
+        },
         publish: {
           kind: 'agent',
           why: 'Assembles one pull request a reviewer can read in a minute.',
-          after: ['safety', 'security'],
+          after: ['safety', 'security', 'voice'],
           card: publish,
         },
         merge: {
