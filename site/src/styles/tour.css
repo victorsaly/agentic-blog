@@ -1,0 +1,275 @@
+/* Why: the tour on /how-it-works is the route drawn as bordered boxes joined by ink, like a diagram in a
+   post. When the reader presses Play the ink runs down from station to station, the lit box fills black
+   like a control that is on, and the line being said is marked in marigold, once. Without motion the
+   same states change at once. Nothing moves until the reader asks. */
+
+.tour {
+  margin: var(--space-4) 0 var(--space-4);
+  max-width: 68rem;
+}
+
+.tour-controls {
+  position: sticky;
+  top: 4.5rem; /* below the sticky header */
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  background: var(--paper);
+  border-bottom: var(--rule-width) solid var(--ink);
+}
+
+.tour-controls .big-play {
+  font-size: var(--size-body);
+  padding-inline: var(--space-3);
+  min-width: 10rem;
+}
+
+.tour-controls .control:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.tour-count {
+  margin: 0 0 0 var(--space-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.tour-route {
+  list-style: none;
+  max-width: calc(var(--measure) + 6rem);
+  margin: var(--space-4) 0 0;
+  padding: 0;
+}
+
+.tour-route li {
+  position: relative;
+  padding-left: 3.5rem;
+  scroll-margin-top: 10rem; /* clear of the sticky header and the tour's controls */
+}
+
+.tour-route li + li {
+  margin-top: var(--space-4);
+}
+
+/* The line the thought travels: a hairline always, an ink rule over it once the station is passed. */
+.tour-route li::before,
+.tour-route li::after {
+  content: '';
+  position: absolute;
+  left: 1.25rem;
+  top: 0;
+  bottom: calc(-1 * var(--space-4));
+  width: var(--rule-width);
+  background: var(--rule);
+}
+
+.tour-route li:last-child::before,
+.tour-route li:last-child::after {
+  display: none;
+}
+
+.tour-route li::after {
+  width: var(--rule-strong);
+  margin-left: -1px;
+  background: var(--ink);
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform var(--duration-travel) var(--ease-in-out);
+}
+
+.tour-route li[data-state='done']::after {
+  transform: scaleY(1);
+}
+
+.station {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-1) var(--space-3);
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  background: var(--paper);
+  color: var(--ink);
+  border: var(--rule-width) solid var(--ink);
+  transition:
+    background-color 200ms ease,
+    color 200ms ease,
+    transform var(--duration-press) var(--ease-out);
+}
+
+.station:hover {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .station:hover {
+    background: var(--hover);
+  }
+}
+
+.station:active {
+  transform: scale(0.99);
+}
+
+/* The stop on the line, to the left of each box: a square, filled once the thought has reached it. */
+.station::before {
+  content: '';
+  position: absolute;
+  left: calc(-3.5rem + 1.25rem - 0.45rem);
+  top: 1rem;
+  width: 0.9rem;
+  height: 0.9rem;
+  border: var(--rule-width) solid var(--ink);
+  background: var(--paper);
+  transition: background-color 200ms ease;
+}
+
+li[data-state='done'] .station::before,
+li[data-state='current'] .station::before {
+  background: var(--ink);
+}
+
+li[data-state='current'] .station,
+li[data-state='current'] .station:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.station .num {
+  grid-column: 2;
+  grid-row: 1;
+  font-size: var(--size-small);
+  font-variant-numeric: tabular-nums;
+  color: inherit;
+  opacity: 0.7;
+}
+
+.station .name {
+  grid-column: 1;
+  grid-row: 1;
+  font-weight: 700;
+}
+
+.station .job {
+  grid-column: 1 / -1;
+  font-size: var(--size-small);
+}
+
+.station .who {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.station .who span {
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  padding: 0 var(--space-2);
+  border: var(--rule-width) solid currentColor;
+}
+
+/* What the voice says: opens under the lit station. Height through the grid, the one place it moves. */
+.said {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows var(--duration-travel) var(--ease-out),
+    opacity 300ms ease;
+}
+
+.said > div {
+  overflow: hidden;
+}
+
+li[data-state='current'] .said {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.said p {
+  margin: var(--space-3) 0 0;
+  font-size: var(--size-message);
+  line-height: 1.4;
+  letter-spacing: var(--tracking-message);
+}
+
+.said mark {
+  background: var(--mark);
+  color: var(--mark-ink);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  padding: 0 0.15em;
+}
+
+/* The station's linocut, above its line: a print, so it keeps its paper in dark mode, dimmed. */
+.said-print {
+  display: block;
+  width: 100%;
+  max-width: 22rem;
+  height: auto;
+  margin-top: var(--space-3);
+  background: var(--print-paper);
+  padding: var(--print-pad);
+  filter: var(--print-filter);
+}
+
+/* On a desk the line is said beside its station, in the column to the right, instead of under it. */
+@media (min-width: 72rem) {
+  .tour-route {
+    max-width: 34rem;
+  }
+  .said {
+    position: absolute;
+    top: 0;
+    left: calc(100% + var(--space-5));
+    width: min(28rem, calc(100vw - 34rem - 8rem));
+  }
+  .said-print {
+    max-width: 18rem;
+    margin-top: 0;
+  }
+  /* A hairline from the lit box to what is being said about it. */
+  li[data-state='current'] .said::before {
+    content: '';
+    position: absolute;
+    left: calc(-1 * var(--space-5));
+    top: 1.4rem;
+    width: calc(var(--space-5) - var(--space-2));
+    border-top: var(--rule-width) solid var(--ink);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-route li::after,
+  .station,
+  .station::before,
+  .said {
+    transition: none;
+  }
+}
+
+@media (max-width: 40rem) {
+  .tour-route li {
+    padding-left: 2.25rem;
+    scroll-margin-top: 15rem; /* the controls wrap to two rows */
+  }
+  .tour-route li::before,
+  .tour-route li::after {
+    left: 0.6rem;
+  }
+  .station::before {
+    left: calc(-2.25rem + 0.6rem - 0.45rem);
+  }
+  .tour-count {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+}

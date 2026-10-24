@@ -1,8 +1,15 @@
 ---
 // Why: the footer closes every page with the one line the blog stands on, set large under a heavy rule,
 // then what the blog is for in plain words, and the links a reader expects at the bottom of a blog: the
-// ways to read, the feed, and where the code lives, so the road is never hidden.
+// ways to read, the feed, and where the code lives, so the road is never hidden. The Agentic Blog mark
+// is inlined so it is drawn in the page's own ink, light or dark; its standalone <style> is dropped.
 import { settings } from '../lib/settings';
+import markRaw from '../assets/logo/mark.svg?raw';
+
+const mark = markRaw
+  .replace(/<!--[\s\S]*?-->/, '')
+  .replace(/<style>[\s\S]*?<\/style>/, '')
+  .replace('role="img" aria-label="Agentic Blog"', 'aria-hidden="true" focusable="false"');
 
 const licence =
   settings.licence.content === 'all-rights-reserved'
@@ -13,6 +20,9 @@ const licence =
 <footer class="site-footer">
   <div class="frame top">
     <div class="line">
+      <a class="brand" href="/" aria-label="Agentic Blog, home"
+        ><Fragment set:html={mark} /><span><b>Agentic</b><i>Blog</i></span></a
+      >
       <p class="tagline">{settings.site.tagline}.</p>
       <p class="small quiet">
         Every post starts as a real thought, spoken or written, kept as it came out. AI helps tidy
@@ -29,6 +39,7 @@ const licence =
         <li><a href="/themes">Themes</a></li>
         <li><a href="/all">Archive</a></li>
         <li><a href="/search">Search</a></li>
+        <li><a href="/how-it-works">How it works</a></li>
       </ul>
     </nav>
     <nav aria-labelledby="footer-follow">
@@ -59,6 +70,30 @@ const licence =
   .line {
     flex: 2 1 22rem;
     min-width: 0;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--tap);
+    margin-bottom: var(--space-3);
+    font-size: var(--size-h2);
+    line-height: 1;
+    letter-spacing: var(--tracking-display);
+    text-decoration: none;
+  }
+  .brand :global(svg) {
+    height: 1.4em;
+    width: auto;
+  }
+  .brand b {
+    font-weight: 700;
+  }
+  .brand i {
+    font-weight: 400;
+  }
+  .brand:hover span {
+    text-decoration: underline;
   }
   .tagline {
     margin: 0 0 var(--space-3);

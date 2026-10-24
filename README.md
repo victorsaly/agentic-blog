@@ -1,4 +1,4 @@
-<p align="center"><img src="site/public/favicon.svg" width="72" alt="Logo: a black dot inside a dotted ring"></p>
+<p><img src="site/src/assets/logo/mark.svg" width="96" alt="Agentic Blog: an A drawn as one folded ribbon beside an open speech bubble"></p>
 
 # Agentic blog
 
@@ -18,6 +18,9 @@ reads every change and merges it. Every post has a switch back to its original.
 
 > **Talked out loud, tidied by AI.** The thought is real and stays the writer's. AI helps tidy it and give
 > it structure, so anyone can say what they think freely and still publish a clear, well-documented blog.
+
+**The idea in one minute:** [watch the pitch](site/public/media/pitch.mp4) (made from the real site by
+`npm run pitch`; see [docs/audio-sources.md](docs/audio-sources.md)).
 
 ## What it offers
 

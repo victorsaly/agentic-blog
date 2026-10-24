@@ -1,0 +1,17 @@
+<!-- Why: the Agentic Blog mark. An A drawn as one folded ribbon (the agents) beside an open speech bubble
+     (every post starts as talk). It is drawn in currentColor and hollowed with a mask, never filled, so it
+     reads as ink on paper and as paper on ink, like the site's other icons. Redrawn 24 October 2026 from
+     Victor's sketch; the wordmark beside it is set in the site's own type. On the site it is inlined (the
+     <style> below is dropped there; the page's own ink applies). Shown as an image, as in the README, the
+     style turns it white on a dark screen. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 563 414" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Agentic Blog">
+  <style>svg { color: black } @media (prefers-color-scheme: dark) { svg { color: white } }</style>
+  <defs>
+    <mask id="agentic-blog-hollow" maskUnits="userSpaceOnUse" x="0" y="0" width="563" height="414">
+      <rect width="563" height="414" fill="white" stroke="none"/>
+      <path d="M186 299 L46.5 364 L170.3 61.7 A17.9 17.9 0 0 1 203.5 61.7 L329 367" stroke="black" stroke-width="49"/>
+    </mask>
+  </defs>
+  <path d="M186 299 L46.5 364 L170.3 61.7 A17.9 17.9 0 0 1 203.5 61.7 L329 367" stroke-width="91" mask="url(#agentic-blog-hollow)"/>
+  <path d="M279 25.5 H514.5 A35 35 0 0 1 549.5 60.5 V290.5 A33 33 0 0 1 516.5 323.5 H508 A13.5 13.5 0 0 0 494.5 337 V398 L398 323" stroke-width="20.5"/>
+</svg>
