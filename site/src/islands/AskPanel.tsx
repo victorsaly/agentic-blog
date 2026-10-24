@@ -1,7 +1,7 @@
 // Why: the reader's way to talk to the blog. A native <dialog> (focus held inside, Escape closes, the page
 // behind is inert), one question at a time, the answer as plain text with links to the posts it came from,
 // and a plain note on what happens to the question: it goes to Anthropic to be answered, and nothing is kept.
-import { useCallback, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 
 interface Source {
   slug: string;
@@ -78,10 +78,18 @@ export function AskPanel({ iconSrc }: AskPanelProps): React.JSX.Element {
     }
   }, []);
 
-  const open = (): void => {
-    dialog.current?.showModal();
+  const open = useCallback((): void => {
+    if (!dialog.current?.open) dialog.current?.showModal();
     input.current?.focus();
-  };
+  }, []);
+
+  // A post's "Ask about this post" button opens the same chat.
+  useEffect(() => {
+    addEventListener('ask:open', open);
+    return () => {
+      removeEventListener('ask:open', open);
+    };
+  }, [open]);
 
   return (
     <>

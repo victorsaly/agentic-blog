@@ -1,9 +1,10 @@
 ---
-// Why: the origin page carries no badge, because nothing converted it. It shows the recording when there is
-// one and the words exactly as they arrived, spoken or written, with the file's own why on top so the
-// reader knows what they are looking at.
+// Why: the origin page is the original, so its switch marks Original and offers the AI version back. It
+// shows the recording when there is one and the words exactly as they arrived, spoken or written, with the
+// file's own why on top so the reader knows what they are looking at.
 import { getCollection, render } from 'astro:content';
 import Page from '../../../layouts/Page.astro';
+import VersionSwitch from '../../../components/VersionSwitch.astro';
 import { formatDate, thoughtSlugOf } from '../../../lib/content';
 
 export async function getStaticPaths() {
@@ -29,9 +30,12 @@ const rendered = await Promise.all(
   type="article"
 >
   <article>
-    <p class="small quiet">
-      <a href={`/thoughts/${slug}`}>← Back to the post</a>
-    </p>
+    <VersionSwitch
+      slug={slug}
+      current="original"
+      medium={origins[0]?.data.medium}
+      recorded={origins[0]?.data.recorded}
+    />
     <h1>Where “{thought.data.title}” came from</h1>
     <p class="quiet">
       This is the origin. Nothing on this page has been edited, and nothing converted it.
@@ -68,6 +72,9 @@ const rendered = await Promise.all(
 </Page>
 
 <style>
+  h1 {
+    margin-top: var(--space-5);
+  }
   .origin {
     margin-top: var(--space-5);
   }
