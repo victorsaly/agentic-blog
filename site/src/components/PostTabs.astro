@@ -22,7 +22,7 @@ interface Props {
 const { tabs, label } = Astro.props;
 ---
 
-<div class="post-tabs" data-tabs>
+<div class="post-tabs" id="ways-in" data-tabs>
   <div class="tablist" role="tablist" aria-label={label} hidden>
     {
       tabs.map((tab, i) => (
@@ -46,6 +46,9 @@ const { tabs, label } = Astro.props;
       <section class="panel" id={tab.id} role="tabpanel" aria-labelledby={`tab-${tab.id}`}>
         <h2 class="panel-name">{tab.name}</h2>
         <slot name={tab.id} />
+        <p class="small back">
+          <a href="#ways-in">Back to the top of this thought</a>
+        </p>
       </section>
     ))
   }
@@ -105,6 +108,10 @@ const { tabs, label } = Astro.props;
   .panel-name {
     margin-top: var(--space-5);
   }
+  /* The way back up from the end of a long panel: a plain jump, no motion. */
+  .back {
+    margin: var(--space-5) 0 0;
+  }
   /* Once the tabs work, the row names each panel, so the panel's own heading is for screen readers only. */
   .post-tabs.ready .panel-name {
     position: absolute;
@@ -162,6 +169,8 @@ const { tabs, label } = Astro.props;
     tabs.forEach((tab, i) => {
       tab.addEventListener('click', () => {
         select(i, false);
+        // The chosen way in lives in the address, so reload, Back and a shared link keep it.
+        history.pushState(null, '', `#${tab.getAttribute('aria-controls') ?? ''}`);
       });
       tab.addEventListener('keydown', (event) => {
         const last = tabs.length - 1;
