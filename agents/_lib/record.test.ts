@@ -2,7 +2,15 @@
 // recorded for good, since the ledger is never edited.
 import { describe, expect, it } from 'vitest';
 import { Ledger } from '@roadbook/core';
-import { assertNotLedger, endState, lastState, originOf, startedBy, whyOf } from './record.js';
+import {
+  assertNotLedger,
+  endState,
+  lastState,
+  originOf,
+  startStates,
+  startedBy,
+  whyOf,
+} from './record.js';
 
 describe('endState', () => {
   it('maps each result to a state, with the reason when there is one', () => {
@@ -29,6 +37,19 @@ describe('lastState', () => {
   });
 });
 
+describe('startStates', () => {
+  it('goes to running from the last state, closing a run that never recorded its end', () => {
+    expect(startStates('seo', 'done')).toEqual([
+      { type: 'node.state', node: 'seo', from: 'done', to: 'running' },
+    ]);
+    const after = startStates('seo', 'running');
+    expect(after.map((e) => (e.type === 'node.state' ? [e.from, e.to] : []))).toEqual([
+      ['running', 'failed'],
+      ['failed', 'running'],
+    ]);
+  });
+});
+
 describe('whyOf', () => {
   const summary = 'Read every version for harm and found none.';
   const agentWhy = 'Nothing goes out that hurts someone, and a human hears why when it holds.';
@@ -49,11 +70,20 @@ describe('whyOf', () => {
 });
 
 describe('originOf and startedBy', () => {
-  it('names the first origin file, never the answers file', () => {
+  it('names the first origin file, never an answers file', () => {
     expect(originOf('2026-10-23-a', ['structure.md', 'origin/text.md', 'origin/answers.md'])).toBe(
       'thoughts/2026-10-23-a/origin/text.md',
     );
+    expect(originOf('2026-10-23-a', ['origin/a/answers.md', 'origin/b.md'])).toBe(
+      'thoughts/2026-10-23-a/origin/b.md',
+    );
     expect(originOf('2026-10-23-a', ['structure.md'])).toBe('thoughts/2026-10-23-a/origin/');
+  });
+
+  it('names the recording before its transcript', () => {
+    expect(originOf('2026-10-23-a', ['origin/transcript.md', 'origin/voice.m4a'])).toBe(
+      'thoughts/2026-10-23-a/origin/voice.m4a',
+    );
   });
 
   it('names the GitHub account in a workflow and nobody in particular on a machine', () => {
@@ -65,10 +95,10 @@ describe('originOf and startedBy', () => {
 describe('assertNotLedger', () => {
   it('refuses an agent that writes or removes the ledger', () => {
     expect(() => {
-      assertNotLedger([{ path: 'ledger.jsonl', content: '' }]);
+      assertNotLedger([{ path: 'ledger/20261024T101530Z-seo-a1b2.jsonl', content: '' }]);
     }).toThrow('only the runner writes the ledger');
     expect(() => {
-      assertNotLedger([{ path: 'ledger.head', content: '', remove: true }]);
+      assertNotLedger([{ path: 'thoughts/x/ledger/r.head', content: '', remove: true }]);
     }).toThrow('only the runner writes the ledger');
     expect(() => {
       assertNotLedger([{ path: 'safety.md', content: '' }]);

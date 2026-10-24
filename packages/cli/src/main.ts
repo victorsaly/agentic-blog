@@ -160,7 +160,7 @@ const help = `roadbook: the record of every turn an agent took, who decided it, 
   roadbook validate   check roadbook.config.ts against every accountability rule
   roadbook plan       show what the project will do, cost, send and create
   roadbook check-cards  check agent prompt facts against their cards
-  roadbook verify-ledgers  check every thought's ledger against its head
+  roadbook verify-ledgers  check every run in every thought's ledger against its head
 
   --config <path>     a different setup file (default: ./roadbook.config.ts)
   --json              machine-readable output`;
@@ -193,7 +193,7 @@ async function main(): Promise<void> {
     console.info(
       checked === 0
         ? 'No ledgers yet.'
-        : `Every ledger verifies (${String(checked)} thought${checked === 1 ? '' : 's'}).`,
+        : `Every ledger verifies (${String(checked)} run${checked === 1 ? '' : 's'}).`,
     );
     return;
   }

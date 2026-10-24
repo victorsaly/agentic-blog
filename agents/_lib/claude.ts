@@ -2,10 +2,12 @@
 // system message are set in one place and a change to any of them is one commit. It also counts what every
 // call used, per model, so the runner can record what the run really cost.
 import Anthropic from '@anthropic-ai/sdk';
-import { addUsage, hasPrice, noUsage, type Usage } from './costs.js';
+import { addUsage, noUsage, priceOf, type Usage } from './costs.js';
 import type { AskOptions } from './types.js';
 
 export interface AskClient {
+  /** Who bills these calls, as the ledger names it. */
+  provider: 'anthropic';
   ask: (user: string, options?: AskOptions) => Promise<string>;
   /** What the calls so far used, by model. */
   usage: () => Map<string, Usage>;
@@ -32,12 +34,15 @@ export function createAskClient(
   system: string,
   defaults: { model: string; maxOutputTokens: number },
 ): AskClient {
+  // A model the ledger could not price is refused here, before the run starts or anything is spent.
+  priceOf(defaults.model);
   const apiKey = process.env['ANTHROPIC_API_KEY'];
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not set');
   const client = new Anthropic({ apiKey });
   const used = new Map<string, Usage>();
 
   return {
+    provider: 'anthropic',
     usage: () => new Map(used),
     async ask(user, options = {}) {
       // The installed SDK predates the web search tool's types, so the tool goes in as plain data.
@@ -66,9 +71,7 @@ export function createAskClient(
 
       // A long search can pause the turn; resend it as it stands and the server carries on.
       const model = options.model ?? defaults.model;
-      // A call the ledger could not price is never made: the run stops before anything is spent.
-      if (!hasPrice(model))
-        throw new Error(`no price for ${model}; add it to agents/_lib/costs.ts before using it`);
+      if (options.model) priceOf(options.model);
       for (let round = 0; round < 6; round += 1) {
         const response = await client.messages.create({
           model,

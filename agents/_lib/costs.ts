@@ -48,15 +48,17 @@ export function addUsage(a: Usage, b: Usage): Usage {
   };
 }
 
-export function hasPrice(model: string): boolean {
-  return model in PRICES;
+/** The model's price; throws for a model with none, so a call the ledger could not price is never made. */
+export function priceOf(model: string): Price {
+  const price = PRICES[model];
+  if (!price)
+    throw new Error(`no price for ${model}; add it to agents/_lib/costs.ts before using it`);
+  return price;
 }
 
 /** The dollars a model's usage cost, to a millionth of a dollar. Throws for a model with no price. */
 export function usdFor(model: string, usage: Usage): number {
-  const price = PRICES[model];
-  if (!price)
-    throw new Error(`no price for ${model}; add it to agents/_lib/costs.ts before running it`);
+  const price = priceOf(model);
   const usd =
     (usage.inputTokens * price.input +
       usage.cacheWriteTokens * price.input * CACHE_WRITE +
@@ -80,4 +82,17 @@ export function unitsOf(model: string, usage: Usage): string {
       ? `, ${String(usage.webSearches)} web search${usage.webSearches === 1 ? '' : 'es'}`
       : '';
   return `${model}: ${parts.join(', ')} tokens${searches}`;
+}
+
+/**
+ * A run's cost shared across the files it wrote, to a millionth of a dollar, so the receipts add up to
+ * exactly what the run cost. The last file takes what rounding leaves over.
+ */
+export function shares(usd: number, count: number): number[] {
+  if (count <= 0) return [];
+  const micros = Math.round(usd * 1_000_000);
+  const each = Math.floor(micros / count);
+  return Array.from({ length: count }, (_, i) =>
+    i === count - 1 ? (micros - each * (count - 1)) / 1_000_000 : each / 1_000_000,
+  );
 }

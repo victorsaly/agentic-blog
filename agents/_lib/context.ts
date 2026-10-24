@@ -55,6 +55,16 @@ export async function loadThought(root: string, slug: string): Promise<ThoughtFi
   return { slug, dir, files };
 }
 
+/** Every file under the thought's origin folder, Markdown or not, relative to the thought. */
+export async function originFiles(dir: string): Promise<string[]> {
+  try {
+    return (await walk(join(dir, 'origin'))).map((p) => relative(dir, p));
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+    throw error;
+  }
+}
+
 /** The system message every agent runs under: who is talking, then what this agent does. */
 export function systemMessage(profile: string, prompt: Prompt, settings: Settings): string {
   return [

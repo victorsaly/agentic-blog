@@ -1,38 +1,43 @@
-// Why: this check is what makes a ledger proof in CI; it must pass an untouched ledger and catch an edited
-// past line, a cut end and a missing half, naming the thought each time.
+// Why: this check is what makes a ledger proof in CI; it must pass untouched runs, catch an edited past line
+// and fail a ledger it cannot read, naming the thought each time.
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { Ledger, eventLines } from '@roadbook/core';
-import { verifyLedgerFiles } from './verify-ledgers.js';
+import { Ledger } from '@roadbook/core';
+import { saveRun } from '@roadbook/core/node';
+import { verifyLedgers } from './verify-ledgers.js';
 
-async function run(): Promise<{ events: string; head: string }> {
+async function repoWithRun(): Promise<string> {
+  const root = await mkdtemp(join(tmpdir(), 'repo-'));
+  await mkdir(join(root, 'thoughts', 'a'), { recursive: true });
+  await mkdir(join(root, 'thoughts', 'no-ledger'), { recursive: true });
   const ledger = new Ledger();
   await ledger.append({ type: 'run.started', workflow: 'blog-post', origin: 'o', by: 'local' });
   await ledger.append({ type: 'node.state', node: 'safety', from: 'idle', to: 'running' });
-  await ledger.append({ type: 'node.state', node: 'safety', from: 'running', to: 'done' });
-  return { events: eventLines(ledger.events), head: JSON.stringify(ledger.head) };
+  await saveRun(join(root, 'thoughts', 'a'), 'r1', ledger);
+  return root;
 }
 
-describe('verifyLedgerFiles', () => {
-  it('passes an untouched ledger, and a thought with no ledger at all', async () => {
-    const { events, head } = await run();
-    expect(await verifyLedgerFiles('thoughts/a', events, head)).toEqual([]);
-    expect(await verifyLedgerFiles('thoughts/a', null, null)).toEqual([]);
+describe('verifyLedgers', () => {
+  it('passes untouched runs, and a thought with no ledger at all', async () => {
+    expect(await verifyLedgers(await repoWithRun())).toEqual({ checked: 1, issues: [] });
   });
 
   it('fails when a past line was edited', async () => {
-    const { events, head } = await run();
-    const edited = events.replace('"to":"running"', '"to":"held"');
-    const issues = await verifyLedgerFiles('thoughts/a', edited, head);
+    const root = await repoWithRun();
+    const file = join(root, 'thoughts', 'a', 'ledger', 'r1.jsonl');
+    await writeFile(file, (await readFile(file, 'utf8')).replace('"to":"running"', '"to":"held"'));
+    const { issues } = await verifyLedgers(root);
     expect(issues).toHaveLength(1);
-    expect(issues[0]).toContain('thoughts/a: the ledger does not verify from event 1');
+    expect(issues[0]).toContain('thoughts/a/ledger/r1: the run does not verify from event 1');
   });
 
-  it('fails when the last events were cut off, or one half is missing', async () => {
-    const { events, head } = await run();
-    const cut = events.split('\n').slice(0, 2).join('\n');
-    expect(await verifyLedgerFiles('thoughts/a', cut, head)).toHaveLength(1);
-    expect(await verifyLedgerFiles('thoughts/a', events, null)).toEqual([
-      'thoughts/a: ledger.jsonl has no ledger.head. Fix: restore the head from git.',
-    ]);
+  it('fails a ledger it cannot read instead of passing it', async () => {
+    const root = await repoWithRun();
+    await writeFile(join(root, 'thoughts', 'no-ledger', 'ledger'), 'a file where the folder goes');
+    const { issues } = await verifyLedgers(root);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toContain('thoughts/no-ledger: the ledger cannot be read');
   });
 });

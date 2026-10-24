@@ -1,6 +1,6 @@
 // Why: the ledger's dollars come from here; a wrong multiplier would put a wrong cost on every post.
 import { describe, expect, it } from 'vitest';
-import { addUsage, hasPrice, noUsage, unitsOf, usdFor } from './costs.js';
+import { addUsage, noUsage, priceOf, shares, unitsOf, usdFor } from './costs.js';
 
 describe('usdFor', () => {
   it('prices each kind of token at its own rate, and each web search', () => {
@@ -16,8 +16,8 @@ describe('usdFor', () => {
   });
 
   it('refuses a model it has no price for, rather than guessing', () => {
-    expect(hasPrice('claude-sonnet-5-5')).toBe(true);
-    expect(hasPrice('some-new-model')).toBe(false);
+    expect(priceOf('claude-sonnet-5-5').input).toBe(2);
+    expect(() => priceOf('some-new-model')).toThrow('no price for some-new-model');
     expect(() => usdFor('some-new-model', noUsage())).toThrow('no price for some-new-model');
   });
 });
@@ -29,5 +29,15 @@ describe('unitsOf and addUsage', () => {
     expect(unitsOf('claude-sonnet-5-5', addUsage(one, two))).toBe(
       'claude-sonnet-5-5: 2000 input, 500 output tokens, 1 web search',
     );
+  });
+});
+
+describe('shares', () => {
+  it("splits a run's cost so the receipts add up to it, to the millionth", () => {
+    expect(shares(0.4, 4)).toEqual([0.1, 0.1, 0.1, 0.1]);
+    const split = shares(0.035604, 7);
+    expect(split).toHaveLength(7);
+    expect(Math.round(split.reduce((a, b) => a + b, 0) * 1_000_000)).toBe(35604);
+    expect(shares(1, 0)).toEqual([]);
   });
 });
