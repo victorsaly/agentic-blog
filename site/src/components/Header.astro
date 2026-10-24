@@ -1,94 +1,219 @@
 ---
-// Why: the header is the site name, the two ways to find something (search the posts, ask about them), and
-// two switches a reader may need before reading anything: the font for a dyslexic reader and the theme for a
-// tired one. Search and Ask carry linocut icons with their words, so they read at a glance and to a screen
-// reader alike. The graph will take the front door later.
-import { Image } from 'astro:assets';
+// Why: the header is the site name, the sections in words, the two ways to find something (search the
+// posts, ask about them), and two switches a reader may need before reading anything: the font for a
+// dyslexic reader and the theme for a tired one. All four controls are the same bordered box with an icon
+// and a word, so they read as one row. It stays at the top as you scroll; on a post it names what you are
+// reading and fills a bar as you go. On a phone the sections and switches fold into a menu.
 import { settings } from '../lib/settings';
 import { AskPanel } from '../islands/AskPanel';
+import { SearchPanel } from '../islands/SearchPanel';
 import searchIcon from '../assets/icons/search.png';
 import askIcon from '../assets/icons/ask.png';
 
+interface Props {
+  /** On a post: its title, shown in the header once the page title has scrolled away. */
+  reading?: string | undefined;
+}
+
+const { reading } = Astro.props;
+
 // The reader chat opens with the site: on when publishing.index is, and always in local development.
 const chatOn = settings.publishing.index || import.meta.env.DEV;
+
+const path = Astro.url.pathname.replace(/\/$/, '') || '/';
+const sections = [
+  { href: '/', name: 'Thoughts', on: path === '/' || path.startsWith('/thoughts') },
+  { href: '/themes', name: 'Themes', on: path.startsWith('/themes') },
+  { href: '/all', name: 'Archive', on: path === '/all' },
+];
 ---
 
-<header>
-  <a class="name" href="/">{settings.site.name}</a>
-  <div class="switches">
-    <a class="header-link" href="/search">
-      <Image class="header-icon" src={searchIcon} alt="" width={24} height={24} />
-      <span>Search</span>
+<header class="site-header" data-header>
+  <div class="frame bar">
+    <a class="name" href="/">
+      <span class="block" aria-hidden="true"></span>
+      {settings.site.name}
     </a>
-    {chatOn && <AskPanel client:idle iconSrc={askIcon.src} />}
-    <!-- Each switch names what it turns on, in words, and says with aria-pressed whether it is on. -->
-    <button type="button" id="font-switch" aria-pressed="false">
-      <span class="glyph" aria-hidden="true">Aa</span>
-      Lexend
-    </button>
-    <button type="button" id="theme-switch" aria-pressed="false">Dark</button>
+    {
+      reading && (
+        <p class="reading" aria-hidden="true">
+          <span class="quiet">Reading</span> <b>{reading}</b>
+        </p>
+      )
+    }
+    <div class="finders">
+      <SearchPanel client:idle iconSrc={searchIcon.src} askIconSrc={askIcon.src} />
+      {chatOn && <AskPanel client:idle iconSrc={askIcon.src} />}
+      <button type="button" class="control menu-open" aria-expanded="false" aria-controls="more">
+        <svg aria-hidden="true" width="20" height="14" viewBox="0 0 20 14">
+          <path d="M0 1h20M0 7h20M0 13h20" stroke="currentColor" stroke-width="2"></path>
+        </svg>
+        <span class="word">Menu</span>
+      </button>
+    </div>
+    <div class="more" id="more">
+      <nav class="sections" aria-label="Sections">
+        {
+          sections.map((s) => (
+            <a href={s.href} aria-current={s.on ? 'page' : undefined}>
+              {s.name}
+            </a>
+          ))
+        }
+      </nav>
+      <div class="switches">
+        <!-- Each switch names what it turns on, in words, and says with aria-pressed whether it is on. -->
+        <button type="button" class="control" id="font-switch" aria-pressed="false">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 20 20">
+            <text
+              x="10"
+              y="15"
+              text-anchor="middle"
+              font-size="14"
+              font-weight="700"
+              fill="currentColor">Aa</text
+            >
+          </svg>
+          Lexend
+        </button>
+        <button type="button" class="control" id="theme-switch" aria-pressed="false">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="2"></circle>
+            <path d="M10 2a8 8 0 0 1 0 16z" fill="currentColor"></path>
+          </svg>
+          Dark
+        </button>
+      </div>
+    </div>
   </div>
+  {
+    reading && (
+      <div class="progress" aria-hidden="true">
+        <span />
+      </div>
+    )
+  }
 </header>
 
 <style>
-  header {
-    width: 100%;
-    box-sizing: border-box;
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--paper);
+    border-bottom: var(--rule-width) solid var(--ink);
+  }
+  /* One row: name, sections (or, once scrolled on a post, its title), then the four controls. */
+  .bar {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
-    gap: var(--space-3);
-    max-width: calc(var(--measure) + 2 * var(--gutter));
-    margin: 0 auto;
-    padding: var(--space-3) var(--gutter) 0;
+    gap: var(--space-2) 0.375rem;
+    padding-block: var(--space-2);
   }
   .name {
-    font-weight: 700;
-    text-decoration: none;
-    min-height: var(--tap);
     display: inline-flex;
     align-items: center;
+    gap: 0.625rem;
+    min-height: var(--tap);
+    margin-right: var(--space-3);
+    font-size: 1.375rem;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
   }
   .name:hover {
     text-decoration: underline;
   }
-  .switches {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
+  .block {
+    width: 14px;
+    height: 14px;
+    background: var(--ink);
   }
-  .header-link,
-  :global(.header-link) {
-    min-height: var(--tap);
+  .more {
+    display: contents;
+  }
+  .sections {
+    order: 1;
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .sections a {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-1);
-    padding: 0 var(--space-2);
-    border: 0;
-    background: none;
-    color: var(--ink);
-    font: inherit;
+    min-height: var(--tap);
+    padding: 0 0.75rem;
+    font-size: 1.0625rem;
     text-decoration: none;
-    cursor: pointer;
   }
-  .header-link:hover span,
-  :global(.header-link:hover span),
-  :global(.header-link:focus-visible span) {
+  .sections a:hover {
     text-decoration: underline;
   }
-  :global(.header-link:hover) {
-    background: none;
-    color: var(--ink);
+  .sections a[aria-current='page'] {
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-thickness: var(--rule-strong);
+    text-underline-offset: 6px;
   }
-  :global(.header-icon) {
-    width: 24px;
-    height: 24px;
-    filter: var(--drawing-filter);
+  .reading {
+    order: 1;
+    flex: 1;
+    min-width: 0;
+    display: none;
+    margin: 0 var(--space-3) 0 0;
+    max-width: none;
+    padding-left: var(--space-4);
+    border-left: var(--rule-width) solid var(--ink);
+    font-size: 1.0625rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  @media (max-width: 30rem) {
-    /* On a phone the icons carry the row; the words stay for screen readers. */
-    .header-link span,
-    :global(.header-link span) {
+  .finders {
+    order: 2;
+    display: flex;
+    gap: 0.375rem;
+  }
+  .switches {
+    order: 3;
+    display: flex;
+    gap: 0.375rem;
+  }
+  /* The menu button exists for phones only, and only once the script can open it. */
+  .menu-open {
+    display: none;
+  }
+
+  /* Reading a post: once its title has scrolled away, the header names it in place of the sections. */
+  .site-header[data-reading='true'] .reading {
+    display: block;
+  }
+  .site-header[data-reading='true'] .sections {
+    display: none;
+  }
+
+  /* The reading bar: drawn with a transform, so it never shifts anything. */
+  .progress {
+    height: 4px;
+    margin-bottom: -1px;
+  }
+  .progress span {
+    display: block;
+    height: 100%;
+    background: var(--ink);
+    transform: scaleX(var(--read, 0));
+    transform-origin: left;
+  }
+
+  @media (max-width: 60rem) {
+    .name {
+      flex: 1;
+    }
+    .site-header[data-reading='true'] .reading {
+      display: none;
+    }
+    .finders :global(.word) {
       position: absolute;
       width: 1px;
       height: 1px;
@@ -96,31 +221,50 @@ const chatOn = settings.publishing.index || import.meta.env.DEV;
       clip-path: inset(50%);
       white-space: nowrap;
     }
-  }
-  button {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1);
-    min-width: var(--tap);
-    padding: 0 var(--space-2);
-    font-size: var(--size-small);
-  }
-  .glyph {
-    font-weight: 700;
-  }
-  @media (max-width: 30rem) {
-    .glyph {
+    .finders :global(.control) {
+      padding: 0;
+    }
+    /* Below the name: the sections and switches, on show without a script, behind Menu with one. */
+    .more {
+      order: 4;
+      flex-basis: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .site-header[data-reading='true'] .sections {
+      display: flex;
+    }
+    :global(html.js) .menu-open {
+      display: inline-flex;
+    }
+    :global(html.js) .more {
       display: none;
     }
-  }
-  button[aria-pressed='true'] {
-    background: var(--ink);
-    color: var(--paper);
+    :global(html.js) .more.open {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      padding-block: var(--space-2) var(--space-3);
+      border-top: var(--rule-width) solid var(--ink);
+    }
+    .more.open .sections {
+      flex-direction: column;
+    }
+    .more.open .sections a {
+      padding: 0;
+      border-bottom: var(--rule-width) solid var(--rule);
+    }
+    .more.open .switches :global(.control) {
+      flex: 1;
+    }
   }
 </style>
 
 <script>
-  // Why: two toggles, stored per browser, restored by the layout before paint. No framework needed for this.
+  // Why: two toggles, stored per browser, restored by the layout before paint; the phone menu; and, on a
+  // post, the reading bar and the title in the header. No framework needed for any of it.
   const root = document.documentElement;
   const remember = (key: string, value: string | null): void => {
     try {
@@ -158,4 +302,50 @@ const chatOn = settings.publishing.index || import.meta.env.DEV;
     syncTheme();
   });
   syncTheme();
+
+  // The phone menu: a disclosure. Escape closes it and gives focus back to the button.
+  const menuButton = document.querySelector<HTMLButtonElement>('.menu-open');
+  const more = document.getElementById('more');
+  const setMenu = (open: boolean): void => {
+    menuButton?.setAttribute('aria-expanded', String(open));
+    more?.classList.toggle('open', open);
+  };
+  menuButton?.addEventListener('click', () => {
+    setMenu(menuButton.getAttribute('aria-expanded') !== 'true');
+  });
+  document.querySelector('[data-header]')?.addEventListener('keydown', (event) => {
+    if (!(event instanceof KeyboardEvent) || event.key !== 'Escape') return;
+    if (menuButton?.getAttribute('aria-expanded') !== 'true') return;
+    setMenu(false);
+    menuButton?.focus();
+  });
+
+  // On a post: how far through the article you are, and whether its title is still in view.
+  const header = document.querySelector<HTMLElement>('[data-header]');
+  const bar = header?.querySelector<HTMLElement>('.progress span');
+  const article = document.querySelector<HTMLElement>('[data-reading-body]');
+  const title = document.querySelector<HTMLElement>('[data-reading-title]');
+  if (header && bar && article) {
+    let queued = false;
+    const measure = (): void => {
+      queued = false;
+      const box = article.getBoundingClientRect();
+      const travel = box.height - innerHeight;
+      const read = travel <= 0 ? 1 : Math.min(1, Math.max(0, -box.top / travel));
+      bar.style.setProperty('--read', read.toFixed(3));
+    };
+    const queue = (): void => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(measure);
+    };
+    addEventListener('scroll', queue, { passive: true });
+    addEventListener('resize', queue);
+    measure();
+  }
+  if (header && title) {
+    new IntersectionObserver(([entry]) => {
+      header.dataset['reading'] = String(entry ? !entry.isIntersecting : false);
+    }).observe(title);
+  }
 </script>

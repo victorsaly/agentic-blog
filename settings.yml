@@ -4,7 +4,7 @@
 site:
   name: Victor Saly
   domain: blog.victorsaly.com
-  tagline: Converted with AI, not made by AI
+  tagline: Talked out loud, tidied by AI
   author: Victor Saly
   email: info@victorsaly.com
   timezone: Europe/London
@@ -27,7 +27,7 @@ depths: # the three reading depths, in order
 
 publishing:
   index: true # robots: search engines welcome; also opens the reader chat (false keeps both closed)
-  badge_text: Converted with AI, not made by AI
+  badge_text: Talked out loud, tidied by AI # printed on LinkedIn posts, beside the link
   social: [linkedin] # which short versions the publish agent prepares
 
 licence:

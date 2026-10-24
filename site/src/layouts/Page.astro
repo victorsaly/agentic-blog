@@ -14,6 +14,10 @@ interface Props {
   noindex?: boolean;
   type?: 'website' | 'article';
   publishedAt?: Date;
+  /** "measure" keeps the page in one reading column; "wide" lets it lay out its own columns. */
+  width?: 'measure' | 'wide';
+  /** On a post: its title, which the header shows once the page title has scrolled away. */
+  reading?: string;
 }
 
 const {
@@ -23,6 +27,8 @@ const {
   noindex = false,
   type = 'website',
   publishedAt,
+  width = 'measure',
+  reading,
 } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const indexable = settings.publishing.index && !noindex;
@@ -48,6 +54,12 @@ const fullTitle = title === settings.site.name ? title : `${title} — ${setting
     <meta property="og:url" content={canonical} />
     <meta property="og:site_name" content={settings.site.name} />
     {publishedAt && <meta property="article:published_time" content={publishedAt.toISOString()} />}
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title={`${settings.site.name}: every thought`}
+      href="/rss.xml"
+    />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -56,6 +68,8 @@ const fullTitle = title === settings.site.name ? title : `${title} — ${setting
     />
     <script is:inline>
       // Restore the reader's font and theme choices before first paint. Stored per browser; failures are fine.
+      // The js class lets the header fold its menu only when the script that opens it is running.
+      document.documentElement.classList.add('js');
       try {
         const font = localStorage.getItem('font');
         if (font === 'switch') document.documentElement.dataset.font = 'switch';
@@ -66,11 +80,24 @@ const fullTitle = title === settings.site.name ? title : `${title} — ${setting
   </head>
   <body>
     <a class="skip" href="#content">Skip to content</a>
-    <Header />
-    <main id="content" tabindex="-1">
+    <Header reading={reading} />
+    <main id="content" tabindex="-1" class={width}>
       <slot />
     </main>
     <Footer />
+    <script is:inline>
+      // A search result opens its page with the words to mark; Pagefind's highlighter marks them there.
+      if (new URLSearchParams(location.search).has('highlight')) {
+        import('/pagefind/pagefind-highlight.js')
+          .then(() => {
+            // eslint-disable-next-line no-undef
+            new PagefindHighlight({ highlightParam: 'highlight' });
+          })
+          .catch(() => {
+            /* not built yet (local development): nothing to mark */
+          });
+      }
+    </script>
   </body>
 </html>
 
@@ -86,73 +113,5 @@ const fullTitle = title === settings.site.name ? title : `${title} — ${setting
   .skip:focus {
     top: var(--space-2);
     z-index: 1;
-  }
-  /* The reader chat: a dialog drawn with rules, no shadow or rounding, opened from the header. */
-  :global(dialog.ask) {
-    width: min(36rem, 100vw);
-    max-height: min(44rem, 100dvh);
-    margin: var(--space-6) var(--gutter) auto auto;
-    padding: var(--space-4);
-    background: var(--paper);
-    color: var(--ink);
-    border: calc(2 * var(--rule-width)) solid var(--ink);
-  }
-  :global(dialog.ask::backdrop) {
-    background: color-mix(in srgb, var(--paper) 70%, transparent);
-  }
-  :global(.ask-head) {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--space-3);
-    border-bottom: var(--rule-width) solid var(--rule);
-    padding-bottom: var(--space-2);
-  }
-  :global(.ask-head h2) {
-    margin: 0;
-    font-size: var(--size-body);
-  }
-  :global(.ask-body) {
-    min-height: 8rem;
-    padding: var(--space-3) 0;
-  }
-  :global(.ask-question) {
-    font-weight: 700;
-  }
-  :global(.ask-suggestions) {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-2);
-    margin-bottom: var(--space-3);
-  }
-  :global(.ask-suggestions button) {
-    font-size: var(--size-small);
-    text-align: left;
-  }
-  :global(.ask-form) {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: var(--space-2);
-  }
-  :global(.ask-form textarea) {
-    font: inherit;
-    padding: var(--space-2);
-    border: var(--rule-width) solid var(--ink);
-    background: var(--paper);
-    color: var(--ink);
-    resize: vertical;
-  }
-  :global(.ask-note) {
-    margin: var(--space-2) 0 0;
-  }
-  @media (max-width: 30rem) {
-    :global(dialog.ask) {
-      margin: 0;
-      width: 100vw;
-      max-width: 100vw;
-      height: 100dvh;
-      max-height: 100dvh;
-      border: 0;
-    }
   }
 </style>

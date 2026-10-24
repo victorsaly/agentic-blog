@@ -18,7 +18,7 @@ A blog where every post starts as a raw voice or text note (the origin, never ed
 
 ## Positioning
 
-"Converted with AI, not made by AI." The origin is kept and shown; every conversion carries a badge that points at it. Agents do the converting, one job each, reading a profile of how Victor talks; two of them can only say no; a human merges. Neighbouring blogs either hide AI involvement or publish AI prose with no source. This one shows the road from note to post.
+"Talked out loud, tidied by AI." The thought is real and stays Victor's; AI only tidies it and gives it structure. The point of the agentic blog is to let people express themselves freely and still publish clear, well-structured, well-documented posts. The origin is kept and shown; every post carries a switch to the original. Agents do the converting, one job each, reading a profile of how Victor talks; two of them can only say no; a human merges. Neighbouring blogs either hide AI involvement or publish AI prose with no source. This one shows the road from note to post.
 
 ## Operating Context
 
@@ -32,16 +32,17 @@ A blog where every post starts as a raw voice or text note (the origin, never ed
 - Three depths per post: message (two or three lines), idea (one screen), road (everything), plus the origin and the sources. On the page these are tabs: The idea, Where it came from, The road, Sources.
 - Themes classify posts: AI changing work, Accountability, Credibility, Scalable and secure, Apps and workflows. A post can carry several. A graph view of themes and small ideas is planned for a later phase.
 - Home shows the newest ten posts; an archive lists all; a search page exists; theme pages exist.
-- Drawings: linocut prints in black and white, generated per post and reviewed; Victor is the recurring drawn person. Drawings invert in dark mode.
+- Drawings: linocut prints in black and white, generated per post and reviewed; Victor is the recurring drawn person. In dark mode drawings stay ink on paper, dimmed, on a paper margin; inverting turned faces dark and hair white. Small icons invert.
 - Font switch (Atkinson Hyperlegible to Lexend) and theme switch (light and dark) in the header.
 - Private by default: robots are kept out until Victor flips `index: true`.
 - Undecided: whether readers can talk back (chat with readers) and what privacy that implies; publishing languages beyond English; a reader voice version.
 
 ## Brand Commitments
 
-- Name: Victor Saly. Tagline: Converted with AI, not made by AI.
+- Name: Victor Saly. Tagline: Talked out loud, tidied by AI.
+- Reader-facing words avoid programming terms such as "converted" or "conversion": say the thought is tidied and given structure by AI. ("Conversion" stays an internal word for agents and code.)
 - Voice: plain words, feeling before mechanism, British spelling, short sentences in the message, questions left hanging, no AI slop words. English is not his first language and the occasional odd preposition is part of the voice.
-- Visual commitments made binding in CLAUDE.md and later decisions: monochrome (black on white, white on black); one colour, marigold, on the message of a post and on each title of a list page; no cards, shadows, gradients or decoration; structure by spacing and rules; motion only when the reader asks; linocut drawings with Victor as the recurring person; Atkinson Hyperlegible body at 19px with a Lexend switch; 60ch measure.
+- Visual commitments made binding in CLAUDE.md and later decisions: monochrome (black on white, white on black); one colour, marigold, on the message of a post, on each title of a list page and on search matches; no cards, shadows, gradients or decoration; structure by spacing and ink rules in three weights; motion only when the reader asks; linocut drawings with Victor as the recurring person; Atkinson Hyperlegible body at 19px with a Lexend switch; 60ch measure.
 - Licence: code MIT; content all rights reserved for now.
 
 ## Evidence on Hand

@@ -1,7 +1,8 @@
 /* Why: every colour, size and rhythm on the site lives here and nowhere else. Monochrome by design:
-   black on white, white on black, and one colour, marigold, that is only ever the highlight behind the
-   message. The type is chosen for a dyslexic reader and a distracted one: large, open, well spaced,
-   short lines, and a switch to a second face built for reading proficiency. */
+   black on white, white on black, and one colour, marigold, that marks the message, list titles and
+   search matches. Structure is drawn with ink rules in three weights, like a printed page. The type is
+   chosen for a dyslexic reader and a distracted one: large, open, well spaced, short lines, and a switch
+   to a second face built for reading proficiency. */
 
 :root {
   /* colour */
@@ -10,9 +11,17 @@
   --quiet: #595959; /* 7:1 on white */
   --rule: #d4d4d4;
   --field: #f3f3f3;
+  --hover: #f2f2f2; /* the faint fill under a control the pointer is on */
+  --skeleton: #e6e6e6; /* grey rows that hold the place of an answer or a result still on its way */
   --mark: #ffc400; /* the one colour; black text on it reads at 12.7:1 */
   --mark-ink: #000000;
   --drawing-filter: none; /* drawings are black ink on white */
+  --drawing-filter-on-ink: invert(1); /* an icon on a filled (inverted) control */
+  /* A drawing is a print, ink on paper, and is never inverted: inverting a linocut turns faces dark and
+     hair white. In dark mode it keeps its paper, dimmed so it does not glare, with a paper margin. */
+  --print-paper: #ffffff;
+  --print-pad: 0;
+  --print-filter: none;
 
   /* type */
   --font-read: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
@@ -22,6 +31,14 @@
   --size-small: 0.9375rem; /* 15px */
   --size-message: clamp(1.375rem, 1.1rem + 1.4vw, 1.75rem); /* 22px on a phone, 28px on a desk */
   --size-title: 2.25rem; /* 36px */
+  --size-display: clamp(
+    2.75rem,
+    1.6rem + 4.2vw,
+    5rem
+  ); /* a post title: 44px on a phone, 80px on a desk */
+  --size-label: 0.9375rem; /* 15px, bold capitals above a rule */
+  --tracking-label: 0.08em;
+  --tracking-display: -0.03em;
   --size-h2: 1.5rem; /* 24px */
   --leading: 1.6;
   --leading-tight: 1.25;
@@ -36,12 +53,23 @@
   --space-5: 2.5rem;
   --space-6: 4rem;
   --gutter: 1.25rem;
+  --wide: 80rem; /* 1280px: the frame for the header, the footer and the wide pages */
+  --pad: clamp(1.25rem, 3vw, 2.5rem); /* the frame's side margin: 20px on a phone, 40px on a desk */
+  --rail: 15rem; /* a side column beside the text on a desk */
+  --dock: 28.75rem; /* 460px: the Ask and Search panel docked on the right */
   --tap: 2.75rem; /* 44px minimum target */
 
   /* edges */
-  --rule-width: 1px;
+  --rule-width: 1px; /* a hairline between rows */
+  --rule-strong: 3px; /* above every section heading and label */
+  --rule-heavy: 8px; /* opens the big moments: masthead, cover, footer */
   --focus: 3px solid var(--ink);
   --focus-offset: 3px;
+
+  /* motion: only when the reader asked for it */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --duration-panel: 220ms;
+  --duration-press: 160ms;
 
   color-scheme: light dark;
 }
@@ -57,8 +85,13 @@
     --ink: #ffffff;
     --quiet: #a8a8a8; /* 7.3:1 on black */
     --rule: #333333;
-    --drawing-filter: invert(1); /* white lines on black */
+    --drawing-filter: invert(1); /* icons: white lines on black */
+    --drawing-filter-on-ink: none;
+    --print-pad: 0.75rem;
+    --print-filter: brightness(0.85);
     --field: #141414;
+    --hover: #1c1c1c;
+    --skeleton: #2a2a2a;
   }
 }
 
@@ -68,5 +101,10 @@
   --quiet: #a8a8a8;
   --rule: #333333;
   --drawing-filter: invert(1);
+  --drawing-filter-on-ink: none;
+  --print-pad: 0.75rem;
+  --print-filter: brightness(0.85);
   --field: #141414;
+  --hover: #1c1c1c;
+  --skeleton: #2a2a2a;
 }
