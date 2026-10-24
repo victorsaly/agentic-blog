@@ -29,7 +29,7 @@ const rendered = await Promise.all(
   lang={thought.data.language}
   type="article"
 >
-  <article>
+  <article data-pagefind-body data-pagefind-filter="kind:origin">
     <VersionSwitch
       slug={slug}
       current="original"

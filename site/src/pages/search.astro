@@ -1,7 +1,8 @@
 ---
-// Why: search over every published post, built into a static index at build time by Pagefind, so it
-// needs no server and sends nothing anywhere. It indexes only the post text (data-pagefind-body), never
-// the studio or the origins.
+// Why: search over every published post and original, built into a static index at build time by
+// Pagefind, so it needs no server and sends nothing anywhere. It indexes the post text and the originals
+// (data-pagefind-body, tagged kind:post or kind:origin), never the studio. The header's Search opens the
+// same index in a docked panel; this page is where Search leads without a script.
 import Page from '../layouts/Page.astro';
 ---
 
@@ -47,12 +48,9 @@ import Page from '../layouts/Page.astro';
     --pagefind-ui-font: inherit;
     --pagefind-ui-scale: 1;
   }
-  /* Marigold belongs to the message alone, so a match is shown by weight and an underline. */
+  /* A match is marked in marigold, as in the docked search panel. */
   #search mark {
-    background: none;
-    color: inherit;
-    font-weight: 700;
-    text-decoration: underline;
-    text-decoration-thickness: 0.12em;
+    background: var(--mark);
+    color: var(--mark-ink);
   }
 </style>

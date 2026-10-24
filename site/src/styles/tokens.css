@@ -51,6 +51,7 @@
   --wide: 80rem; /* 1280px: the frame for the header, the footer and the wide pages */
   --pad: clamp(1.25rem, 3vw, 2.5rem); /* the frame's side margin: 20px on a phone, 40px on a desk */
   --rail: 15rem; /* a side column beside the text on a desk */
+  --dock: 28.75rem; /* 460px: the Ask and Search panel docked on the right */
   --tap: 2.75rem; /* 44px minimum target */
 
   /* edges */

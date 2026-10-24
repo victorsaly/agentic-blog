@@ -4,9 +4,9 @@
 // dyslexic reader and the theme for a tired one. All four controls are the same bordered box with an icon
 // and a word, so they read as one row. It stays at the top as you scroll; on a post it names what you are
 // reading and fills a bar as you go. On a phone the sections and switches fold into a menu.
-import { Image } from 'astro:assets';
 import { settings } from '../lib/settings';
 import { AskPanel } from '../islands/AskPanel';
+import { SearchPanel } from '../islands/SearchPanel';
 import searchIcon from '../assets/icons/search.png';
 import askIcon from '../assets/icons/ask.png';
 
@@ -42,10 +42,7 @@ const sections = [
       )
     }
     <div class="finders">
-      <a class="control" href="/search">
-        <Image src={searchIcon} alt="" width={20} height={20} />
-        <span class="word">Search</span>
-      </a>
+      <SearchPanel client:idle iconSrc={searchIcon.src} askIconSrc={askIcon.src} />
       {chatOn && <AskPanel client:idle iconSrc={askIcon.src} />}
       <button type="button" class="control menu-open" aria-expanded="false" aria-controls="more">
         <svg aria-hidden="true" width="20" height="14" viewBox="0 0 20 14">

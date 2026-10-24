@@ -1,23 +1,40 @@
-// Why: the reader's way to talk to the blog. A native <dialog> (focus held inside, Escape closes, the page
-// behind is inert), one question at a time, the answer as plain text with links to the posts it came from,
-// and a plain note on what happens to the question: it goes to Anthropic to be answered, and nothing is kept.
+// Why: the reader's way to talk to the blog. A panel docked beside the page (full screen on a phone), so the
+// post stays readable while you ask. It is a conversation: follow-ups carry the earlier turns. On a post the
+// reader chooses whether answers come from this post or every post, and can select a passage and ask about
+// it. While an answer is on its way its block is already drawn at its final size, so nothing jumps. A plain
+// note says what happens to a question: it goes to Anthropic to be answered, and nothing is kept.
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useDock } from './use-dock';
 
 interface Source {
   slug: string;
   title: string;
 }
 
-type State =
-  | { kind: 'idle' }
-  | { kind: 'asking'; question: string }
-  | { kind: 'answered'; question: string; answer: string; sources: Source[] }
-  | { kind: 'failed'; question: string; message: string };
+interface Turn {
+  id: number;
+  question: string;
+  quote?: string;
+  state: 'asking' | 'answered' | 'failed';
+  answer?: string;
+  sources?: Source[];
+  message?: string;
+}
 
-const SUGGESTIONS = [
+interface Post {
+  slug: string;
+  title: string;
+}
+
+const SITE_SUGGESTIONS = [
   'What is this blog about, in one minute?',
   'What does "converted with AI" mean here?',
 ];
+const POST_SUGGESTIONS = [
+  'What is the point of this post?',
+  'What changed from the original note?',
+];
+const MAX_QUESTION = 500;
 
 function isAnswer(data: unknown): data is { answer: string; sources: Source[] } {
   return (
@@ -36,58 +53,102 @@ function errorText(data: unknown): string | null {
     : null;
 }
 
+/** The post this page is, if it is one: the post page marks its article with its slug and title. */
+function currentPost(): Post | null {
+  const article = document.querySelector<HTMLElement>('[data-post]');
+  const slug = article?.getAttribute('data-post');
+  const title = article?.getAttribute('data-post-title');
+  return slug && title ? { slug, title } : null;
+}
+
 export interface AskPanelProps {
   /** The linocut speech bubble shown on the header button. */
   iconSrc: string;
 }
 
 export function AskPanel({ iconSrc }: AskPanelProps): React.JSX.Element {
-  const dialog = useRef<HTMLDialogElement | null>(null);
+  const dock = useDock('ask');
   const input = useRef<HTMLTextAreaElement | null>(null);
+  const thread = useRef<HTMLDivElement | null>(null);
   const [draft, setDraft] = useState('');
-  const [state, setState] = useState<State>({ kind: 'idle' });
+  const [quote, setQuote] = useState<string | null>(null);
+  const [turns, setTurns] = useState<Turn[]>([]);
+  const [post, setPost] = useState<Post | null>(null);
+  const [scope, setScope] = useState<'post' | 'all'>('post');
+  const [selection, setSelection] = useState<{ text: string; top: number; left: number } | null>(
+    null,
+  );
+  const nextId = useRef(1);
   const id = useId();
+  const asking = turns.some((t) => t.state === 'asking');
 
-  const ask = useCallback(async (question: string) => {
-    const q = question.trim();
-    if (q === '') return;
-    setState({ kind: 'asking', question: q });
-    setDraft('');
-    try {
-      const response = await fetch('/ask', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ question: q }),
-      });
-      const data: unknown = await response.json().catch(() => null);
-      if (response.ok && isAnswer(data)) {
-        setState({ kind: 'answered', question: q, answer: data.answer, sources: data.sources });
-      } else {
-        setState({
-          kind: 'failed',
-          question: q,
-          message: errorText(data) ?? 'The chat could not answer just now.',
+  useEffect(() => {
+    setPost(currentPost());
+  }, []);
+
+  const ask = useCallback(
+    async (question: string, about: string | null = null) => {
+      const q = question.replace(/\s+/g, ' ').trim();
+      if (q === '' || turns.some((t) => t.state === 'asking')) return;
+      const turnId = nextId.current++;
+      const history = turns
+        .filter((t) => t.state === 'answered' && t.answer)
+        .slice(-4)
+        .map((t) => ({ question: t.question, answer: t.answer ?? '' }));
+      setTurns((all) => [
+        ...all,
+        { id: turnId, question: q, state: 'asking', ...(about ? { quote: about } : {}) },
+      ]);
+      setDraft('');
+      setQuote(null);
+      const settle = (patch: Partial<Turn>): void => {
+        setTurns((all) => all.map((t) => (t.id === turnId ? { ...t, ...patch } : t)));
+      };
+      try {
+        const response = await fetch('/ask', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            question: q,
+            history,
+            ...(about ? { quote: about } : {}),
+            ...(post && scope === 'post' ? { post: post.slug } : {}),
+          }),
+        });
+        const data: unknown = await response.json().catch(() => null);
+        if (response.ok && isAnswer(data))
+          settle({ state: 'answered', answer: data.answer, sources: data.sources });
+        else
+          settle({
+            state: 'failed',
+            message: errorText(data) ?? 'The chat could not answer just now.',
+          });
+      } catch {
+        settle({
+          state: 'failed',
+          message: 'The chat could not be reached. Check the connection.',
         });
       }
-    } catch {
-      setState({
-        kind: 'failed',
-        question: q,
-        message: 'The chat could not be reached. Check the connection.',
-      });
-    }
-  }, []);
+    },
+    [turns, post, scope],
+  );
 
-  const open = useCallback((): void => {
-    if (!dialog.current?.open) dialog.current?.showModal();
+  // Keep the newest turn in view as it lands.
+  useEffect(() => {
+    const box = thread.current;
+    if (box) box.scrollTop = box.scrollHeight;
+  }, [turns]);
+
+  const openPanel = useCallback((): void => {
+    dock.open();
     input.current?.focus();
-  }, []);
+  }, [dock]);
 
   // A post's "Ask about this post" button and the home page's question open the same chat; a question
   // that comes with the event is asked straight away.
   useEffect(() => {
     const onAsk = (event: Event): void => {
-      open();
+      openPanel();
       const detail: unknown = event instanceof CustomEvent ? event.detail : null;
       const question =
         typeof detail === 'object' && detail !== null
@@ -99,109 +160,300 @@ export function AskPanel({ iconSrc }: AskPanelProps): React.JSX.Element {
     return () => {
       removeEventListener('ask:open', onAsk);
     };
-  }, [open, ask]);
+  }, [openPanel, ask]);
+
+  // On a post: text selected in the post grows a button to ask about that passage.
+  useEffect(() => {
+    if (!post) return;
+    let timer = 0;
+    const onChange = (): void => {
+      clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        const sel = getSelection();
+        const text = sel?.toString().replace(/\s+/g, ' ').trim() ?? '';
+        const node = sel && sel.rangeCount > 0 ? sel.getRangeAt(0).commonAncestorContainer : null;
+        const element = node instanceof Element ? node : node?.parentElement;
+        if (!sel || text.length < 3 || !element?.closest('[data-post] .panel')) {
+          setSelection(null);
+          return;
+        }
+        const rect = sel.getRangeAt(0).getBoundingClientRect();
+        setSelection({
+          text: text.slice(0, 400),
+          top: Math.max(8, rect.top - 52),
+          left: Math.min(Math.max(8, rect.left), innerWidth - 260),
+        });
+      }, 150);
+    };
+    document.addEventListener('selectionchange', onChange);
+    return () => {
+      document.removeEventListener('selectionchange', onChange);
+      clearTimeout(timer);
+    };
+  }, [post]);
+
+  const suggestions = post && scope === 'post' ? POST_SUGGESTIONS : SITE_SUGGESTIONS;
 
   return (
     <>
-      <button type="button" className="control ask-open" onClick={open} aria-haspopup="dialog">
+      <button
+        type="button"
+        className="control ask-open"
+        ref={(el) => {
+          dock.trigger.current = el;
+        }}
+        onClick={() => {
+          if (dock.isOpen) dock.close();
+          else openPanel();
+        }}
+        aria-expanded={dock.isOpen}
+        aria-controls={`${id}-dock`}
+      >
         <img src={iconSrc} alt="" width={20} height={20} />
         <span className="word">Ask</span>
       </button>
-      <dialog ref={dialog} className="ask" aria-labelledby={`${id}-title`}>
-        <div className="ask-head">
-          <h2 id={`${id}-title`}>Ask about the blog</h2>
+
+      {selection && (
+        <button
+          type="button"
+          className="control ask-selection"
+          style={{ top: selection.top, left: selection.left }}
+          onMouseDown={(event) => {
+            event.preventDefault(); // keep the selection while the button is pressed
+          }}
+          onClick={() => {
+            setQuote(selection.text);
+            setSelection(null);
+            openPanel();
+          }}
+        >
+          <img src={iconSrc} alt="" width={18} height={18} />
+          Ask about this passage
+        </button>
+      )}
+
+      <dialog
+        ref={dock.dialog}
+        id={`${id}-dock`}
+        className="dock ask"
+        aria-labelledby={`${id}-title`}
+        {...dock.dialogProps}
+      >
+        <div className="dock-head">
+          <h2 id={`${id}-title`}>Ask</h2>
+          {turns.length > 0 && (
+            <button
+              type="button"
+              className="control"
+              onClick={() => {
+                setTurns([]);
+                input.current?.focus();
+              }}
+              disabled={asking}
+            >
+              New conversation
+            </button>
+          )}
           <button
             type="button"
-            className="ask-close"
+            className="control"
+            aria-label="Close the chat"
             onClick={() => {
-              dialog.current?.close();
+              dock.close();
             }}
           >
-            Close
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14">
+              <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="2" />
+            </svg>
           </button>
         </div>
 
-        <div className="ask-body" aria-live="polite">
-          {state.kind === 'idle' && (
-            <p className="quiet">
-              Ask anything the posts can answer. The answer comes from the posts alone and says
-              which ones.
-            </p>
-          )}
-          {state.kind !== 'idle' && <p className="ask-question">{state.question}</p>}
-          {state.kind === 'asking' && <p className="quiet">Reading the posts…</p>}
-          {state.kind === 'answered' && (
-            <>
-              {state.answer.split(/\n{2,}/).map((para, i) => (
-                <p key={i}>{para}</p>
-              ))}
-              {state.sources.length > 0 && (
-                <p className="small">
-                  From:{' '}
-                  {state.sources.map((s, i) => (
-                    <span key={s.slug}>
-                      {i > 0 && ', '}
-                      <a href={`/thoughts/${s.slug}`}>{s.title}</a>
-                    </span>
-                  ))}
-                </p>
-              )}
-            </>
-          )}
-          {state.kind === 'failed' && <p role="alert">{state.message}</p>}
-        </div>
-
-        {state.kind !== 'asking' && (
-          <div className="ask-suggestions">
-            {SUGGESTIONS.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => {
-                  void ask(s);
-                }}
-              >
-                {s}
-              </button>
-            ))}
+        {post && (
+          <div className="dock-section">
+            <fieldset className="choice">
+              <legend>Answers come from</legend>
+              <div className="segmented">
+                <label>
+                  <input
+                    type="radio"
+                    name={`${id}-scope`}
+                    checked={scope === 'post'}
+                    onChange={() => {
+                      setScope('post');
+                    }}
+                  />
+                  This post
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name={`${id}-scope`}
+                    checked={scope === 'all'}
+                    onChange={() => {
+                      setScope('all');
+                    }}
+                  />
+                  Every post
+                </label>
+              </div>
+            </fieldset>
           </div>
         )}
 
-        <form
-          className="ask-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void ask(draft);
-          }}
-        >
-          <label htmlFor={`${id}-q`} className="visually-hidden">
-            Your question
-          </label>
-          <textarea
-            id={`${id}-q`}
-            ref={input}
-            rows={2}
-            maxLength={500}
-            value={draft}
-            placeholder="Ask about a post…"
-            onChange={(event) => {
-              setDraft(event.target.value);
+        <div className="dock-scroll" ref={thread} aria-live="polite">
+          {turns.length === 0 && (
+            <p className="quiet ask-empty">
+              {post && scope === 'post'
+                ? `Ask anything “${post.title}” can answer. The answer comes from this post alone.`
+                : 'Ask anything the posts can answer. The answer comes from the posts alone and says which ones.'}
+            </p>
+          )}
+          {turns.map((turn) => (
+            <div key={turn.id} className="turn">
+              <div className="asked arrive">
+                <p className="small-label">You asked</p>
+                <p className="question">{turn.question}</p>
+                {turn.quote && <p className="about small quiet">about: “{turn.quote}”</p>}
+              </div>
+              <div className="answer arrive" aria-busy={turn.state === 'asking'}>
+                <p className="small-label">From the posts</p>
+                {turn.state === 'asking' && (
+                  <>
+                    <p className="waiting small quiet">
+                      <span className="dots" aria-hidden="true">
+                        <i />
+                        <i />
+                        <i />
+                      </span>
+                      {post && scope === 'post' ? 'Reading this post…' : 'Reading the posts…'}
+                    </p>
+                    <span className="skeleton" style={{ width: '100%' }} />
+                    <span className="skeleton" style={{ width: '94%' }} />
+                    <span className="skeleton" style={{ width: '62%' }} />
+                  </>
+                )}
+                {turn.state === 'answered' && (
+                  <>
+                    {(turn.answer ?? '').split(/\n{2,}/).map((para, i) => (
+                      <p key={i}>{para}</p>
+                    ))}
+                    {(turn.sources ?? []).length > 0 && (
+                      <ul className="sources">
+                        {(turn.sources ?? []).map((s) => (
+                          <li key={s.slug}>
+                            <a href={`/thoughts/${s.slug}`}>{s.title}</a>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <button
+                      type="button"
+                      className="control copy"
+                      onClick={(event) => {
+                        const button = event.currentTarget;
+                        void navigator.clipboard.writeText(turn.answer ?? '').then(() => {
+                          button.textContent = 'Copied';
+                          setTimeout(() => {
+                            button.textContent = 'Copy the answer';
+                          }, 2000);
+                        });
+                      }}
+                    >
+                      Copy the answer
+                    </button>
+                  </>
+                )}
+                {turn.state === 'failed' && <p role="alert">{turn.message}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="dock-foot">
+          {turns.length === 0 && (
+            <>
+              <p className="small quiet try">Try asking</p>
+              <div className="suggestions">
+                {suggestions.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className="control"
+                    onClick={() => {
+                      void ask(s);
+                    }}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void ask(draft, quote);
             }}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                void ask(draft);
-              }
-            }}
-          />
-          <button type="submit" disabled={state.kind === 'asking' || draft.trim() === ''}>
-            Ask
-          </button>
-        </form>
-        <p className="small quiet ask-note">
-          Answered by Claude, from the published posts only. Your question goes to Anthropic to be
-          answered; nothing is stored here.
-        </p>
+          >
+            <label htmlFor={`${id}-q`} className="small-label">
+              Your question
+            </label>
+            {quote && (
+              <p className="about small">
+                <span>about: “{quote}”</span>
+                <button
+                  type="button"
+                  className="control"
+                  aria-label="Ask without this passage"
+                  onClick={() => {
+                    setQuote(null);
+                  }}
+                >
+                  <svg aria-hidden="true" width="12" height="12" viewBox="0 0 14 14">
+                    <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="2" />
+                  </svg>
+                </button>
+              </p>
+            )}
+            <div className="welded">
+              <textarea
+                id={`${id}-q`}
+                ref={input}
+                rows={2}
+                maxLength={MAX_QUESTION}
+                value={draft}
+                placeholder={turns.length > 0 ? 'Ask a follow-up…' : 'Ask about a post…'}
+                onChange={(event) => {
+                  setDraft(event.target.value);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    if (!asking) void ask(draft, quote);
+                  }
+                }}
+              />
+              <button type="submit" disabled={asking || draft.trim() === ''}>
+                Ask
+              </button>
+            </div>
+            <p className="small quiet hint">
+              <span>
+                {asking
+                  ? 'Answer on its way. Enter sends once it lands.'
+                  : 'Enter sends · Shift and Enter for a new line'}
+              </span>
+              <span>
+                {draft.length} / {MAX_QUESTION}
+              </span>
+            </p>
+          </form>
+          <p className="small quiet note">
+            Answered by Claude from the published posts and originals only. Your question goes to
+            Anthropic to be answered; nothing is stored here. The conversation is gone when you
+            close the tab.
+          </p>
+        </div>
       </dialog>
     </>
   );
