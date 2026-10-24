@@ -23,12 +23,11 @@ interface Heading {
   text: string;
 }
 
+// Typed here for the same reason: without generated types, render() is untyped when lint runs.
+const renderEntry = render as unknown as (entry: Entry) => Promise<{ headings: Heading[] }>;
+
 const headingsOf = async (entry: Entry | undefined, depth: number): Promise<Heading[]> =>
-  entry
-    ? ((await render(entry as Parameters<typeof render>[0])).headings as Heading[]).filter(
-        (h) => h.depth === depth,
-      )
-    : [];
+  entry ? (await renderEntry(entry)).headings.filter((h) => h.depth === depth) : [];
 
 export const GET: APIRoute = async () => {
   const thoughts = ((await getCollection('thoughts')) as unknown as ThoughtEntry[]).filter(
