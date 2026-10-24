@@ -20,7 +20,13 @@ const { reading } = Astro.props;
 // The reader chat opens with the site: on when publishing.index is, and always in local development.
 const chatOn = settings.publishing.index || import.meta.env.DEV;
 
-const path = Astro.url.pathname.replace(/\/$/, '') || '/';
+// The built site serves files (build.format 'file'), so a page knows itself as /index.html or /all.html;
+// the dev server says / and /all. Both read the same here.
+const path =
+  Astro.url.pathname
+    .replace(/\.html$/, '')
+    .replace(/\/index$/, '')
+    .replace(/\/$/, '') || '/';
 const sections = [
   { href: '/', name: 'Thoughts', on: path === '/' || path.startsWith('/thoughts') },
   { href: '/themes', name: 'Themes', on: path.startsWith('/themes') },
