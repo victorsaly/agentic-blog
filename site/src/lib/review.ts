@@ -14,6 +14,8 @@ export interface Waiting {
 export interface ThoughtWaiting {
   slug: string;
   title: string;
+  /** A draft has no public page yet, so nothing in it links anywhere. */
+  draft: boolean;
   waiting: Waiting[];
 }
 
@@ -49,7 +51,7 @@ function nameOf(v: VersionLike): Pick<Waiting, 'name' | 'href'> {
 
 /** Every thought with something unreviewed, newest first, and what waits in each. */
 export function waitingForReview(
-  thoughts: { slug: string; title: string; date: Date }[],
+  thoughts: { slug: string; title: string; date: Date; draft: boolean }[],
   versions: VersionLike[],
   sources: SourcesLike[],
 ): ThoughtWaiting[] {
@@ -59,14 +61,15 @@ export function waitingForReview(
       const own = versions
         .filter((v) => v.slug === t.slug && !v.reviewed)
         .sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind));
-      const waiting: Waiting[] = own.map((v) => ({
-        file: `thoughts/${t.slug}/versions/${v.leaf}.md`,
-        ...nameOf(v),
-      }));
+      const waiting: Waiting[] = own.map((v) => {
+        const { name, href } = nameOf(v);
+        const file = `thoughts/${t.slug}/versions/${v.leaf}.md`;
+        return href && !t.draft ? { file, name, href } : { file, name };
+      });
       if (sources.some((s) => s.slug === t.slug && !s.reviewed))
         // Unreviewed sources are not shown to readers at all, so there is no page to link.
         waiting.push({ file: `thoughts/${t.slug}/sources.md`, name: 'The sources' });
-      return { slug: t.slug, title: t.title, waiting };
+      return { slug: t.slug, title: t.title, draft: t.draft, waiting };
     })
     .filter((t) => t.waiting.length > 0);
 }

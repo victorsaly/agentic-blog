@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { waitingForReview } from './review.js';
 
 const thoughts = [
-  { slug: '2026-10-22-a', title: 'Older', date: new Date('2026-10-22') },
-  { slug: '2026-10-23-b', title: 'Newer', date: new Date('2026-10-23') },
+  { slug: '2026-10-22-a', title: 'Older', date: new Date('2026-10-22'), draft: false },
+  { slug: '2026-10-23-b', title: 'Newer', date: new Date('2026-10-23'), draft: false },
 ];
 
 describe('waitingForReview', () => {
@@ -24,6 +24,7 @@ describe('waitingForReview', () => {
       {
         slug: '2026-10-23-b',
         title: 'Newer',
+        draft: false,
         waiting: [
           {
             file: 'thoughts/2026-10-23-b/versions/short.md',
@@ -37,6 +38,7 @@ describe('waitingForReview', () => {
       {
         slug: '2026-10-22-a',
         title: 'Older',
+        draft: false,
         waiting: [{ file: 'thoughts/2026-10-22-a/versions/es.md', name: 'The version in es' }],
       },
     ]);
@@ -50,5 +52,25 @@ describe('waitingForReview', () => {
         [{ slug: '2026-10-23-b', reviewed: true }],
       ),
     ).toEqual([]);
+  });
+
+  it('keeps a draft thought in the list, with no links, since it has no public page yet', () => {
+    expect(
+      waitingForReview(
+        [{ slug: '2026-10-24-c', title: 'Draft', date: new Date('2026-10-24'), draft: true }],
+        [{ slug: '2026-10-24-c', leaf: 'short', kind: 'short', reviewed: false }],
+        [{ slug: '2026-10-24-c', reviewed: false }],
+      ),
+    ).toEqual([
+      {
+        slug: '2026-10-24-c',
+        title: 'Draft',
+        draft: true,
+        waiting: [
+          { file: 'thoughts/2026-10-24-c/versions/short.md', name: 'The idea' },
+          { file: 'thoughts/2026-10-24-c/sources.md', name: 'The sources' },
+        ],
+      },
+    ]);
   });
 });

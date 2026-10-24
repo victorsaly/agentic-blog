@@ -10,10 +10,12 @@ import { settings } from '../lib/settings';
 import { leafOf, thoughtSlugOf } from '../lib/content';
 import { waitingForReview } from '../lib/review';
 
-const thoughts = (await getCollection('thoughts', ({ data }) => !data.draft)).map((t) => ({
+// Drafts too: the structure agent opens every thought as a draft, and its versions wait for review then.
+const thoughts = (await getCollection('thoughts')).map((t) => ({
   slug: thoughtSlugOf(t.id),
   title: t.data.title,
   date: t.data.date,
+  draft: t.data.draft,
 }));
 const versions = (await getCollection('versions')).map((v) => ({
   slug: thoughtSlugOf(v.id),
@@ -62,7 +64,13 @@ const count = waiting.reduce((n, t) => n + t.waiting.length, 0);
           {waiting.map((t) => (
             <div class="thought">
               <h3>
-                <a href={`/thoughts/${t.slug}`}>{t.title}</a>
+                {t.draft ? (
+                  <>
+                    {t.title} <span class="quiet small">(draft, not published)</span>
+                  </>
+                ) : (
+                  <a href={`/thoughts/${t.slug}`}>{t.title}</a>
+                )}
               </h3>
               <ul>
                 {t.waiting.map((w) => (
