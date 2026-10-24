@@ -1,18 +1,31 @@
 // Why: the agent list on /how-it-works is the sales page's proof; a dropped agent or a wrong phase shows there.
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { firstSentence, rosterFrom } from './agents.js';
+import { firstSentence, rosterFrom, type AgentCardFacts } from './agents.js';
 import { tour } from './tour.js';
 
-const prompt = (meta: string): string => `---\n${meta}\n---\n\nBody.`;
+const cards = import.meta.glob<AgentCardFacts>('../../../agents/*/card.ts', {
+  eager: true,
+  import: 'card',
+});
 
 describe('rosterFrom', () => {
-  it('reads name, why, phase, reads and writes, by phase then name', () => {
+  it('lists name, why, phase, reads and writes, by phase then name', () => {
     const cards = rosterFrom([
-      prompt(
-        'name: safety\nwhy: >\n  Reads for harm.\n  Can hold.\nphase: 5\nreads: [versions/*.md]\nwrites: [safety.md]',
-      ),
-      prompt('name: interview\nwhy: Asks.\nphase: 1\nreads: [origin/*.md]\nwrites: [interview.md]'),
+      {
+        name: 'safety',
+        why: 'Reads for harm. Can hold.',
+        phase: 5,
+        reads: ['versions/*.md'],
+        writes: ['safety.md'],
+      },
+      {
+        name: 'interview',
+        why: 'Asks.',
+        phase: 1,
+        reads: ['origin/*.md'],
+        writes: ['interview.md'],
+      },
     ]);
     expect(cards.map((c) => c.name)).toEqual(['interview', 'safety']);
     expect(cards[1]).toEqual({
@@ -25,19 +38,12 @@ describe('rosterFrom', () => {
     });
   });
 
-  it('skips a prompt without a name, a why or a phase', () => {
-    expect(rosterFrom([prompt('name: x\nphase: 2'), 'no front matter'])).toEqual([]);
+  it('skips a card without a why or its workflow facts', () => {
+    expect(rosterFrom([{ name: 'x', why: '', phase: 2, reads: [], writes: [] }])).toEqual([]);
   });
 
-  it('finds every agent in the repo', () => {
-    const root = new URL('../../../agents/', import.meta.url);
-    const dirs = readdirSync(root, { withFileTypes: true }).filter(
-      (d) => d.isDirectory() && existsSync(new URL(`${d.name}/PROMPT.md`, root)),
-    );
-    const cards = rosterFrom(
-      dirs.map((d) => readFileSync(new URL(`${d.name}/PROMPT.md`, root), 'utf8')),
-    );
-    expect(cards).toHaveLength(dirs.length);
+  it('finds all 13 agents from their cards', () => {
+    expect(rosterFrom(Object.values(cards))).toHaveLength(13);
   });
 });
 

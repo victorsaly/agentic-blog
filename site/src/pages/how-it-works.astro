@@ -10,7 +10,7 @@ import Page from '../layouts/Page.astro';
 import FlowChart from '../components/FlowChart.astro';
 import { Tour } from '../islands/Tour';
 import { tour } from '../lib/tour';
-import { firstSentence, phases, rosterFrom } from '../lib/agents';
+import { firstSentence, phases, rosterFrom, type AgentCardFacts } from '../lib/agents';
 import { settings } from '../lib/settings';
 // The hero print shows the route, not the blogger; site/src/assets/how-it-works/prompts.md says how it was drawn.
 import cover from '../assets/how-it-works/hands-around-one-page.png';
@@ -36,12 +36,11 @@ const text = (v: unknown): string => (typeof v === 'string' ? v.trim().replace(/
 const message = text(structure.message);
 const cuts = text(structure.why);
 
-const prompts = import.meta.glob<string>('../../../agents/*/PROMPT.md', {
-  query: '?raw',
-  import: 'default',
+const agentCards = import.meta.glob<AgentCardFacts>('../../../agents/*/card.ts', {
+  import: 'card',
   eager: true,
 });
-const roster = rosterFrom(Object.values(prompts));
+const roster = rosterFrom(Object.values(agentCards));
 const byPhase = Object.entries(phases)
   .map(([n, name]) => ({ n: Number(n), name, agents: roster.filter((a) => a.phase === Number(n)) }))
   .filter((p) => p.agents.length > 0);
