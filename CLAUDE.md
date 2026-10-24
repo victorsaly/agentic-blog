@@ -19,7 +19,8 @@ The full idea is the first post: `thoughts/2026-10-23-converted-with-ai/`.
 3. **Nothing publishes without a human merge.** Agents open pull requests. `main` is protected.
 4. **Private by default.** `settings.yml → index: false` keeps robots out until Victor flips it.
 5. **Accessibility is the floor.** WCAG 2.2 AA; axe runs in CI; keyboard reaches everything; one font switch.
-6. **Monochrome.** Black on white (and white on black). One colour, marigold, used once per page, only for the message.
+6. **Monochrome.** Black on white (and white on black). One colour, marigold: on a post it marks the message,
+   once; on a list page it marks each post's title. Drawings are linocut prints, inverted in dark mode.
 
 ## Stack
 
@@ -28,7 +29,8 @@ The full idea is the first post: `thoughts/2026-10-23-converted-with-ai/`.
 - Login: Cloudflare Access in front of `/studio` (configured in the Cloudflare dashboard, not in code).
 - Content: Markdown with YAML front matter in `thoughts/`, read by Astro content collections.
 - Agents: TypeScript programs in `agents/`, one folder each, run by GitHub Actions on a label or a schedule.
-- Models: Claude for reasoning agents; Workers AI for transcription and images.
+- Models: Claude for reasoning agents and for reviewing every drawing; Workers AI for transcription; OpenAI's
+  image model for drawings (Workers AI as the fallback without a key).
 
 ## Commands (run from the repo root)
 

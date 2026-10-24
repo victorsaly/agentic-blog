@@ -2,8 +2,8 @@
 // drawings follow the text. Claude plans every picture in one reply; the code names the files, Workers AI
 // draws them, and a manifest records which section each belongs to and its alt text. A picture that fails
 // to draw does not stop the others. If the blogger put their own photo in image/, nothing is drawn.
-import { readdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { readdir, readFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
 import matter from 'gray-matter';
 import { z } from 'zod';
 import { markdownFile } from '../_lib/files.js';
@@ -115,6 +115,14 @@ export const run: AgentRun = async (ctx) => {
     };
   }
 
+  // The reference photo lives on the blogger's machine only; in CI it is absent and the text describes him.
+  const referencePath = ctx.settings.media.image_reference;
+  const reference = referencePath
+    ? await readFile(resolve(ctx.thought.dir, '..', '..', referencePath))
+        .then((b) => new Uint8Array(b))
+        .catch(() => undefined)
+    : undefined;
+
   const sections = ['cover', ...sectionsOf(long)];
   const message = userMessage(
     {
@@ -135,9 +143,11 @@ export const run: AgentRun = async (ctx) => {
   const failures: string[] = [];
   for (const [index, image] of parsed.data.images.entries()) {
     const file = fileNameFor(index, image.name);
+    // The blogger appears once, on the cover; every other panel is the idea of its section.
+    const isCover = image.section === 'cover';
     const prompt = drawingPrompt(
       ctx.settings.media.image_style,
-      ctx.settings.media.image_character,
+      isCover ? ctx.settings.media.image_character : undefined,
       image.subject,
     );
     const quote = verifiedQuote(
@@ -150,7 +160,7 @@ export const run: AgentRun = async (ctx) => {
     let model = '';
     while (attempts < MAX_ATTEMPTS && kept === null) {
       attempts += 1;
-      const picture = await drawPicture(prompt);
+      const picture = await drawPicture(prompt, isCover ? reference : undefined);
       model = picture.model;
       if (!picture.ok) {
         problems = [picture.reason];

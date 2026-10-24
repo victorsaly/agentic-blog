@@ -103,11 +103,20 @@ export async function generatePicture(prompt: string): Promise<Picture> {
   }
 }
 
-/** Draws with OpenAI when OPENAI_API_KEY is set, otherwise with Workers AI. */
-export async function drawPicture(prompt: string): Promise<Picture & { model: string }> {
+/**
+ * Draws with OpenAI when OPENAI_API_KEY is set (from the reference photo too, when there is one),
+ * otherwise with Workers AI, which takes the prompt alone.
+ */
+export async function drawPicture(
+  prompt: string,
+  reference?: Uint8Array,
+): Promise<Picture & { model: string }> {
   const { openAiAvailable, generateWithOpenAi, OPENAI_IMAGE_MODEL } =
     await import('./openai-images.js');
   if (openAiAvailable())
-    return { ...(await generateWithOpenAi(prompt)), model: `openai/${OPENAI_IMAGE_MODEL}` };
+    return {
+      ...(await generateWithOpenAi(prompt, reference)),
+      model: `openai/${OPENAI_IMAGE_MODEL}${reference ? ' (from the reference photo)' : ''}`,
+    };
   return { ...(await generatePicture(prompt)), model: IMAGE_MODEL };
 }

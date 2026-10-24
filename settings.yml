@@ -37,13 +37,16 @@ licence:
 media:
   audio_bucket: agentic-blog-audio # R2 bucket, bound as AUDIO in site/wrangler.toml
   image_style: >
-    Monochrome. Black ink on white. Lines and dots only: no photographs, no shading, no gradients, no text.
-    One idea per picture, drawn as if by one steady hand with a fine pen. Generous empty space.
-  # The one person who appears in every drawing, so a post's pictures read as one story. A placeholder
-  # until Victor describes who it should be; never a real person's name or likeness.
+    A linocut print: bold carved black shapes and white cut lines, strong contrast, hand-printed texture,
+    only black and white, no grey, no text. One idea per picture. Generous empty space.
+  # The blogger, Victor, drawn on each post's cover; the section panels draw the ideas, not him.
   image_character: >
-    An adult with short dark hair and round glasses, wearing a plain crew-neck jumper with the sleeves
-    pushed up. Always the same person, drawn the same way, seen at the same desk.
+    Victor: a man with short dark hair swept up at the front, light stubble along the jaw, round glasses
+    and a warm, wide smile. Dressed simply, a dark jacket or jumper over a shirt. Always the same man,
+    drawn the same way.
+  # A photo of Victor the image agent draws from, kept on Victor's machine only (.private/ is git-ignored;
+  # the repo is public). Without it, the description above is all the agent has.
+  image_reference: .private/reference/victor.png
   voice_id: null # ElevenLabs voice id once chosen
 
 agents:
