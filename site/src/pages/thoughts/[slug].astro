@@ -106,24 +106,24 @@ const message = splitFirstSentence(thought.data.message);
       {message.rest && <span class="message-rest"> {message.rest}</span>}
     </p>
 
-    {
-      cover && coverImage && (
-        <figure class="cover">
-          <Image
-            class="drawing"
-            src={coverImage}
-            alt={cover.alt}
-            width={720}
-            height={720}
-            loading="eager"
-          />
-          {cover.note && <figcaption class="small quiet">{cover.note}</figcaption>}
-        </figure>
-      )
-    }
-
     <PostTabs label="Read this thought" tabs={tabs}>
       <div slot="idea">
+        {
+          /* The print opens the idea, after the row of ways in, so the choice is never a screen away. */
+          cover && coverImage && (
+            <figure class="cover">
+              <Image
+                class="drawing"
+                src={coverImage}
+                alt={cover.alt}
+                width={720}
+                height={720}
+                loading="eager"
+              />
+              {cover.note && <figcaption class="small quiet">{cover.note}</figcaption>}
+            </figure>
+          )
+        }
         {idea ? <idea.Content /> : <Structure />}
       </div>
 
@@ -245,7 +245,7 @@ const message = splitFirstSentence(thought.data.message);
     filter: var(--drawing-filter);
   }
   .cover {
-    margin: var(--space-4) 0;
+    margin: 0 0 var(--space-5);
   }
   .cover figcaption {
     margin-top: var(--space-2);
