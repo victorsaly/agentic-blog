@@ -73,7 +73,7 @@ const readerSections = (road?.headings ?? []).filter(
 // The order follows the blog's thesis: the thought, where it came from, the whole road, its sources.
 const tabs: Tab[] = [
   { id: 'idea', name: 'The idea', hint: 'one screen', icon: ideaIcon },
-  { id: 'origin', name: 'Where it came from', hint: 'the origin, unedited', icon: originIcon },
+  { id: 'origin', name: 'The origin', hint: 'the note it started from', icon: originIcon },
   ...(road ? [{ id: 'road', name: 'The road', hint: 'the whole piece', icon: roadIcon }] : []),
   ...(sources
     ? [{ id: 'sources', name: 'Sources', hint: 'where each claim leads', icon: sourcesIcon }]
@@ -91,11 +91,15 @@ const description = excerpt(thought.data.message, 40);
   publishedAt={thought.data.date}
 >
   <article data-pagefind-body>
-    <Badge originHref={originHref} by={long?.data.converted_by ?? short?.data.converted_by} />
+    <Badge
+      originHref={originHref}
+      by={long?.data.converted_by ?? short?.data.converted_by}
+      explain
+    />
     <h1>{thought.data.title}</h1>
     <p class="small quiet meta" data-pagefind-ignore>
       <time datetime={thought.data.date.toISOString()}>{formatDate(thought.data.date)}</time>
-      <span>{readingLabel(minutes)} to walk the whole road</span>
+      <span>{readingLabel(minutes)} to read the whole road</span>
     </p>
 
     <p class="message"><mark>{thought.data.message}</mark></p>
