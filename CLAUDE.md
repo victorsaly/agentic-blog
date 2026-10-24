@@ -9,7 +9,7 @@ A blog for blog.victorsaly.com where every post starts as a raw voice note (the 
 published form (short, long, LinkedIn, another language, voice, image) is a **conversion** that links back
 to it. The tagline is "Talked out loud, tidied by AI." Agents do the converting; a human decides.
 
-The full idea is the first post: `thoughts/2026-10-23-converted-with-ai/`.
+The full idea is the first post: `thoughts/2026-10-23-talked-out-loud-tidied-by-ai/`.
 
 ## Non-negotiables
 

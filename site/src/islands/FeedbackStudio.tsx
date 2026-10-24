@@ -19,7 +19,7 @@ export function FeedbackStudio(): React.JSX.Element {
           type="text"
           inputMode="text"
           autoComplete="off"
-          placeholder="2026-10-23-converted-with-ai"
+          placeholder="2026-10-23-talked-out-loud-tidied-by-ai"
           value={slug}
           onChange={(event) => {
             setSlug(event.target.value.trim());

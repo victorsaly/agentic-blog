@@ -13,7 +13,7 @@ Every post on this blog starts as a voice note. I talk into my phone, badly, and
 exactly as it was spoken. It is the origin, and it is never edited.
 
 Everything else is a conversion. The short version, the long one, the LinkedIn post, another language, a
-picture, a voice you can listen to. Each carries a small badge, "Converted with AI, not made by AI", and
+picture, a voice you can listen to. Each carries a small badge, "Talked out loud, tidied by AI", and
 the badge is a link back to the origin. You can always see where a thought came from.
 
 The blog is a map, not a list. Me in the middle, a few themes around me, small ideas hanging off them. An

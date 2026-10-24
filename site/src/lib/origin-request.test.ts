@@ -65,10 +65,10 @@ describe('text origins', () => {
     const parsed = parseOriginRequest({
       medium: 'text',
       mode: 'feedback',
-      thought: '2026-10-23-converted-with-ai',
+      thought: '2026-10-23-talked-out-loud-tidied-by-ai',
       transcript: 'The short version loses the point.',
     });
-    expect(parsed.ok && parsed.value.thought).toBe('2026-10-23-converted-with-ai');
+    expect(parsed.ok && parsed.value.thought).toBe('2026-10-23-talked-out-loud-tidied-by-ai');
   });
 });
 

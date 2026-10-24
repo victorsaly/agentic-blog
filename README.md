@@ -7,7 +7,7 @@ real thought, spoken or written, kept exactly as it came out. Agents tidy it and
 reads every change and merges it. Every post has a switch back to its original.
 
 **Live blog: [blog.victorsaly.com](https://blog.victorsaly.com)**
-&nbsp;·&nbsp; [Start here: the first post](https://blog.victorsaly.com/thoughts/2026-10-23-converted-with-ai)
+&nbsp;·&nbsp; [Start here: the first post](https://blog.victorsaly.com/thoughts/2026-10-23-talked-out-loud-tidied-by-ai)
 &nbsp;·&nbsp; [Newest post](https://blog.victorsaly.com/thoughts/2026-10-23-productive-friction-counts-evidence)
 &nbsp;·&nbsp; [Its original](https://blog.victorsaly.com/thoughts/2026-10-23-productive-friction-counts-evidence/origin)
 &nbsp;·&nbsp; [Themes](https://blog.victorsaly.com/themes)
@@ -134,7 +134,7 @@ Run one agent against one thought. The runner reads its keys from the shell, not
 
 ```bash
 set -a; source .env; set +a     # exports every line of .env into this shell
-npm run agent -- interview 2026-10-23-converted-with-ai
+npm run agent -- interview 2026-10-23-talked-out-loud-tidied-by-ai
 ```
 
 `.env` needs `ANTHROPIC_API_KEY`. For drawings add `OPENAI_API_KEY` (and optionally `OPENAI_IMAGE_MODEL`), or

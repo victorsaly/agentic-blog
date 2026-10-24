@@ -101,7 +101,7 @@ describe('kebab', () => {
 });
 
 describe('withBadge', () => {
-  const badge = 'Converted with AI, not made by AI · https://blog.example.com/thoughts/x';
+  const badge = 'Talked out loud, tidied by AI · https://blog.example.com/thoughts/x';
 
   it('replaces a footer the model wrote itself, so the badge is never doubled', () => {
     const post =

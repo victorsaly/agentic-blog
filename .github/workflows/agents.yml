@@ -29,7 +29,7 @@ on:
             publish,
           ]
       thought:
-        description: Thought folder, e.g. 2026-10-23-converted-with-ai
+        description: Thought folder, e.g. 2026-10-23-talked-out-loud-tidied-by-ai
         required: true
         type: string
 

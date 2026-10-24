@@ -14,10 +14,10 @@ import {
 
 describe('ids', () => {
   it('finds the thought slug and the leaf of a collection id', () => {
-    expect(thoughtSlugOf('2026-10-23-converted-with-ai/versions/long')).toBe(
-      '2026-10-23-converted-with-ai',
+    expect(thoughtSlugOf('2026-10-23-talked-out-loud-tidied-by-ai/versions/long')).toBe(
+      '2026-10-23-talked-out-loud-tidied-by-ai',
     );
-    expect(leafOf('2026-10-23-converted-with-ai/versions/long')).toBe('long');
+    expect(leafOf('2026-10-23-talked-out-loud-tidied-by-ai/versions/long')).toBe('long');
   });
 
   it('refuses an empty id', () => {
