@@ -8,6 +8,7 @@ import { readdir } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { checkCards } from './check-cards.js';
+import { verifyLedgers } from './verify-ledgers.js';
 import {
   plan,
   validate,
@@ -18,7 +19,7 @@ import {
 } from '@roadbook/core';
 
 interface Args {
-  command: 'validate' | 'plan' | 'check-cards' | 'help';
+  command: 'validate' | 'plan' | 'check-cards' | 'verify-ledgers' | 'help';
   config: string;
   json: boolean;
 }
@@ -26,7 +27,12 @@ interface Args {
 function parseArgs(argv: string[]): Args {
   const [first, ...rest] = argv;
   const command =
-    first === 'validate' || first === 'plan' || first === 'check-cards' ? first : 'help';
+    first === 'validate' ||
+    first === 'plan' ||
+    first === 'check-cards' ||
+    first === 'verify-ledgers'
+      ? first
+      : 'help';
   let config = 'roadbook.config.ts';
   let json = false;
   for (let i = 0; i < rest.length; i += 1) {
@@ -154,6 +160,7 @@ const help = `roadbook: the record of every turn an agent took, who decided it, 
   roadbook validate   check roadbook.config.ts against every accountability rule
   roadbook plan       show what the project will do, cost, send and create
   roadbook check-cards  check agent prompt facts against their cards
+  roadbook verify-ledgers  check every run in every thought's ledger against its head
 
   --config <path>     a different setup file (default: ./roadbook.config.ts)
   --json              machine-readable output`;
@@ -173,6 +180,21 @@ async function main(): Promise<void> {
       return;
     }
     console.info('All agent cards match their prompts.');
+    return;
+  }
+
+  if (args.command === 'verify-ledgers') {
+    const { checked, issues } = await verifyLedgers(dirname(args.config));
+    for (const issue of issues) console.info(issue);
+    if (issues.length > 0) {
+      process.exitCode = 1;
+      return;
+    }
+    console.info(
+      checked === 0
+        ? 'No ledgers yet.'
+        : `Every ledger verifies (${String(checked)} run${checked === 1 ? '' : 's'}).`,
+    );
     return;
   }
 

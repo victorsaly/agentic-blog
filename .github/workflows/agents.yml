@@ -84,16 +84,30 @@ jobs:
           echo "$out"
           echo "result=$out" >> "$GITHUB_OUTPUT"
           echo "code=$code" >> "$GITHUB_OUTPUT"
-          # 3 = held: files are still committed so the reason is in the PR; the check fails below
-          [ "$code" = "0" ] || [ "$code" = "3" ] || exit "$code"
+          # The step always passes so the ledger is committed below; a failed or held run fails the job after.
 
-      - name: Commit what the agent wrote
+      # The runner wrote this run to thoughts/<slug>/ledger/<run>.jsonl and <run>.head; they go in the same
+      # commit as the agent's files, so the pull request shows the record beside the change. A run that
+      # failed (any code but 0 done and 3 held) commits only its ledger, so the failure and its cost are kept
+      # and nothing half-written lands.
+      - name: Commit what the agent wrote, and its ledger
+        env:
+          CODE: ${{ steps.agent.outputs.code }}
+          AGENT: ${{ steps.pick.outputs.agent }}
+          THOUGHT: ${{ steps.pick.outputs.thought }}
         run: |
           git config user.name "agentic-blog[bot]"
           git config user.email "agentic-blog[bot]@users.noreply.github.com"
-          git add -A thoughts wiki profile.md
+          if [ "$CODE" = "0" ] || [ "$CODE" = "3" ]; then
+            git add -A thoughts wiki profile.md
+            title="agent($AGENT): $THOUGHT"
+          else
+            # A run that stopped before it started (a bad ledger, a model with no price) has no ledger file.
+            if [ -d "thoughts/$THOUGHT/ledger" ]; then git add -A "thoughts/$THOUGHT/ledger"; fi
+            title="agent($AGENT): $THOUGHT failed (exit $CODE), ledger only"
+          fi
           if git diff --cached --quiet; then echo "nothing to commit"; exit 0; fi
-          git commit -m "agent(${{ steps.pick.outputs.agent }}): ${{ steps.pick.outputs.thought }}" -m "${{ steps.agent.outputs.result }}"
+          git commit -m "$title" -m "${{ steps.agent.outputs.result }}"
           git push
 
       - name: Remove the trigger label
@@ -106,4 +120,10 @@ jobs:
         if: steps.agent.outputs.code == '3'
         run: |
           echo "::error::The ${{ steps.pick.outputs.agent }} agent held this post. Read its file in the pull request before merging."
+          exit 1
+
+      - name: Fail if the agent failed
+        if: steps.agent.outputs.code != '0' && steps.agent.outputs.code != '3'
+        run: |
+          echo "::error::The ${{ steps.pick.outputs.agent }} agent exited ${{ steps.agent.outputs.code }}. Its ledger records why."
           exit 1
