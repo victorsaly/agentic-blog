@@ -1,10 +1,31 @@
 // Why: one thin door to the model. Every agent asks through here, so the model, the token budget and the
-// system message are set in one place and a change to any of them is one commit.
+// system message are set in one place and a change to any of them is one commit. It also counts what every
+// call used, per model, so the runner can record what the run really cost.
 import Anthropic from '@anthropic-ai/sdk';
+import { addUsage, hasPrice, noUsage, type Usage } from './costs.js';
 import type { AskOptions } from './types.js';
 
 export interface AskClient {
   ask: (user: string, options?: AskOptions) => Promise<string>;
+  /** What the calls so far used, by model. */
+  usage: () => Map<string, Usage>;
+}
+
+/** One response's usage. Web searches sit under server_tool_use, which this SDK version does not type. */
+function usageOf(response: Anthropic.Message): Usage {
+  const u = response.usage;
+  const tools: unknown = (u as unknown as { server_tool_use?: unknown }).server_tool_use;
+  const searches =
+    typeof tools === 'object' && tools !== null
+      ? (tools as { web_search_requests?: unknown }).web_search_requests
+      : undefined;
+  return {
+    inputTokens: u.input_tokens,
+    outputTokens: u.output_tokens,
+    cacheWriteTokens: u.cache_creation_input_tokens ?? 0,
+    cacheReadTokens: u.cache_read_input_tokens ?? 0,
+    webSearches: typeof searches === 'number' ? searches : 0,
+  };
 }
 
 export function createAskClient(
@@ -14,8 +35,10 @@ export function createAskClient(
   const apiKey = process.env['ANTHROPIC_API_KEY'];
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not set');
   const client = new Anthropic({ apiKey });
+  const used = new Map<string, Usage>();
 
   return {
+    usage: () => new Map(used),
     async ask(user, options = {}) {
       // The installed SDK predates the web search tool's types, so the tool goes in as plain data.
       const tools = options.webSearch
@@ -42,14 +65,20 @@ export function createAskClient(
       const texts: string[] = [];
 
       // A long search can pause the turn; resend it as it stands and the server carries on.
+      const model = options.model ?? defaults.model;
+      // A call the ledger could not price is never made: the run stops before anything is spent.
+      if (!hasPrice(model))
+        throw new Error(`no price for ${model}; add it to agents/_lib/costs.ts before using it`);
       for (let round = 0; round < 6; round += 1) {
         const response = await client.messages.create({
-          model: options.model ?? defaults.model,
+          model,
           max_tokens: options.maxOutputTokens ?? defaults.maxOutputTokens,
           system,
           messages,
           ...(tools ? { tools } : {}),
         });
+        // Counted before anything else, so a refused or empty answer still shows what it cost.
+        used.set(model, addUsage(used.get(model) ?? noUsage(), usageOf(response)));
         if ((response.stop_reason as string) === 'refusal')
           throw new Error('the model declined this request; read the input before running again');
         texts.push(

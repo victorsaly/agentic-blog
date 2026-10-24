@@ -87,7 +87,9 @@ jobs:
           # 3 = held: files are still committed so the reason is in the PR; the check fails below
           [ "$code" = "0" ] || [ "$code" = "3" ] || exit "$code"
 
-      - name: Commit what the agent wrote
+      # The runner also appended this run to thoughts/<slug>/ledger.jsonl and rewrote ledger.head; both go in
+      # the same commit as the agent's files, so the pull request shows the record beside the change.
+      - name: Commit what the agent wrote, and its ledger
         run: |
           git config user.name "agentic-blog[bot]"
           git config user.email "agentic-blog[bot]@users.noreply.github.com"

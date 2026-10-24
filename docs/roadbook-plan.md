@@ -18,6 +18,11 @@ where each lives). This file says what to build next and in what order.
 - The review fixes are in (commit 1c4959c): RB010 is checked from every node that makes work, RB032 counts
   only approve gates, RB043 covers fallback providers (`data.fallbackSends`), the ledger queues appends,
   copies events, verifies a cut end against a saved head, and the CLI never crashes on a bad config.
+- **Slice 2 is built** (`feat/roadbook-ledger`): every `npm run agent` run is recorded in
+  `thoughts/<slug>/ledger.jsonl` with `ledger.head` beside it, and CI runs `roadbook verify-ledgers`. Cost
+  comes from the usage Claude reports, priced from `agents/_lib/costs.ts`; a model with no price is refused
+  before anything is spent. Known gap: the image agent's drawing calls (OpenAI, Workers AI) are not costed
+  yet; its Claude review calls are. Slice 5's adapters close that.
 - **Nothing runs through Roadbook yet.** The agents still run through `agents/run.ts` and their
   `PROMPT.md`; the cards describe them alongside. That is deliberate: the existing logic keeps working
   while the framework grows under it.

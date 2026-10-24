@@ -28,6 +28,8 @@ jobs:
         run: node scripts/ci-annotate.mjs why npm run check:why
       - name: Agent cards match their prompts
         run: node scripts/ci-annotate.mjs cards npm run roadbook --silent -- check-cards
+      - name: Every ledger verifies against its head
+        run: node scripts/ci-annotate.mjs ledgers npm run roadbook --silent -- verify-ledgers
       - name: Lint and format
         run: node scripts/ci-annotate.mjs lint npm run lint
       - name: Types
