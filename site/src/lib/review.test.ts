@@ -1,7 +1,7 @@
 // Why: the studio's review list is how Victor knows what an agent wrote that he has not read; a version
 // missing from it would reach readers unchecked without anyone noticing.
 import { describe, expect, it } from 'vitest';
-import { waitingForReview } from './review.js';
+import { markReviewed, readReviewRequest, waitingForReview } from './review.js';
 
 const thoughts = [
   { slug: '2026-10-22-a', title: 'Older', date: new Date('2026-10-22'), draft: false },
@@ -72,5 +72,39 @@ describe('waitingForReview', () => {
         ],
       },
     ]);
+  });
+});
+
+describe('readReviewRequest', () => {
+  it('takes versions and sources of a thought, and nothing else', () => {
+    expect(
+      readReviewRequest({
+        files: ['thoughts/2026-10-23-b/versions/short.md', 'thoughts/2026-10-23-b/sources.md'],
+      }),
+    ).toEqual({
+      ok: true,
+      files: ['thoughts/2026-10-23-b/sources.md', 'thoughts/2026-10-23-b/versions/short.md'],
+    });
+    for (const bad of [
+      'thoughts/2026-10-23-b/origin/text.md',
+      'thoughts/2026-10-23-b/structure.md',
+      'thoughts/2026-10-23-b/versions/../origin/text.md',
+      'settings.yml',
+    ])
+      expect(readReviewRequest({ files: [bad] }).ok).toBe(false);
+    expect(readReviewRequest({ files: [] }).ok).toBe(false);
+    expect(readReviewRequest(null).ok).toBe(false);
+  });
+});
+
+describe('markReviewed', () => {
+  it('turns only the front matter flag, leaving every other byte as it was', () => {
+    const before =
+      '---\nwhy: >\n  A why.\nreviewed: false\n---\n\nreviewed: false stays in the text.\n';
+    expect(markReviewed(before)).toBe(
+      '---\nwhy: >\n  A why.\nreviewed: true\n---\n\nreviewed: false stays in the text.\n',
+    );
+    expect(markReviewed('---\nreviewed: true\n---\nText')).toBeNull();
+    expect(markReviewed('No front matter.')).toBeNull();
   });
 });
