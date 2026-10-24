@@ -1,5 +1,5 @@
 /* Why: every colour, size and rhythm on the site lives here and nowhere else. Monochrome by design:
-   black on white, white on black, and one colour, marigold, that marks the message, list titles and
+   black on white, soft white on charcoal, and one colour, marigold, that marks the message, list titles and
    search matches. Structure is drawn with ink rules in three weights, like a printed page. The type is
    chosen for a dyslexic reader and a distracted one: large, open, well spaced, short lines, and a switch
    to a second face built for reading proficiency. */
@@ -17,6 +17,10 @@
   --mark-ink: #000000;
   --drawing-filter: none; /* drawings are black ink on white */
   --drawing-filter-on-ink: invert(1); /* an icon on a filled (inverted) control */
+  /* Icons are ink on a white square. The blend lets the square take the colour behind it, so it never
+     shows as a box on a hover fill or on the charcoal of dark mode. */
+  --drawing-blend: multiply;
+  --drawing-blend-on-ink: screen;
   /* A drawing is a print, ink on paper, and is never inverted: inverting a linocut turns faces dark and
      hair white. In dark mode it keeps its paper, dimmed so it does not glare, with a paper margin. */
   --print-paper: #ffffff;
@@ -88,30 +92,34 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --paper: #000000;
-    --ink: #ffffff;
-    --quiet: #a8a8a8; /* 7.3:1 on black */
-    --rule: #333333;
-    --drawing-filter: invert(1); /* icons: white lines on black */
+    --paper: #1c1c1c; /* charcoal, not black: pure black under white text glares at night */
+    --ink: #e6e6e6; /* soft white, 13.4:1 on charcoal */
+    --quiet: #a8a8a8; /* 7.2:1 on charcoal */
+    --rule: #3a3a3a;
+    --drawing-filter: invert(1) brightness(0.9); /* icons: soft white lines, like the text */
     --drawing-filter-on-ink: none;
+    --drawing-blend: screen;
+    --drawing-blend-on-ink: multiply;
     --print-pad: 0.75rem;
     --print-filter: brightness(0.85);
-    --field: #141414;
-    --hover: #1c1c1c;
-    --skeleton: #2a2a2a;
+    --field: #252525;
+    --hover: #2c2c2c;
+    --skeleton: #333333;
   }
 }
 
 :root[data-theme='dark'] {
-  --paper: #000000;
-  --ink: #ffffff;
+  --paper: #1c1c1c;
+  --ink: #e6e6e6;
   --quiet: #a8a8a8;
-  --rule: #333333;
-  --drawing-filter: invert(1);
+  --rule: #3a3a3a;
+  --drawing-filter: invert(1) brightness(0.9);
   --drawing-filter-on-ink: none;
+  --drawing-blend: screen;
+  --drawing-blend-on-ink: multiply;
   --print-pad: 0.75rem;
   --print-filter: brightness(0.85);
-  --field: #141414;
-  --hover: #1c1c1c;
-  --skeleton: #2a2a2a;
+  --field: #252525;
+  --hover: #2c2c2c;
+  --skeleton: #333333;
 }
