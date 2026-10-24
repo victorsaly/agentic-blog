@@ -1,0 +1,62 @@
+---
+// Why: the home page and every theme page list thoughts the same way, message first, so a reader sees
+// the point of each post before its title. One component keeps the two lists identical.
+import type { CollectionEntry } from 'astro:content';
+import { formatDate, thoughtSlugOf } from '../lib/content';
+
+interface Props {
+  thoughts: CollectionEntry<'thoughts'>[];
+}
+
+const { thoughts } = Astro.props;
+---
+
+<ol class="thoughts">
+  {
+    thoughts.map((t) => {
+      const slug = thoughtSlugOf(t.id);
+      return (
+        <li>
+          <p class="message">
+            <a href={`/thoughts/${slug}`}>
+              <mark>{t.data.message}</mark>
+            </a>
+          </p>
+          <p class="small quiet meta">
+            <span>{t.data.title}</span>
+            <time datetime={t.data.date.toISOString()}>{formatDate(t.data.date)}</time>
+          </p>
+        </li>
+      );
+    })
+  }
+</ol>
+
+<style>
+  .thoughts {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .thoughts li + li {
+    border-top: var(--rule-width) solid var(--rule);
+    padding-top: var(--space-4);
+  }
+  .message {
+    margin: 0 0 var(--space-2);
+  }
+  .message a {
+    text-decoration: none;
+  }
+  .message a:hover mark,
+  .message a:focus-visible mark {
+    text-decoration: underline;
+    text-decoration-thickness: 0.12em;
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+</style>

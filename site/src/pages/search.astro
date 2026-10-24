@@ -1,0 +1,58 @@
+---
+// Why: search over every published post, built into a static index at build time by Pagefind, so it
+// needs no server and sends nothing anywhere. It indexes only the post text (data-pagefind-body), never
+// the studio or the origins.
+import Page from '../layouts/Page.astro';
+---
+
+<Page title="Search" description="Search every thought.">
+  <h1>Search</h1>
+  <div id="search"></div>
+  <p id="search-missing" class="quiet" hidden>
+    Search works on the built site. In local development, run <code>npm run build</code> and open the
+    built copy.
+  </p>
+  <link rel="stylesheet" href="/pagefind/pagefind-ui.css" />
+  <script is:inline>
+    (() => {
+      const script = document.createElement('script');
+      script.src = '/pagefind/pagefind-ui.js';
+      script.onload = () => {
+        // eslint-disable-next-line no-undef
+        new PagefindUI({
+          element: '#search',
+          showSubResults: true,
+          showImages: false,
+          translations: { placeholder: 'Search the thoughts' },
+        });
+      };
+      script.onerror = () => {
+        document.getElementById('search-missing').hidden = false;
+      };
+      document.head.append(script);
+    })();
+  </script>
+</Page>
+
+<style is:global>
+  /* Pagefind's own UI, brought into the site: one font, the tokens, no rounded corners. */
+  #search {
+    --pagefind-ui-primary: var(--ink);
+    --pagefind-ui-text: var(--ink);
+    --pagefind-ui-background: var(--paper);
+    --pagefind-ui-border: var(--ink);
+    --pagefind-ui-tag: var(--paper);
+    --pagefind-ui-border-width: var(--rule-width);
+    --pagefind-ui-border-radius: 0;
+    --pagefind-ui-font: inherit;
+    --pagefind-ui-scale: 1;
+  }
+  /* Marigold belongs to the message alone, so a match is shown by weight and an underline. */
+  #search mark {
+    background: none;
+    color: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-thickness: 0.12em;
+  }
+</style>

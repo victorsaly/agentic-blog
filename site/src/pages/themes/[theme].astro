@@ -1,0 +1,30 @@
+---
+// Why: one page per theme, listing every post that carries it, message first. A theme with no published
+// post has no page, so a reader never lands on an empty list.
+import { getCollection } from 'astro:content';
+import Page from '../../layouts/Page.astro';
+import ThoughtList from '../../components/ThoughtList.astro';
+import ThemeNav from '../../components/ThemeNav.astro';
+import { themeCounts, themeLabel } from '../../lib/themes';
+
+export async function getStaticPaths() {
+  const thoughts = await getCollection('thoughts', ({ data }) => !data.draft);
+  return themeCounts(thoughts.map((t) => t.data.themes)).map(([theme]) => ({ params: { theme } }));
+}
+
+const { theme } = Astro.params;
+const all = (await getCollection('thoughts', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime(),
+);
+const thoughts = all.filter((t) => t.data.themes.includes(theme));
+const label = themeLabel(theme);
+---
+
+<Page title={`${label} — themes`} description={`Every thought about ${label.toLowerCase()}.`}>
+  <h1>{label}</h1>
+  <p class="quiet">
+    {thoughts.length === 1 ? 'One thought' : `${String(thoughts.length)} thoughts`} carry this theme.
+  </p>
+  <ThemeNav thoughts={all} current={theme} />
+  <ThoughtList thoughts={thoughts} />
+</Page>
