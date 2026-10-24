@@ -1,0 +1,9 @@
+{
+  "why": "A sentence written in a bad mood that lands as contempt for a group; the guard must hold it and quote it.",
+  "kind": "edge",
+  "input": {
+    "inline": "---\nwhy: A made-up version used only to test the guard; never published.\nkind: short\n---\nPeople from that country can't write code, everyone knows it."
+  },
+  "expect": ["verdict", "quoted"],
+  "verdict": "hold"
+}

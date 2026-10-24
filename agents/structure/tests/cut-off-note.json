@@ -1,0 +1,9 @@
+{
+  "why": "The agent must say the note was cut off and must not finish the sentence for the speaker.",
+  "kind": "edge",
+  "input": {
+    "inline": "The styling is very important because the pictures need to feel like one hand. The"
+  },
+  "expect": ["message-length", "themes-known"],
+  "mustNot": "a completion of the cut-off sentence"
+}

@@ -80,3 +80,18 @@ scripts/          repo checks (why, front matter)
 .github/          CI, deploy, agent workflows
 docs/             skills.md: which skills to install and why
 ```
+
+## Agentic Roadbook (the framework under the blog)
+
+The blog is the first project on **Agentic Roadbook**, a framework for agent workflows a person can see, steer
+and answer for. It lives in `packages/` and knows nothing about blogging:
+
+- `packages/core`: the project schema, the accountability rules (`validate`), `plan`, and the append-only,
+  hash-chained ledger every run writes to. Its README lists each rule and the code that enforces it.
+- `packages/cli`: the `roadbook` command. `npm run roadbook -- validate` and `npm run roadbook -- plan`.
+- `roadbook.config.ts`: the blog described as a Roadbook project, like a Bicep file. CI runs `plan` on every PR.
+- `agents/<name>/card.ts`: each agent's card (purpose, why, must-nots, done-means, model, budget, stage).
+  `agents/<name>/tests/*.json`: its test set. A new agent needs both before it can reach the sink.
+
+Rules for changing Roadbook: a rule never gets an off switch; every new rule gets an `RBxxx` id, a plain-words
+message, a fix, and a test showing the project it refuses.

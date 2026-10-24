@@ -10,7 +10,9 @@
   },
   "workspaces": [
     "site",
-    "agents"
+    "agents",
+    "packages/core",
+    "packages/cli"
   ],
   "scripts": {
     "dev": "npm run dev --workspace site",
@@ -18,9 +20,10 @@
     "preview": "npm run preview --workspace site",
     "lint": "eslint . && prettier --check \"**/*.{ts,tsx,mjs,astro,css,json,yml,yaml}\"",
     "format": "prettier --write \"**/*.{ts,tsx,mjs,astro,css,json,yml,yaml}\"",
-    "typecheck": "npm run typecheck --workspaces",
+    "typecheck": "tsc -p tsconfig.roadbook.json && npm run typecheck --workspaces",
     "test": "vitest run",
     "check:why": "tsx scripts/check-why.ts",
+    "roadbook": "tsx packages/cli/src/main.ts",
     "agent": "npm run agent --workspace agents --",
     "dev:fresh": "npm run dev:fresh --workspace site",
     "pitch:voice": "tsx --env-file=site/.env.local scripts/pitch/voice.ts",

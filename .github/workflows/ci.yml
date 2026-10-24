@@ -32,6 +32,8 @@ jobs:
         run: node scripts/ci-annotate.mjs types npm run typecheck
       - name: Tests
         run: node scripts/ci-annotate.mjs tests npm run test -- --reporter=dot
+      - name: Roadbook (every accountability rule holds, and what the project will do)
+        run: node scripts/ci-annotate.mjs roadbook npm run roadbook --silent -- plan
       - name: Build the site
         run: node scripts/ci-annotate.mjs build npm run build --workspace site
       - uses: actions/upload-artifact@v4
