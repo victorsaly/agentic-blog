@@ -18,7 +18,11 @@ export default defineConfig({
   output: 'static',
   trailingSlash: 'never',
   build: { format: 'file' },
-  integrations: [react(), sitemap()],
+  // The studio is private (behind Cloudflare Access) and never belongs in the sitemap.
+  integrations: [
+    react(),
+    sitemap({ filter: (page) => !new URL(page).pathname.startsWith('/studio') }),
+  ],
   // The drawings are already small black-and-white PNGs; served as they are, no image library needed.
   image: { service: passthroughImageService() },
   // Each section's drawing goes under its heading in the long version (see the plugin's why).
