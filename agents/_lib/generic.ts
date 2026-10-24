@@ -67,10 +67,21 @@ export async function askForFile(
   options?: AskOptions,
 ): Promise<OutputFile> {
   const reply = await ctx.ask(message, options);
-  const content = unfence(reply);
-  if (!content.startsWith('---'))
-    throw new Error(`${ctx.agent} replied without front matter for ${path}`);
+  const content = fileFromReply(reply);
+  if (content === null) throw new Error(`${ctx.agent} replied without front matter for ${path}`);
   return { path, content };
+}
+
+/**
+ * The file inside a reply. Models sometimes say a sentence before the file, or fence it, or both; the file
+ * is whatever starts at the first front matter that opens with a why. Null when there is none.
+ */
+export function fileFromReply(reply: string): string | null {
+  for (const candidate of [unfence(reply), reply]) {
+    const start = candidate.search(/^---\r?\nwhy:/m);
+    if (start >= 0) return candidate.slice(start).trim();
+  }
+  return null;
 }
 
 export interface FencedFile {

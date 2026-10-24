@@ -1,7 +1,14 @@
 // Why: every converting agent reads the origin through readOrigin; if it missed a text origin or a second
 // note, the agents would convert half a thought without saying so.
 import { describe, expect, it } from 'vitest';
-import { fencedFiles, kebab, readOrigin, setFrontMatterField, withBadge } from './generic.js';
+import {
+  fencedFiles,
+  fileFromReply,
+  kebab,
+  readOrigin,
+  setFrontMatterField,
+  withBadge,
+} from './generic.js';
 import type { AgentContext } from './types.js';
 
 function ctxWith(files: Record<string, string>): AgentContext {
@@ -108,5 +115,20 @@ describe('withBadge', () => {
 
   it('adds the badge when there is none', () => {
     expect(withBadge('The point.', badge, 'blog.example.com')).toBe(`The point.\n\n${badge}\n`);
+  });
+});
+
+describe('fileFromReply', () => {
+  const file = '---\nwhy: because it exists\n---\n\nBody.';
+
+  it('takes a plain file, a fenced file, or a file after a sentence', () => {
+    expect(fileFromReply(file)).toBe(file);
+    expect(fileFromReply('```markdown\n' + file + '\n```')).toBe(file);
+    expect(fileFromReply('Here is seo.md:\n\n' + file)).toBe(file);
+  });
+
+  it('is null when there is no front matter with a why', () => {
+    expect(fileFromReply('I could not check the page.')).toBeNull();
+    expect(fileFromReply('---\ntitle: no why\n---\nBody')).toBeNull();
   });
 });
