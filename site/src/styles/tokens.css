@@ -17,6 +17,11 @@
   --mark-ink: #000000;
   --drawing-filter: none; /* drawings are black ink on white */
   --drawing-filter-on-ink: invert(1); /* an icon on a filled (inverted) control */
+  /* A drawing is a print, ink on paper, and is never inverted: inverting a linocut turns faces dark and
+     hair white. In dark mode it keeps its paper, dimmed so it does not glare, with a paper margin. */
+  --print-paper: #ffffff;
+  --print-pad: 0;
+  --print-filter: none;
 
   /* type */
   --font-read: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
@@ -80,8 +85,10 @@
     --ink: #ffffff;
     --quiet: #a8a8a8; /* 7.3:1 on black */
     --rule: #333333;
-    --drawing-filter: invert(1); /* white lines on black */
+    --drawing-filter: invert(1); /* icons: white lines on black */
     --drawing-filter-on-ink: none;
+    --print-pad: 0.75rem;
+    --print-filter: brightness(0.85);
     --field: #141414;
     --hover: #1c1c1c;
     --skeleton: #2a2a2a;
@@ -95,6 +102,8 @@
   --rule: #333333;
   --drawing-filter: invert(1);
   --drawing-filter-on-ink: none;
+  --print-pad: 0.75rem;
+  --print-filter: brightness(0.85);
   --field: #141414;
   --hover: #1c1c1c;
   --skeleton: #2a2a2a;
