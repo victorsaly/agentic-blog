@@ -1,52 +1,578 @@
 ---
-// Why: the front page is the newest ten thoughts, each a print, a title and its message, so a reader sees
-// the point of every post and picks one. Older ones are one link away. The graph takes over in phase 3.
+// Why: the front page says whose blog this is before anything else: the portrait print, the name, the one
+// line. Then the newest thought leads with its print and its title, and every thought follows as a
+// numbered, ruled index, so a reader sees the point of each post and picks one. A side column offers a
+// place to start, a question to ask, the themes and the feed. The graph takes over in phase 3.
 import { getCollection } from 'astro:content';
+import { Image } from 'astro:assets';
 import Page from '../layouts/Page.astro';
 import { settings } from '../lib/settings';
-import ThoughtList from '../components/ThoughtList.astro';
-import ThemeNav from '../components/ThemeNav.astro';
+import { coversBySlug, firstSectionPrint } from '../lib/covers';
+import { formatDate, leafOf, readingLabel, readingMinutes, thoughtSlugOf } from '../lib/content';
+import { picturesFrom } from '../lib/pictures';
+import { themeCounts, themeLabel } from '../lib/themes';
+import ideaIcon from '../assets/icons/idea.png';
+import originIcon from '../assets/icons/origin.png';
+import roadIcon from '../assets/icons/road.png';
+import sourcesIcon from '../assets/icons/sources.png';
 
 const all = (await getCollection('thoughts', ({ data }) => !data.draft)).sort(
-  (a, b) => b.data.date.getTime() - a.data.date.getTime(),
+  (a, b) => b.data.date.getTime() - a.data.date.getTime() || b.id.localeCompare(a.id),
 );
 const NEWEST = 10;
 const thoughts = all.slice(0, NEWEST);
+const lead = thoughts[0];
+const first = all.at(-1);
+const covers = await coversBySlug();
+const themes = themeCounts(all.map((t) => t.data.themes));
+const chatOn = settings.publishing.index || import.meta.env.DEV;
+
+// The portrait: the newest cover, where Victor is drawn.
+const portrait = all.map((t) => covers.get(thoughtSlugOf(t.id))).find((c) => c !== undefined);
+
+// What the lead post offers: its ways in, how long the road is, how many drawings.
+const leadSlug = lead ? thoughtSlugOf(lead.id) : '';
+const leadVersions = await getCollection('versions', ({ id }) => thoughtSlugOf(id) === leadSlug);
+const leadLong = leadVersions.find((v) => leafOf(v.id) === 'long');
+const leadShort = leadVersions.find((v) => leafOf(v.id) === 'short');
+const leadSources = (await getCollection('sources', ({ id }) => thoughtSlugOf(id) === leadSlug))[0];
+const leadPictures = (
+  await getCollection('pictures', ({ id }) => thoughtSlugOf(id) === leadSlug)
+)[0];
+// The masthead already shows the newest cover, so the lead never shows the same print twice.
+const ownCover = covers.get(leadSlug);
+const leadCover =
+  ownCover && ownCover.image === portrait?.image
+    ? ((await firstSectionPrint(leadSlug)) ?? ownCover)
+    : ownCover;
+const drawingCount = picturesFrom(leadPictures?.data).length;
+const leadMinutes = readingMinutes(leadLong?.body ?? leadShort?.body ?? lead?.body ?? '');
+const ways = [
+  { name: 'Idea', icon: ideaIcon },
+  { name: 'Origin', icon: originIcon },
+  ...(leadLong ? [{ name: 'Road', icon: roadIcon }] : []),
+  ...(leadSources?.data.reviewed ? [{ name: 'Sources', icon: sourcesIcon }] : []),
+];
+const pad = (n: number): string => String(n).padStart(2, '0');
+const short = (date: Date): string =>
+  new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: settings.site.timezone,
+  }).format(date);
 ---
 
 <Page
   title={settings.site.name}
   description={`${settings.site.tagline}. Thoughts by ${settings.site.author}, each one starting as an unedited note, the origin.`}
+  width="wide"
 >
-  <h1 class="visually-hidden">{settings.site.name}</h1>
-  <p class="lead">
-    Every post here starts as a note, spoken or written, kept exactly as it came out: the origin.
-    What you read is a conversion of it, and the origin is always one click away.
-  </p>
-
-  {
-    thoughts.length === 0 && (
-      <p class="quiet">Nothing published yet. The first thought is on its way.</p>
-    )
-  }
-
-  <ThemeNav thoughts={all} />
-  <ThoughtList thoughts={thoughts} />
-  {
-    all.length > NEWEST && (
-      <p class="more">
-        <a href="/all">All {all.length} thoughts</a>
+  <section class="frame masthead">
+    <div class="plate">
+      {
+        portrait && (
+          <Image
+            class="portrait"
+            src={portrait.image}
+            alt={portrait.alt}
+            width={560}
+            height={560}
+            loading="eager"
+          />
+        )
+      }
+      <div class="name">
+        <p class="label-plain">Notes on AI, work and accountability</p>
+        <h1>{settings.site.name}</h1>
+        <p class="tagline">{settings.site.tagline}.</p>
+      </div>
+    </div>
+    <div class="band">
+      <p>
+        Every post here starts as a note, spoken or written, kept exactly as it came out: the
+        origin. What you read is a conversion of it, and the origin is always one click away.
       </p>
-    )
-  }
+      {
+        themes.length > 0 && (
+          <nav class="themes" aria-labelledby="themes-label">
+            <span class="label-plain" id="themes-label">
+              Themes
+            </span>
+            <ul>
+              {themes.map(([theme, count]) => (
+                <li>
+                  <a href={`/themes/${theme}`}>
+                    {themeLabel(theme)} <span class="quiet">{count}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )
+      }
+    </div>
+  </section>
+
+  <div class="frame body">
+    <div class="main">
+      {
+        thoughts.length === 0 && (
+          <p class="quiet">Nothing published yet. The first thought is on its way.</p>
+        )
+      }
+
+      {
+        lead && (
+          <section aria-labelledby="newest-label">
+            <h2 class="label" id="newest-label">
+              Newest
+            </h2>
+            <article class="lead">
+              {leadCover && (
+                <a class="print" href={`/thoughts/${leadSlug}`} tabindex="-1" aria-hidden="true">
+                  <Image src={leadCover.image} alt="" width={680} height={680} loading="eager" />
+                </a>
+              )}
+              <div class="lead-text">
+                <p class="small quiet">
+                  <time datetime={lead.data.date.toISOString()}>{formatDate(lead.data.date)}</time>
+                  {' · '}
+                  {readingLabel(leadMinutes)} for the whole road
+                </p>
+                <h3>
+                  <a href={`/thoughts/${leadSlug}`}>
+                    <mark>{lead.data.title}</mark>
+                  </a>
+                </h3>
+                <p class="summary">{lead.data.message}</p>
+                <p class="ways small">
+                  {ways.map((w) => (
+                    <span>
+                      <Image src={w.icon} alt="" width={22} height={22} />
+                      {w.name}
+                    </span>
+                  ))}
+                  {drawingCount > 0 && (
+                    <span class="quiet">
+                      {drawingCount === 1 ? 'one drawing' : `${String(drawingCount)} drawings`}
+                    </span>
+                  )}
+                </p>
+              </div>
+            </article>
+          </section>
+        )
+      }
+
+      {
+        thoughts.length > 0 && (
+          <section class="index" aria-labelledby="every-label">
+            <h2 class="label" id="every-label">
+              Every thought
+            </h2>
+            <ol>
+              {thoughts.map((t, i) => (
+                <li>
+                  <span class="n" aria-hidden="true">
+                    {pad(i + 1)}
+                  </span>
+                  <div>
+                    <h3>
+                      <a href={`/thoughts/${thoughtSlugOf(t.id)}`}>
+                        <mark>{t.data.title}</mark>
+                      </a>
+                    </h3>
+                    <p class="summary">{t.data.message}</p>
+                  </div>
+                  <time class="small quiet" datetime={t.data.date.toISOString()}>
+                    {short(t.data.date)}
+                  </time>
+                </li>
+              ))}
+            </ol>
+            <p class="more">
+              <a href="/all">
+                {all.length > NEWEST
+                  ? `All ${String(all.length)} thoughts, in the archive`
+                  : 'The archive'}
+              </a>
+            </p>
+          </section>
+        )
+      }
+    </div>
+
+    <aside class="side" aria-label="More">
+      {
+        first && (
+          <section>
+            <h2 class="label">Start here</h2>
+            <p class="start">
+              <a href={`/thoughts/${thoughtSlugOf(first.id)}`}>{first.data.title}</a>
+            </p>
+            <p class="small quiet">The first thought, and the one every other one follows from.</p>
+          </section>
+        )
+      }
+      {
+        chatOn && (
+          <section>
+            <h2 class="label">Ask the blog</h2>
+            <form class="ask" action="/search" method="get" data-home-ask>
+              <label for="home-ask" class="small">
+                A question the posts can answer
+              </label>
+              <div class="field">
+                <input
+                  id="home-ask"
+                  name="q"
+                  type="text"
+                  maxlength="500"
+                  placeholder="What does origin mean here?"
+                />
+                <button type="submit" class="control filled">
+                  Ask
+                </button>
+              </div>
+            </form>
+          </section>
+        )
+      }
+      {
+        themes.length > 0 && (
+          <section>
+            <h2 class="label">Themes</h2>
+            <ul class="rows">
+              {themes.map(([theme, count]) => (
+                <li>
+                  <a href={`/themes/${theme}`}>
+                    {themeLabel(theme)}
+                    <span class="quiet">{count}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )
+      }
+      <section>
+        <h2 class="label">Follow</h2>
+        <ul class="rows">
+          <li><a href="/rss.xml">RSS feed</a></li>
+        </ul>
+      </section>
+    </aside>
+  </div>
 </Page>
 
 <style>
+  .label-plain {
+    margin: 0;
+    font-size: var(--size-label);
+    font-weight: 700;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+  }
+
+  /* The masthead: a heavy rule, the portrait print, the name at full size, the one line. */
+  .masthead {
+    padding-top: var(--space-6);
+  }
+  .plate {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--space-5);
+    padding-top: var(--space-5);
+    border-top: var(--rule-heavy) solid var(--ink);
+  }
+  .portrait {
+    display: block;
+    flex: none;
+    width: clamp(10rem, 22vw, 17.5rem);
+    height: auto;
+    filter: var(--drawing-filter);
+  }
+  .name {
+    flex: 999 1 26rem;
+    min-width: 0;
+    padding-bottom: var(--space-2);
+  }
+  .name h1 {
+    margin: var(--space-3) 0 0;
+    font-size: clamp(3.5rem, 1.2rem + 7.6vw, 8rem);
+    line-height: 0.92;
+    letter-spacing: -0.035em;
+  }
+  .tagline {
+    margin: var(--space-4) 0 0;
+    max-width: none;
+    font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.25rem);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+  .band {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-3) var(--space-5);
+    margin-top: var(--space-5);
+    padding-block: var(--space-3);
+    border-top: var(--rule-strong) solid var(--ink);
+    border-bottom: var(--rule-width) solid var(--ink);
+  }
+  .band p {
+    flex: 1 1 26rem;
+    margin: 0;
+  }
+  .themes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+  }
+  .themes ul {
+    display: flex;
+    flex-wrap: wrap;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-right: var(--rule-width) solid var(--ink);
+  }
+  .themes a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: var(--tap);
+    padding: 0 0.75rem;
+    border-left: var(--rule-width) solid var(--ink);
+    text-decoration: none;
+    font-size: 1.0625rem;
+  }
+  .themes a:hover {
+    text-decoration: underline;
+  }
+
+  /* The body: the lead and the index, a side column beside them. */
+  .body {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-6);
+    padding-top: var(--space-6);
+  }
+  .main {
+    flex: 999 1 36rem;
+    min-width: 0;
+  }
+  .side {
+    flex: 1 1 17rem;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  mark {
+    background: var(--mark);
+    color: var(--mark-ink);
+    padding: 0.05em 0.2em;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+  h3 a {
+    text-decoration: none;
+  }
+  h3 a:hover mark,
+  h3 a:focus-visible mark {
+    text-decoration: underline;
+    text-decoration-thickness: 0.1em;
+  }
+
   .lead {
-    color: var(--quiet);
-    margin-bottom: var(--space-4);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-5);
+    padding-block: var(--space-5);
+    border-bottom: var(--rule-width) solid var(--ink);
+  }
+  .print {
+    flex: 0 1 21rem;
+  }
+  .print :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    filter: var(--drawing-filter);
+  }
+  .lead-text {
+    flex: 1 1 20rem;
+    min-width: 0;
+  }
+  .lead-text > .small {
+    margin: 0 0 var(--space-3);
+  }
+  .lead h3 {
+    margin: 0;
+    font-size: clamp(2rem, 1.3rem + 2.4vw, 3.25rem);
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+  }
+  .lead .summary {
+    margin: var(--space-4) 0 0;
+    font-size: 1.3125rem;
+    line-height: 1.55;
+  }
+  .ways {
+    max-width: none;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-4);
+    margin: var(--space-4) 0 0;
+    padding-top: var(--space-3);
+    border-top: var(--rule-width) solid var(--ink);
+  }
+  .ways span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .ways :global(img) {
+    width: 22px;
+    height: 22px;
+    filter: var(--drawing-filter);
+  }
+
+  .index {
+    margin-top: var(--space-6);
+  }
+  .index ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-width: none;
+  }
+  .index li {
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1fr) 8rem;
+    gap: var(--space-4);
+    align-items: baseline;
+    padding-block: var(--space-4);
+    border-bottom: var(--rule-width) solid var(--ink);
+  }
+  .n {
+    font-size: 2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .index h3 {
+    margin: 0;
+    font-size: 1.75rem;
+    line-height: 1.2;
+  }
+  .index .summary {
+    margin: var(--space-2) 0 0;
+    font-size: 1.0625rem;
+    line-height: 1.55;
+  }
+  .index time {
+    text-align: right;
   }
   .more {
     margin-top: var(--space-4);
   }
+
+  .start {
+    margin: var(--space-3) 0 0;
+    font-weight: 700;
+  }
+  .side .small.quiet {
+    margin: var(--space-2) 0 0;
+  }
+  .ask {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+  }
+  .field {
+    display: flex;
+  }
+  .field input {
+    flex: 1;
+    min-width: 0;
+    min-height: var(--tap);
+    padding: 0 0.75rem;
+    border: var(--rule-width) solid var(--ink);
+    border-right: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    font-size: 1.0625rem;
+  }
+  .field input::placeholder {
+    color: var(--quiet);
+  }
+  .field button {
+    font-weight: 700;
+  }
+  .rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-width: none;
+  }
+  .rows li {
+    border-bottom: var(--rule-width) solid var(--ink);
+  }
+  .rows a {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 3rem;
+    font-size: 1.0625rem;
+    text-decoration: none;
+  }
+  .rows a:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 40rem) {
+    /* The side column lists the themes too; on a phone the band keeps only the sentence. */
+    .themes {
+      display: none;
+    }
+    .index li {
+      grid-template-columns: 2.75rem minmax(0, 1fr);
+      gap: var(--space-1) var(--space-3);
+    }
+    .n {
+      font-size: 1.5rem;
+    }
+    .index h3 {
+      font-size: 1.375rem;
+    }
+    .index time {
+      grid-column: 2;
+      text-align: left;
+    }
+  }
 </style>
+
+<script>
+  // Why: the home page's question goes to the same chat as the header's Ask. Without a script the form
+  // falls back to a search for the same words.
+  document
+    .querySelector<HTMLFormElement>('[data-home-ask]')
+    ?.addEventListener('submit', (event) => {
+      const form = event.currentTarget;
+      if (!(form instanceof HTMLFormElement)) return;
+      const question = new FormData(form).get('q');
+      if (typeof question !== 'string' || question.trim() === '') return;
+      event.preventDefault();
+      dispatchEvent(new CustomEvent('ask:open', { detail: { question: question.trim() } }));
+      form.reset();
+    });
+</script>
