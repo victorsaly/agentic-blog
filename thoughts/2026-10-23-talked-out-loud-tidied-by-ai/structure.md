@@ -4,7 +4,7 @@ why: >
   idea that fits a screen, and a road underneath for anyone who wants it. The small ideas and their themes
   are what the graph is drawn from. Converted from origin/transcript.md by hand, since the structure agent
   did not exist yet; the road says so.
-title: Converted with AI, not made by AI
+title: Talked out loud, tidied by AI
 date: 2026-10-23
 language: en
 themes: [ai-changing-work, accountability, credibility]

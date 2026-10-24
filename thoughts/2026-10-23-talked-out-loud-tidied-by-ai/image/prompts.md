@@ -85,7 +85,7 @@ images:
       half is smooth, with a small heap of dust beneath. Generous empty space,
       nothing else. Square image.
   - file: image/03-hand-stamping-blank-round-mark.png
-    section: 'Converted with AI, not made by AI'
+    section: 'Talked out loud, tidied by AI'
     subject: >-
       A hand presses a plain round rubber stamp onto the corner of a sheet of
       paper, leaving a blank circular mark with no text.
@@ -235,7 +235,7 @@ images:
 | image/00-man-speaking-into-phone-outdoors.png | cover | A smiling man with round glasses walks along a path and speaks into a phone held close to his mouth. |
 | image/01-scribbled-page-beside-clean-page.png | Every post should have a before and an after | Two sheets of paper on a table: one crumpled and covered in scribbles, the other flat and neatly lined. |
 | image/02-hand-sanding-rough-wooden-board.png | The rusty version is the real one | A hand pushes a sanding block along a wooden board, rough and knotted on one side and smooth on the other. |
-| image/03-hand-stamping-blank-round-mark.png | Converted with AI, not made by AI | A hand pressing a round stamp onto the corner of a sheet of paper, leaving a plain circle. |
+| image/03-hand-stamping-blank-round-mark.png | Talked out loud, tidied by AI | A hand pressing a round stamp onto the corner of a sheet of paper, leaving a plain circle. |
 | image/04-one-original-under-glass-dome.png | How it works | A sheet of paper under a glass dome, with three other sheets beside it, each joined to the dome by a thin thread. |
 | image/05-walker-at-fork-in-paths.png | A graph you can walk | A person seen from behind walks away from a big tree along a path that divides into several paths across a field. |
 | image/06-footprints-on-winding-road.png | Show the road, not just the building | A winding dirt road with footprints on it leads up a hill to a small house, with a few short tracks that stop at dead ends. |

@@ -1,0 +1,7 @@
+# Why: a post's address is its folder name, so renaming a folder moves the post. Old addresses that were
+# shared or indexed point here to the new one, permanently, so no link to the blog ever breaks.
+
+# The first post's folder followed its new title, "Talked out loud, tidied by AI" (October 2026).
+/thoughts/2026-10-23-converted-with-ai /thoughts/2026-10-23-talked-out-loud-tidied-by-ai 301
+/thoughts/2026-10-23-converted-with-ai.html /thoughts/2026-10-23-talked-out-loud-tidied-by-ai 301
+/thoughts/2026-10-23-converted-with-ai/* /thoughts/2026-10-23-talked-out-loud-tidied-by-ai/:splat 301

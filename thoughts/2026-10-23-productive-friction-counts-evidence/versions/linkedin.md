@@ -20,4 +20,4 @@ My advice: think first, act after. Spend hours, days, on what you want, so the t
 
 AI will not exist without us humans.
 
-Converted with AI, not made by AI · https://blog.victorsaly.com/thoughts/2026-10-23-productive-friction-counts-evidence
+Talked out loud, tidied by AI · https://blog.victorsaly.com/thoughts/2026-10-23-productive-friction-counts-evidence

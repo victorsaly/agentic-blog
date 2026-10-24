@@ -13,7 +13,7 @@ gathers inputs and names outputs. The prompt is the behaviour; the code is plumb
 ## Run one
 
 ```
-ANTHROPIC_API_KEY=… npm run agent -- interview 2026-10-23-converted-with-ai
+ANTHROPIC_API_KEY=… npm run agent -- interview 2026-10-23-talked-out-loud-tidied-by-ai
 ```
 
 The runner (`run.ts`) loads `settings.yml`, `profile.md`, the agent's prompt and the thought folder, asks

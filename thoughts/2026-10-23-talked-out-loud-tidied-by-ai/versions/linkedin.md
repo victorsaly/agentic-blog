@@ -15,10 +15,10 @@ Here is the difference.
 
 Every post on my new blog starts as a voice note. Half sentences, repeated words, feelings mixed in with the point. That recording is kept exactly as it was spoken. It is never edited.
 
-Everything you read is a conversion of it. Short, long, another language, a picture, a voice. Each one carries a badge, "Converted with AI, not made by AI", and the badge is a link back to the raw note.
+Everything you read is a conversion of it. Short, long, another language, a picture, a voice. Each one carries a badge, "Talked out loud, tidied by AI", and the badge is a link back to the raw note.
 
 A human had the thought. A tool changed the shape. You can always check.
 
 The whole thing is built by agents with one job each, and a human who decides what merges. The first post is the idea itself, spoken into a phone and built with the same tools it describes.
 
-Converted with AI, not made by AI. The origin is one click away: blog.victorsaly.com
+Talked out loud, tidied by AI. The origin is one click away: blog.victorsaly.com

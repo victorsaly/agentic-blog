@@ -11,7 +11,7 @@ converted_by: claude-chat
 reviewed: false
 ---
 
-# Converted with AI, not made by AI
+# Talked out loud, tidied by AI
 
 ## Every post should have a before and an after
 
@@ -33,7 +33,7 @@ So I want to keep the rough edges somewhere. Not hidden in a notes app, but publ
 
 That is the whole point. Keep the uniqueness. Convert the delivery.
 
-## Converted with AI, not made by AI
+## Talked out loud, tidied by AI
 
 I want a small badge on everything I publish. Not "made with AI", which sounds like the machine had the idea. "Converted with AI", which says what actually happened: a human had a thought, and a tool changed its shape so more people could receive it. The badge is a link. Click it and you land on the origin.
 

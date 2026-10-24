@@ -47,7 +47,7 @@ A blog where every post starts as a raw voice or text note (the origin, never ed
 
 ## Evidence on Hand
 
-- Two published thoughts under `thoughts/`: "Converted with AI, not made by AI" (2026-10-23, no drawings yet) and "What counts as evidence of competence" (2026-10-23, cover and eight section drawings, sources).
+- Two published thoughts under `thoughts/`: "Talked out loud, tidied by AI" (2026-10-23, no drawings yet) and "What counts as evidence of competence" (2026-10-23, cover and eight section drawings, sources).
 - Origins as text transcripts; audio recording flow exists but no published audio yet.
 - `profile.md` with Victor's voice, grown by the profile agent.
 - Linocut icons for the four tabs under `site/src/assets/icons/`.
