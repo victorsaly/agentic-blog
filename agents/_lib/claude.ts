@@ -11,12 +11,18 @@ export function createAskClient(
   system: string,
   defaults: { model: string; maxOutputTokens: number },
 ): AskClient {
-  const apiKey = process.env['ANTHROPIC_API_KEY'];
-  if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not set');
-  const client = new Anthropic({ apiKey });
+  // The key is checked on the first question, not at start-up: an agent that never asks (voice) needs none.
+  let cached: Anthropic | undefined;
+  const clientFor = (): Anthropic => {
+    const apiKey = process.env['ANTHROPIC_API_KEY'];
+    if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not set');
+    cached ??= new Anthropic({ apiKey });
+    return cached;
+  };
 
   return {
     async ask(user, options = {}) {
+      const client = clientFor();
       // The installed SDK predates the web search tool's types, so the tool goes in as plain data.
       const tools = options.webSearch
         ? ([

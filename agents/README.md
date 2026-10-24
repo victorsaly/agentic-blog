@@ -39,6 +39,7 @@ the written files into a pull request. See `.github/workflows/agents.yml`.
 | feedback  | turns a note about the output into a rework, and a pattern into a route change      | 5     | real |
 | security  | patches, and other people's data; can hold                                          | 5     | real |
 | seo       | metadata when the index switch is on                                                | 5     | real |
+| voice     | reads the short version aloud and times every word, so the page can follow          | 5     | real |
 | publish   | assembles the pull request, confirms the badge                                      | 5     | real |
 
 Every agent in the table has code; a new one gets a row here when it lands. citations and drilldown search the web through Claude's web search tool (no extra
@@ -46,6 +47,9 @@ key). image draws with OpenAI's image model when `OPENAI_API_KEY` is set (`gpt-i
 ), otherwise with Cloudflare Workers AI, which needs `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_AI_TOKEN`
 (a token with "Workers AI: Read"); without them it writes `image/prompt.md` and stops. It also needs
 `ffmpeg` on the path to force every pixel to black or white; GitHub's Ubuntu runners have it.
+voice asks no model anything: it sends the approved `versions/short.md` to ElevenLabs (`ELEVENLABS_API_KEY`, voice Chris W unless
+`media.voice_id` says otherwise) and writes `voice/short.mp3`, `voice/short.json` (the time of every word) and `voice/short.md`
+(the spoken text). It skips an unchanged text and holds one over 400 words.
 
 ## Rules every agent obeys
 

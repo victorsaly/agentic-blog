@@ -63,8 +63,8 @@ describe('rosterFrom', () => {
     ).toEqual([{ name: 'x', why: 'Waits.', phase: 2, reads: [], writes: [], canHold: false }]);
   });
 
-  it('finds all 13 agents from their cards', () => {
-    expect(rosterFrom(Object.values(cards), Object.values(prompts))).toHaveLength(13);
+  it('finds all 14 agents from their cards', () => {
+    expect(rosterFrom(Object.values(cards), Object.values(prompts))).toHaveLength(14);
   });
 });
 

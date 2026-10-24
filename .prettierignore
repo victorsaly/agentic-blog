@@ -3,4 +3,5 @@ dist
 .astro
 .wrangler
 thoughts/**/origin/**
+thoughts/**/voice/*.json
 package-lock.json
