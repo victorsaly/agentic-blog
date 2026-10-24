@@ -4,6 +4,7 @@
 // here and nowhere else, so what a reader is told is exactly what happened.
 //
 // It uses Web Crypto so the same code runs in Node, in a Cloudflare Worker and in the browser.
+import { z } from 'zod';
 
 export type NodeState = 'idle' | 'waiting' | 'running' | 'needs-you' | 'done' | 'held' | 'failed';
 
@@ -161,6 +162,24 @@ export class Ledger {
   }
 
   /**
+   * Picks up a ledger kept on disk and carries on from its last event. Every event is checked against the
+   * chain and the head kept apart from it first; a ledger that does not verify is refused, never extended,
+   * because a new event chained to a changed past would make the change look legitimate.
+   */
+  static async resume(
+    events: readonly LedgerEvent[],
+    head: LedgerHead,
+    options: { now?: () => Date } = {},
+  ): Promise<Ledger> {
+    const broken = await Ledger.verify(events, head);
+    if (broken !== null)
+      throw new LedgerError(`refused: the ledger does not verify from event ${String(broken)}`);
+    const ledger = new Ledger(options);
+    ledger.#events.push(...structuredClone(events));
+    return ledger;
+  }
+
+  /**
    * Recomputes the chain. Returns the first broken position, or null when every event is intact. The chain
    * alone shows a change or a removal in the middle; a removed end leaves a valid shorter chain, so pass the
    * head kept from the run (`ledger.head`, stored apart from the events) to detect that too. The position
@@ -181,6 +200,61 @@ export class Ledger {
     }
     return null;
   }
+}
+
+// ---------------------------------------------------------------------------------------------- on disk
+
+// A ledger is kept as one JSON event per line (ledger.jsonl) and its head apart (ledger.head). Reading checks
+// only the envelope of each line; verify() is what proves the content, by recomputing every hash.
+
+const hex64 = z.string().regex(/^[0-9a-f]{64}$/);
+const envelope = z
+  .object({
+    type: z.string().min(1),
+    seq: z.number().int().min(0),
+    at: z.string(),
+    prev: hex64,
+    hash: hex64,
+  })
+  .passthrough();
+const headShape = z.object({ count: z.number().int().min(0), hash: hex64 });
+
+/** The events in a ledger.jsonl file, oldest first. Throws on a line that is not an event. */
+export function readEvents(jsonl: string): LedgerEvent[] {
+  return jsonl
+    .split('\n')
+    .map((line, index) => ({ line: line.trim(), number: index + 1 }))
+    .filter(({ line }) => line !== '')
+    .map(({ line, number }) => {
+      let data: unknown;
+      try {
+        data = JSON.parse(line);
+      } catch {
+        throw new LedgerError(`line ${String(number)} is not JSON`);
+      }
+      const parsed = envelope.safeParse(data);
+      if (!parsed.success) throw new LedgerError(`line ${String(number)} is not a ledger event`);
+      // The envelope is checked here; the hash, checked by verify(), covers every other field.
+      return parsed.data as unknown as LedgerEvent;
+    });
+}
+
+/** The head in a ledger.head file. Throws when it is not a count and a hash. */
+export function readHead(json: string): LedgerHead {
+  let data: unknown;
+  try {
+    data = JSON.parse(json);
+  } catch {
+    throw new LedgerError('the head is not JSON');
+  }
+  const parsed = headShape.safeParse(data);
+  if (!parsed.success) throw new LedgerError('the head is not a count and a hash');
+  return parsed.data;
+}
+
+/** Events as ledger.jsonl lines, each ending in a newline, so appending more lines keeps the file valid. */
+export function eventLines(events: readonly LedgerEvent[]): string {
+  return events.map((e) => `${JSON.stringify(e)}\n`).join('');
 }
 
 // ---------------------------------------------------------------------------------------------- readings

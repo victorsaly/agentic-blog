@@ -74,7 +74,10 @@ export default defineProject({
     writer: claude({ model: 'claude-sonnet-5-5' }),
     images: openaiImages(),
     voices: elevenlabs({ model: 'eleven_v3' }),
-    workers: workersAi({ model: '@cf/openai/whisper-large-v3-turbo' }),
+    workers: workersAi({
+      model: '@cf/openai/whisper-large-v3-turbo',
+      drawModel: '@cf/black-forest-labs/flux-1-schnell',
+    }),
   },
 
   budget: { monthlyCapUsd: 30, atCap: 'queue' },

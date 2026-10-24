@@ -2,7 +2,16 @@
 // without a reason, that any change to a past event is detected, and that the disclosure never claims
 // more human work than was recorded.
 import { describe, expect, it } from 'vitest';
-import { Ledger, LedgerError, costs, disclosure, type Receipt } from './ledger.js';
+import {
+  Ledger,
+  LedgerError,
+  costs,
+  disclosure,
+  eventLines,
+  readEvents,
+  readHead,
+  type Receipt,
+} from './ledger.js';
 
 const fixedClock = (): (() => Date) => {
   let t = Date.parse('2026-10-24T09:00:00Z');
@@ -205,5 +214,38 @@ describe('review fixes', () => {
     const d = disclosure(ledger.events);
     expect(d.byAgent).toEqual(['convert']);
     expect(d.editedByPerson).toEqual([]);
+  });
+});
+
+describe('a ledger kept on disk', () => {
+  it('reads back what it wrote and carries on the same chain', async () => {
+    const first = await sampleRun();
+    const events = readEvents(eventLines(first.events));
+    const head = readHead(JSON.stringify(first.head));
+    const resumed = await Ledger.resume(events, head, { now: fixedClock() });
+    await resumed.append({ type: 'node.state', node: 'write', from: 'done', to: 'running' });
+    expect(resumed.events).toHaveLength(first.events.length + 1);
+    expect(await Ledger.verify(resumed.events, resumed.head)).toBeNull();
+  });
+
+  it('refuses to carry on a ledger whose past was edited', async () => {
+    const first = await sampleRun();
+    const lines = eventLines(first.events).split('\n');
+    lines[1] = (lines[1] ?? '').replace('"to":"running"', '"to":"done"');
+    const edited = readEvents(lines.join('\n'));
+    await expect(Ledger.resume(edited, first.head)).rejects.toThrow(LedgerError);
+  });
+
+  it('refuses a ledger whose last events were cut off', async () => {
+    const first = await sampleRun();
+    await expect(Ledger.resume(first.events.slice(0, -1), first.head)).rejects.toThrow(
+      /does not verify/,
+    );
+  });
+
+  it('names the line that is not an event', () => {
+    expect(() => readEvents('{"type":"run.started"}\n')).toThrow('line 1 is not a ledger event');
+    expect(() => readEvents('\nnot json')).toThrow('line 2 is not JSON');
+    expect(() => readHead('{"count":-1,"hash":"x"}')).toThrow(LedgerError);
   });
 });

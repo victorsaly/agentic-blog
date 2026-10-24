@@ -28,6 +28,23 @@ jobs:
         run: node scripts/ci-annotate.mjs why npm run check:why
       - name: Agent cards match their prompts
         run: node scripts/ci-annotate.mjs cards npm run roadbook --silent -- check-cards
+      - name: Every ledger verifies against its head
+        run: node scripts/ci-annotate.mjs ledgers npm run roadbook --silent -- verify-ledgers
+      # Each run keeps its own ledger file, so a pull request only ever adds runs. One that changes or removes
+      # a run already on the base branch is rewriting the record and fails here.
+      - name: Merged ledger runs are never changed or removed
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.base_ref }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE"
+          changed=$(git diff --name-only --diff-filter=DMRT FETCH_HEAD HEAD -- 'thoughts/*/ledger/*')
+          if [ -n "$changed" ]; then
+            while read -r f; do echo "::error file=$f::A merged ledger run was changed or removed."; done <<< "$changed"
+            echo "Fix: restore these from $BASE; to correct an event, record a correction in a new run."
+            exit 1
+          fi
+          echo "No merged ledger run was touched."
       - name: Lint and format
         run: node scripts/ci-annotate.mjs lint npm run lint
       - name: Types

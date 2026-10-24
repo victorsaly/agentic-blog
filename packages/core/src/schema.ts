@@ -43,6 +43,8 @@ export const provider = z.object({
   kind: providerKind,
   /** The default model this provider is called with; a card may name another allowed one. */
   model: z.string().min(1).optional(),
+  /** For a provider that also draws (workers-ai): the model it draws with, kept apart from `model`. */
+  drawModel: z.string().min(1).optional(),
   /** The environment variable that holds the key. Never the key itself. */
   secret: z
     .string()

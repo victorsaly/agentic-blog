@@ -24,6 +24,14 @@ function contextWith(languages: string[], social: string[]): AgentContext {
     profile: '',
     thought: { slug: 's', dir: '/tmp/s', files: new Map() },
     ask: () => Promise.resolve(''),
+    draw: () =>
+      Promise.resolve({
+        provider: 'none',
+        model: 'none',
+        usage: {},
+        ok: false,
+        reason: 'not in a test',
+      }),
     today: '2026-10-23',
   };
 }

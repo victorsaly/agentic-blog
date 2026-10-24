@@ -36,6 +36,7 @@ function context(
       files: new Map(Object.entries({ ...guards, ...files })),
     },
     ask: () => Promise.reject(new Error('the voice agent asks no model')),
+    draw: () => Promise.reject(new Error('the voice agent draws nothing')),
     today: '2026-10-24',
   };
 }
