@@ -28,7 +28,7 @@ interface Post {
 
 const SITE_SUGGESTIONS = [
   'What is this blog about, in one minute?',
-  'What does "converted with AI" mean here?',
+  'How does AI help write these posts?',
 ];
 const POST_SUGGESTIONS = [
   'What is the point of this post?',

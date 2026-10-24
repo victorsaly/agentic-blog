@@ -20,6 +20,7 @@ const { slug, current, medium, recorded } = Astro.props;
 const note = medium === 'voice' ? 'a voice note' : 'a text note';
 const how = medium === 'voice' ? 'recorded' : 'wrote';
 const when = recorded ? ` on ${formatDate(recorded)}` : '';
+const of = recorded ? ` of ${formatDate(recorded)}` : '';
 ---
 
 <div class="version" data-pagefind-ignore>
@@ -36,8 +37,8 @@ const when = recorded ? ` on ${formatDate(recorded)}` : '';
   <p class="small quiet">
     {
       current === 'ai'
-        ? `Converted with AI from ${note} ${settings.site.author} ${how}${when}. The original is kept as written.`
-        : `${settings.site.author} ${how} this${when}. Nothing here has been edited, and nothing converted it.`
+        ? `${settings.site.author}'s own thought, from ${note}${of}, tidied and structured with AI. The original is kept as written.`
+        : `${settings.site.author} ${how} this${when}, and it is kept exactly as it came out. AI has not touched it.`
     }
   </p>
 </div>
