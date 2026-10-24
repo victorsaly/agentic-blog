@@ -19,6 +19,17 @@ export interface AgentCardFacts {
   writes: string[];
 }
 
+function isAgentWhy(value: unknown): value is { name: string; why: string } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'name' in value &&
+    typeof value.name === 'string' &&
+    'why' in value &&
+    typeof value.why === 'string'
+  );
+}
+
 /** What each phase is for, in the words the page uses. */
 export const phases: Record<number, string> = {
   1: 'Ask',
@@ -36,10 +47,9 @@ function whysFrom(prompts: string[]): Map<string, string> {
     const frontMatter = /^---\r?\n([\s\S]*?)\r?\n---/.exec(prompt)?.[1];
     if (frontMatter === undefined) continue;
     const meta: unknown = parse(frontMatter);
-    if (typeof meta !== 'object' || meta === null || Array.isArray(meta)) continue;
-    const record = meta as Record<string, unknown>;
-    if (typeof record['name'] === 'string' && typeof record['why'] === 'string') {
-      whys.set(record['name'], record['why'].trim().replace(/\s+/g, ' '));
+    if (!isAgentWhy(meta)) continue;
+    if (meta.name !== '' && meta.why !== '') {
+      whys.set(meta.name, meta.why.trim().replace(/\s+/g, ' '));
     }
   }
   return whys;
