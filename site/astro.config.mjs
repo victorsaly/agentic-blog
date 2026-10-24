@@ -28,6 +28,10 @@ export default defineConfig({
   server: { port: 4321 },
   vite: {
     // thoughts/ sits one level above the site so the content and the code share one history
-    server: { fs: { allow: ['..'] } },
+    server: {
+      fs: { allow: ['..'] },
+      // In development the reader chat's endpoint runs in the local Worker (npm run worker:dev, port 8787).
+      proxy: { '/ask': 'http://localhost:8787' },
+    },
   },
 });
