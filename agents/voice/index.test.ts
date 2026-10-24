@@ -15,7 +15,13 @@ const settings = {
 
 const shortVersion = (body: string): string => `---\nwhy: A short version.\n---\n\n${body}\n`;
 
-function context(files: Record<string, string>): AgentContext {
+const verdict = (value: string): string => `---\nwhy: A guard's verdict.\nverdict: ${value}\n---\n`;
+const guardsPass = { 'safety.md': verdict('pass'), 'security.md': verdict('pass') };
+
+function context(
+  files: Record<string, string>,
+  guards: Record<string, string> = guardsPass,
+): AgentContext {
   return {
     agent: 'voice',
     prompt: {
@@ -24,7 +30,11 @@ function context(files: Record<string, string>): AgentContext {
     },
     settings,
     profile: '',
-    thought: { slug: 'a-thought', dir: '/nowhere', files: new Map(Object.entries(files)) },
+    thought: {
+      slug: 'a-thought',
+      dir: '/nowhere',
+      files: new Map(Object.entries({ ...guards, ...files })),
+    },
     ask: () => Promise.reject(new Error('the voice agent asks no model')),
     today: '2026-10-24',
   };
@@ -154,6 +164,33 @@ describe('voice agent', () => {
     await expect(run(context({ [SOURCE]: shortVersion('Intended words.') }))).rejects.toThrow(
       /nothing was written/,
     );
+  });
+
+  it('holds before calling the voice when a guard file is missing', async () => {
+    const voice = fakeVoice();
+    const run = makeRun({ synthesise: voice.synthesise, exists: nothingThere });
+    const result = await run(
+      context({ [SOURCE]: shortVersion('Fine words.') }, { 'safety.md': verdict('pass') }),
+    );
+    expect(result.status).toBe('held');
+    expect(result.holdReason).toContain('security.md is missing');
+    expect(result.files).toEqual([]);
+    expect(voice.calls).toEqual([]);
+  });
+
+  it('holds before calling the voice when a guard has not passed', async () => {
+    const voice = fakeVoice();
+    const run = makeRun({ synthesise: voice.synthesise, exists: nothingThere });
+    const result = await run(
+      context(
+        { [SOURCE]: shortVersion('Fine words.') },
+        { 'safety.md': verdict('hold'), 'security.md': verdict('pass') },
+      ),
+    );
+    expect(result.status).toBe('held');
+    expect(result.holdReason).toContain('safety.md says hold');
+    expect(result.holdReason).not.toContain('security.md');
+    expect(voice.calls).toEqual([]);
   });
 
   it('needs the short version', async () => {

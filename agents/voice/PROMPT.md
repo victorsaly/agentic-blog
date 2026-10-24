@@ -6,14 +6,16 @@ why: >
   spoken, so the page can light the word being said and the reader can follow, or just listen. It adds
   nothing and rewrites nothing; what is heard is exactly what was approved to be read.
 phase: 5
-reads: [versions/short.md, settings.yml → media.voice_id]
+reads: [versions/short.md, safety.md, security.md, settings.yml → media.voice_id]
 writes: [voice/short.mp3, voice/short.json, voice/short.md]
 ---
 
-This agent asks no model anything. The runner takes versions/short.md, drops the front matter, any line
-that carries the site's badge or link, and the Markdown marks, and sends the rest to the voice service
-exactly as written. It runs after the safety and security checks, so audio is never paid for on text that
-is about to be held.
+This agent asks no model anything. It first checks that safety.md and security.md both say `verdict: pass`;
+if either is missing or says anything else it holds, before the voice service is called, so audio is never
+paid for on text that is about to be held (the same check publish makes, and it does not rely on the
+workflow's order). Then the runner takes versions/short.md, drops the front matter, any line that carries
+the site's badge or link, and the Markdown marks (the words inside inline code are kept as written), and
+sends the rest to the voice service exactly as written.
 
 What it writes:
 

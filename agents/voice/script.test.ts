@@ -32,6 +32,22 @@ describe('spokenText', () => {
     expect(spokenText(markdown, domain)).toBe('A bold idea\n\nRead this link and code.\n\none two');
   });
 
+  it('speaks inline code and in-word underscores as written', () => {
+    expect(spokenText('Call `get_user_id`.', domain)).toBe('Call get_user_id.');
+    expect(spokenText('Use snake_case and my_var_name here.', domain)).toBe(
+      'Use snake_case and my_var_name here.',
+    );
+    expect(spokenText('Keep `*args` and `__init__` and 42 apples.', domain)).toBe(
+      'Keep *args and __init__ and 42 apples.',
+    );
+  });
+
+  it('still drops real emphasis marks', () => {
+    expect(spokenText('An _italic_ and *starred* and **bold** and __strong__ word.', domain)).toBe(
+      'An italic and starred and bold and strong word.',
+    );
+  });
+
   it('is empty when nothing is left to say', () => {
     expect(spokenText('---\nwhy: x\n---\n\nblog.victorsaly.com\n', domain)).toBe('');
   });

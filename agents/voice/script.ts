@@ -14,6 +14,34 @@ export interface CharacterClock {
   characterEndTimesSeconds: number[];
 }
 
+const OPEN = '\uE000';
+const CLOSE = '\uE001';
+
+/** Code spans are lifted out before the emphasis marks go, so `get_user_id` is spoken as written. */
+function plainLine(line: string): string {
+  const code: string[] = [];
+  const stripped = line
+    .replace(/^\s{0,3}#{1,6}\s+/, '')
+    .replace(/^\s*(?:[-*+]|\d+[.)])\s+/, '')
+    .replace(/^\s*>\s?/, '')
+    .replace(
+      /`([^`]+)`/g,
+      (_match, inner: string) => `${OPEN}${String(code.push(inner) - 1)}${CLOSE}`,
+    )
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/\*\*(\S(?:.*?\S)?)\*\*/g, '$1')
+    .replace(/(^|[^\w])__(\S(?:.*?\S)?)__(?=[^\w]|$)/g, '$1$2')
+    .replace(/\*(\S(?:.*?\S)?)\*/g, '$1')
+    .replace(/(^|[^\w])_(\S(?:.*?\S)?)_(?=[^\w]|$)/g, '$1$2');
+  return stripped
+    .replace(
+      new RegExp(`${OPEN}(\\d+)${CLOSE}`, 'g'),
+      (_match, index: string) => code[Number(index)] ?? '',
+    )
+    .trim();
+}
+
 /**
  * The words a listener hears, from a version's Markdown: no front matter, no lines that carry the site's
  * badge or link, no markup. Paragraphs stay separate so the voice pauses between them.
@@ -26,18 +54,7 @@ export function spokenText(markdown: string, domain: string): string {
       block
         .split('\n')
         .filter((line) => domain === '' || !line.includes(domain))
-        .map((line) =>
-          line
-            .replace(/^\s{0,3}#{1,6}\s+/, '')
-            .replace(/^\s*(?:[-*+]|\d+[.)])\s+/, '')
-            .replace(/^\s*>\s?/, '')
-            .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
-            .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-            .replace(/(\*\*|__)(.+?)\1/g, '$2')
-            .replace(/(\*|_)(.+?)\1/g, '$2')
-            .replace(/`([^`]+)`/g, '$1')
-            .trim(),
-        )
+        .map(plainLine)
         .filter((line) => line !== '')
         .join(' '),
     )

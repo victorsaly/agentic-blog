@@ -6,7 +6,7 @@ import { access } from 'node:fs/promises';
 import { join } from 'node:path';
 import matter from 'gray-matter';
 import { markdownFile } from '../_lib/files.js';
-import { readIfPresent, readOrThrow } from '../_lib/generic.js';
+import { readIfPresent, readOrThrow, verdictProblem } from '../_lib/generic.js';
 import type { AgentContext, AgentRun, OutputFile, Settings } from '../_lib/types.js';
 import { defaultVoice, synthesise, type Synthesise, type Voice } from './elevenlabs.js';
 import {
@@ -59,6 +59,17 @@ export interface VoiceDeps {
 
 export function makeRun(deps: VoiceDeps): AgentRun {
   return async (ctx) => {
+    const unguarded = [verdictProblem(ctx, 'safety.md'), verdictProblem(ctx, 'security.md')].filter(
+      (p): p is string => p !== null,
+    );
+    if (unguarded.length > 0)
+      return {
+        status: 'held',
+        summary: 'Not read aloud: the guards have not passed this thought; no audio was made.',
+        holdReason: unguarded.join('\n'),
+        files: [],
+      };
+
     const text = spokenText(readOrThrow(ctx, SOURCE), ctx.settings.site.domain);
     const words = wordCount(text);
     if (words === 0)

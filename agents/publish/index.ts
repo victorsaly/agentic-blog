@@ -3,16 +3,16 @@
 import { resolve } from 'node:path';
 import matter from 'gray-matter';
 import { hasWhy, markdownFile } from '../_lib/files.js';
-import { badgeLine, fencedFiles, readIfPresent, userMessage, withBadge } from '../_lib/generic.js';
+import {
+  badgeLine,
+  fencedFiles,
+  readIfPresent,
+  userMessage,
+  verdictProblem,
+  withBadge,
+} from '../_lib/generic.js';
 import { agentHistory } from '../_lib/git.js';
-import type { AgentContext, AgentRun, OutputFile } from '../_lib/types.js';
-
-function verdictProblem(ctx: AgentContext, name: 'safety.md' | 'security.md'): string | null {
-  const file = readIfPresent(ctx, name);
-  if (file === undefined) return `${name} is missing; run that agent first.`;
-  const verdict: unknown = matter(file).data['verdict'];
-  return verdict === 'pass' ? null : `${name} says ${String(verdict)}.`;
-}
+import type { AgentRun, OutputFile } from '../_lib/types.js';
 
 export const run: AgentRun = async (ctx) => {
   const problems = [verdictProblem(ctx, 'safety.md'), verdictProblem(ctx, 'security.md')].filter(
