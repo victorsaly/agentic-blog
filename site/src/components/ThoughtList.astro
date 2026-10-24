@@ -88,6 +88,14 @@ const covers = await coversBySlug();
   .title a {
     text-decoration: none;
   }
+  /* The same marigold as the message on a post, never the browser's default highlight. */
+  .title mark {
+    background: var(--mark);
+    color: var(--mark-ink);
+    padding: 0.1em 0.2em;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
   .title a:hover mark,
   .title a:focus-visible mark {
     text-decoration: underline;
