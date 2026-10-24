@@ -83,13 +83,23 @@ export function AskPanel({ iconSrc }: AskPanelProps): React.JSX.Element {
     input.current?.focus();
   }, []);
 
-  // A post's "Ask about this post" button opens the same chat.
+  // A post's "Ask about this post" button and the home page's question open the same chat; a question
+  // that comes with the event is asked straight away.
   useEffect(() => {
-    addEventListener('ask:open', open);
-    return () => {
-      removeEventListener('ask:open', open);
+    const onAsk = (event: Event): void => {
+      open();
+      const detail: unknown = event instanceof CustomEvent ? event.detail : null;
+      const question =
+        typeof detail === 'object' && detail !== null
+          ? (detail as { question?: unknown }).question
+          : undefined;
+      if (typeof question === 'string') void ask(question);
     };
-  }, [open]);
+    addEventListener('ask:open', onAsk);
+    return () => {
+      removeEventListener('ask:open', onAsk);
+    };
+  }, [open, ask]);
 
   return (
     <>
