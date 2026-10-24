@@ -78,6 +78,8 @@ export interface AgentContext {
 export interface AskOptions {
   maxOutputTokens?: number;
   model?: string;
+  /** PNG pictures to show the model before the text, as raw bytes. */
+  images?: Uint8Array[];
   /** Lets the model search the web (Anthropic's server-side tool), at most this many times. */
   webSearch?: { maxUses: number };
 }

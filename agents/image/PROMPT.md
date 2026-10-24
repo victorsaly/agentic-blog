@@ -27,7 +27,9 @@ text allows. Do not repeat a scene.
 The drawing model drops whatever it cannot fit, so keep every scene small: one person, or two at most,
 one action, two or three objects. If the point is a contrast (one person apart from a crowd), draw it with
 the fewest figures that still show it, and name the contrast in the subject sentence. Laptops, phones and
-cups are plain, with no logo or brand; name that in the subject ("a plain laptop with no logo").
+cups are plain, with no logo or brand; name that in the subject ("a plain laptop with no logo"). Never
+show the back of a laptop lid or a phone's back to the viewer: the drawing model puts a logo there every
+time. Show the screen side, the keyboard from above, or the laptop closed and seen from the side.
 
 For each picture give:
 

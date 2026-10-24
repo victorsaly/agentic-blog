@@ -11,9 +11,12 @@ import { kebab, readIfPresent, readOrThrow, userMessage } from '../_lib/generic.
 import { unfence } from '../_lib/claude.js';
 import type { AgentContext, AgentRun, OutputFile } from '../_lib/types.js';
 import { IMAGE_MODEL, generatePicture } from '../_lib/workers-ai.js';
+import { reviewDrawing } from './review.js';
 
 export const MANIFEST = 'image/prompts.md';
 const MAX_SECTIONS = 8;
+/** Drawings per picture before giving up on it; each failed one is shown to Claude with its problems. */
+const MAX_ATTEMPTS = 3;
 const SKIP_SECTION = /^what changed from the origin/i;
 
 const plan = z.object({
@@ -102,15 +105,31 @@ export const run: AgentRun = async (ctx) => {
   const failures: string[] = [];
   for (const [index, image] of parsed.data.images.entries()) {
     const file = fileNameFor(index, image.name);
-    const picture = await generatePicture(image.prompt);
-    if (picture.ok) files.push({ path: file, content: '', bytes: picture.png });
-    else failures.push(`${file}: ${picture.reason}`);
+    let kept: Uint8Array | null = null;
+    let problems: string[] = [];
+    let attempts = 0;
+    while (attempts < MAX_ATTEMPTS && kept === null) {
+      attempts += 1;
+      const picture = await generatePicture(image.prompt);
+      if (!picture.ok) {
+        problems = [picture.reason];
+        break; // a credentials or service problem; redrawing will not help
+      }
+      const review = await reviewDrawing(ctx, picture.png, image.subject);
+      if (review.ok) kept = picture.png;
+      else problems = review.problems;
+    }
+    if (kept !== null) files.push({ path: file, content: '', bytes: kept });
+    else failures.push(`${file}: ${problems.join(' ')}`);
     manifest.push({
       file,
       section: image.section,
       subject: image.subject,
       alt: image.alt,
-      drawn: picture.ok,
+      drawn: kept !== null,
+      reviewed_by: 'claude',
+      attempts,
+      ...(kept === null ? { problems } : {}),
       prompt: image.prompt,
     });
   }
@@ -138,7 +157,7 @@ export const run: AgentRun = async (ctx) => {
   return {
     status: 'done',
     summary:
-      `Drew ${String(drawn)} of ${String(manifest.length)} pictures: the cover and one per section.` +
+      `Drew ${String(drawn)} of ${String(manifest.length)} pictures that passed review: the cover and one per section.` +
       (failures.length > 0 ? ` Not drawn: ${failures.join('; ')}` : ''),
     files,
   };

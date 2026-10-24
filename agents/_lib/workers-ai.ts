@@ -20,6 +20,20 @@ function credentials(): { account: string; token: string } | null {
   return account && token ? { account, token } : null;
 }
 
+/** Cloudflare's own error text, e.g. its content filter refusing a prompt, so the reason is not guessed. */
+function errorMessage(body: string): string {
+  try {
+    const data = JSON.parse(body) as { errors?: { message?: unknown }[] };
+    return (data.errors ?? [])
+      .map((e) => (typeof e.message === 'string' ? e.message : ''))
+      .filter((m) => m !== '')
+      .join('; ')
+      .slice(0, 200);
+  } catch {
+    return body.slice(0, 200);
+  }
+}
+
 function imageField(data: unknown): string | null {
   if (typeof data !== 'object' || data === null) return null;
   const result = (data as Record<string, unknown>)['result'];
@@ -69,11 +83,17 @@ export async function generatePicture(prompt: string): Promise<Picture> {
       body: JSON.stringify({ prompt: prompt.slice(0, 2048), steps: 8 }),
     },
   );
-  if (!response.ok)
+  if (!response.ok) {
+    const detail = await response.text().then(errorMessage, () => '');
+    const hint =
+      response.status === 401 || response.status === 403
+        ? ' The token needs the "Workers AI: Read" permission.'
+        : '';
     return {
       ok: false,
-      reason: `Workers AI answered ${String(response.status)}; the token needs the "Workers AI: Read" permission.`,
+      reason: `Workers AI answered ${String(response.status)}${detail ? `: ${detail}` : ''}.${hint}`,
     };
+  }
   const image = imageField(await response.json());
   if (!image) return { ok: false, reason: 'Workers AI returned no image.' };
   try {
