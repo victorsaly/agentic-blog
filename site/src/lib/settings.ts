@@ -29,6 +29,7 @@ const settingsSchema = z.object({
     audio_bucket: z.string().min(1),
     image_style: z.string().min(1),
     image_character: z.string().min(1).optional(),
+    image_reference: z.string().min(1).optional(),
     voice_id: z.string().nullable(),
   }),
   agents: z.object({

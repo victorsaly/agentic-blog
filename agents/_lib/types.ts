@@ -57,6 +57,7 @@ export interface Settings {
     audio_bucket: string;
     image_style: string;
     image_character?: string;
+    image_reference?: string;
     voice_id: string | null;
   };
   agents: { model: string; max_output_tokens: number; review_required: true };

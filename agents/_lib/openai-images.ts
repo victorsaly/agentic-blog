@@ -32,20 +32,43 @@ function errorText(body: string): string {
   }
 }
 
-export async function generateWithOpenAi(prompt: string): Promise<Picture> {
+/**
+ * Draws from the prompt alone, or, when a reference photo is given, from the photo and the prompt
+ * together (the edits endpoint), so the recurring person keeps the real person's likeness.
+ */
+export async function generateWithOpenAi(prompt: string, reference?: Uint8Array): Promise<Picture> {
   const key = process.env['OPENAI_API_KEY'];
   if (!key) return { ok: false, reason: 'OPENAI_API_KEY is not set.' };
-  const response = await fetch('https://api.openai.com/v1/images/generations', {
-    method: 'POST',
-    headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
-    body: JSON.stringify({
-      model: OPENAI_IMAGE_MODEL,
-      prompt: prompt.slice(0, 4000),
-      size: '1024x1024',
-      quality: 'medium',
-      n: 1,
-    }),
-  });
+  const text = prompt.slice(0, 4000);
+  let response: Response;
+  if (reference) {
+    const form = new FormData();
+    form.set('model', OPENAI_IMAGE_MODEL);
+    form.set(
+      'prompt',
+      `${text} The person in the drawing is the person in the reference photo: keep his face and build recognisable, translated into the style above.`,
+    );
+    form.set('size', '1024x1024');
+    form.set('quality', 'medium');
+    form.append('image[]', new Blob([reference], { type: 'image/png' }), 'reference.png');
+    response = await fetch('https://api.openai.com/v1/images/edits', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${key}` },
+      body: form,
+    });
+  } else {
+    response = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: OPENAI_IMAGE_MODEL,
+        prompt: text,
+        size: '1024x1024',
+        quality: 'medium',
+        n: 1,
+      }),
+    });
+  }
   const body = await response.text();
   if (!response.ok)
     return { ok: false, reason: `OpenAI answered ${String(response.status)}: ${errorText(body)}` };

@@ -11,3 +11,6 @@ test-results/
 .env
 .env.*
 !.env.example
+
+# Local only: reference photos for the image agent, never committed (the repo is public).
+.private/
