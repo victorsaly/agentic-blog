@@ -60,6 +60,11 @@ describe('plan', () => {
 describe('plan, behaviour', () => {
   it('shows each agent\u2019s retries, failure policy and escalation', () => {
     const write = plan(parsed).workflows[0]?.nodes.find((n) => n.id === 'write');
-    expect(write).toMatchObject({ retries: 1, onFailure: 'stop-run', escalatesTo: 'owner', needsApproval: true });
+    expect(write).toMatchObject({
+      retries: 1,
+      onFailure: 'stop-run',
+      escalatesTo: 'owner',
+      needsApproval: true,
+    });
   });
 });

@@ -255,7 +255,9 @@ describe('behaviour rules', () => {
         kind: 'agent',
         why: 'Falls back to the very model that just failed.',
         after: ['origin'],
-        card: card('write', { behaviour: { ...fail, onFailure: 'use-fallback', fallback: 'writer' } }),
+        card: card('write', {
+          behaviour: { ...fail, onFailure: 'use-fallback', fallback: 'writer' },
+        }),
       },
     }));
     expect(rulesOf(input)).toContain('RB033');
@@ -290,7 +292,9 @@ describe('behaviour rules', () => {
         kind: 'agent',
         why: 'Escalates to a gate nobody added.',
         after: ['origin'],
-        card: card('write', { behaviour: { ...fail, escalate: { ...fail.escalate, to: { gate: 'nowhere' } } } }),
+        card: card('write', {
+          behaviour: { ...fail, escalate: { ...fail.escalate, to: { gate: 'nowhere' } } },
+        }),
       },
     }));
     expect(rulesOf(input)).toContain('RB035');
@@ -298,19 +302,39 @@ describe('behaviour rules', () => {
 
   it('RB036: refuses a node setting the card does not declare, or of the wrong type', () => {
     const tuned = card('write', {
-      variables: { maxWords: { type: 'number', default: 250, why: 'How long the draft may be, in words.' } },
+      variables: {
+        maxWords: { type: 'number', default: 250, why: 'How long the draft may be, in words.' },
+      },
     });
     const unknown = withNodes((nodes) => ({
       ...nodes,
-      write: { kind: 'agent', why: 'Sets a variable its card never declared.', after: ['origin'], card: tuned, vars: { tone: 'warm' } },
+      write: {
+        kind: 'agent',
+        why: 'Sets a variable its card never declared.',
+        after: ['origin'],
+        card: tuned,
+        vars: { tone: 'warm' },
+      },
     }));
     const wrongType = withNodes((nodes) => ({
       ...nodes,
-      write: { kind: 'agent', why: 'Sets a number variable to a word.', after: ['origin'], card: tuned, vars: { maxWords: 'many' } },
+      write: {
+        kind: 'agent',
+        why: 'Sets a number variable to a word.',
+        after: ['origin'],
+        card: tuned,
+        vars: { maxWords: 'many' },
+      },
     }));
     const right = withNodes((nodes) => ({
       ...nodes,
-      write: { kind: 'agent', why: 'Sets a declared variable with the right type.', after: ['origin'], card: tuned, vars: { maxWords: 180 } },
+      write: {
+        kind: 'agent',
+        why: 'Sets a declared variable with the right type.',
+        after: ['origin'],
+        card: tuned,
+        vars: { maxWords: 180 },
+      },
     }));
     expect(rulesOf(unknown)).toContain('RB036');
     expect(rulesOf(wrongType)).toContain('RB036');
@@ -320,7 +344,12 @@ describe('behaviour rules', () => {
   it('refuses a card with no metric to score it on', () => {
     const input = withNodes((nodes) => ({
       ...nodes,
-      write: { kind: 'agent', why: 'An agent nobody could score.', after: ['origin'], card: card('write', { metrics: [] }) },
+      write: {
+        kind: 'agent',
+        why: 'An agent nobody could score.',
+        after: ['origin'],
+        card: card('write', { metrics: [] }),
+      },
     }));
     expect(validate(input).ok).toBe(false);
   });

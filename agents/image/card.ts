@@ -30,7 +30,12 @@ export const card = defineAgentCard({
   budget: { usdPerRun: 0.6, secondsPerRun: 300 },
   behaviour: {
     ...coreStep(false),
-    retry: { max: 2, backoffSeconds: 30, withFeedback: true, on: ['check-failed', 'provider-error', 'timeout'] },
+    retry: {
+      max: 2,
+      backoffSeconds: 30,
+      withFeedback: true,
+      on: ['check-failed', 'provider-error', 'timeout'],
+    },
     onFailure: 'use-fallback',
     fallback: 'workers',
   },

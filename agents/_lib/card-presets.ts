@@ -10,7 +10,12 @@ type Metrics = AgentCardInput['metrics'];
 export function coreStep(needsApproval: boolean): Behaviour {
   return {
     needsApproval,
-    retry: { max: 1, backoffSeconds: 30, withFeedback: true, on: ['check-failed', 'provider-error', 'timeout'] },
+    retry: {
+      max: 1,
+      backoffSeconds: 30,
+      withFeedback: true,
+      on: ['check-failed', 'provider-error', 'timeout'],
+    },
     onFailure: 'stop-run',
     escalate: {
       when: ['retries-exhausted', 'held', 'over-budget'],
@@ -24,7 +29,12 @@ export function coreStep(needsApproval: boolean): Behaviour {
 export function optionalStep(): Behaviour {
   return {
     needsApproval: false,
-    retry: { max: 1, backoffSeconds: 30, withFeedback: true, on: ['check-failed', 'provider-error', 'timeout'] },
+    retry: {
+      max: 1,
+      backoffSeconds: 30,
+      withFeedback: true,
+      on: ['check-failed', 'provider-error', 'timeout'],
+    },
     onFailure: 'skip-node',
     escalate: {
       when: ['retries-exhausted', 'over-budget'],

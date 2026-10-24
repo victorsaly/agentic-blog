@@ -376,7 +376,11 @@ function checkWorkflow(p: Project, wf: Workflow, options: ValidateOptions): Issu
     // RB036: node settings match the card's variables
     for (const [name, value] of Object.entries(n.vars)) {
       const declared = card.variables[name];
-      const actual = Array.isArray(value) ? 'list' : typeof value === 'string' ? 'text' : typeof value;
+      const actual = Array.isArray(value)
+        ? 'list'
+        : typeof value === 'string'
+          ? 'text'
+          : typeof value;
       if (!declared) {
         issues.push(
           issue(

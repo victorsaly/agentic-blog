@@ -18,10 +18,20 @@ export function card(name: string, overrides: Partial<AgentCardInput> = {}): Age
       needsApproval: true,
       retry: { max: 1, on: ['check-failed', 'provider-error'] },
       onFailure: 'stop-run',
-      escalate: { when: ['retries-exhausted', 'held'], to: 'owner', says: 'The draft could not be written; have a look.' },
+      escalate: {
+        when: ['retries-exhausted', 'held'],
+        to: 'owner',
+        says: 'The draft could not be written; have a look.',
+      },
     },
     metrics: [
-      { id: 'approved-without-rewrite', says: 'Share of drafts approved as written.', target: 0.9, direction: 'at-least', unit: 'share' },
+      {
+        id: 'approved-without-rewrite',
+        says: 'Share of drafts approved as written.',
+        target: 0.9,
+        direction: 'at-least',
+        unit: 'share',
+      },
     ],
     data: { sends: ['text'] },
     owner: 'Test Owner',

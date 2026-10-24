@@ -114,7 +114,10 @@ export const behaviour = z.object({
   /** When retries are used up: stop the run, skip this node, or try the fallback provider once. */
   onFailure: z.enum(['stop-run', 'skip-node', 'use-fallback']),
   /** A provider from model.allowed, used once when onFailure is use-fallback. */
-  fallback: z.string().regex(/^[a-z][a-z0-9-]*$/).optional(),
+  fallback: z
+    .string()
+    .regex(/^[a-z][a-z0-9-]*$/)
+    .optional(),
   escalate: z.object({
     when: z.array(z.enum(['retries-exhausted', 'held', 'over-budget', 'timeout'])).min(1),
     /** Who is told: the owner, a gate in the workflow, or a named person. */
