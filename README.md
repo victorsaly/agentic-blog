@@ -1,3 +1,5 @@
+<p><img src="site/src/assets/logo/mark.svg" width="96" alt="Agentic Blog: an A drawn as one folded ribbon beside an open speech bubble"></p>
+
 # Agentic blog
 
 The engine behind **blog.victorsaly.com**: a blog where every post starts as a raw voice note and every
@@ -6,6 +8,9 @@ published version links back to it.
 > **Talked out loud, tidied by AI.** The thought is real and stays the writer's. AI helps tidy it and give
 > it structure, so anyone can say what they think freely and still publish a clear, well-documented blog.
 > Every post has a switch to its original, kept exactly as it came out.
+
+**The idea in one minute:** [watch the pitch](site/public/media/pitch.mp4) (made from the real site by
+`npm run pitch`; see [docs/audio-sources.md](docs/audio-sources.md)).
 
 ## How a thought moves
 
