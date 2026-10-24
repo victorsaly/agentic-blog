@@ -1,0 +1,39 @@
+---
+// Why: a version an agent wrote and Victor has not yet read is shown, but never as if he had read it. The
+// tag opens the panel so a reader sees it before the words, in the house's control style: a bordered box
+// with a word, no colour, because it is information, not an alarm. It goes once he sets reviewed: true.
+import { settings } from '../lib/settings';
+
+const words = `${settings.site.author} has not checked this version yet. It can still change.`;
+---
+
+<p class="unreviewed" data-pagefind-ignore>
+  <span class="tag">Not reviewed yet</span>
+  <span class="words">{words}</span>
+</p>
+
+<style>
+  .unreviewed {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    margin: 0 0 var(--space-4);
+    max-width: none;
+    font-size: var(--size-small);
+    color: var(--quiet);
+  }
+  .tag {
+    padding: var(--space-1) var(--space-2);
+    border: var(--rule-width) solid var(--ink);
+    color: var(--ink);
+    font-size: var(--size-label);
+    font-weight: 700;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    line-height: var(--leading-tight);
+  }
+  .words {
+    flex: 1 1 16rem;
+  }
+</style>
