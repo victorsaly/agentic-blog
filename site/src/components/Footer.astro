@@ -1,26 +1,104 @@
 ---
-// Why: the footer says what the site is in one line and where the code lives, so the road is never hidden.
+// Why: the footer closes every page with the one line the blog stands on, set large under a heavy rule,
+// and the links a reader expects at the bottom of a blog: the ways to read, the feed, and where the code
+// lives, so the road is never hidden.
 import { settings } from '../lib/settings';
+
+const licence =
+  settings.licence.content === 'all-rights-reserved'
+    ? 'all rights reserved'
+    : settings.licence.content;
 ---
 
-<footer>
-  <p class="small quiet">
-    {settings.site.tagline}. Every post starts as a note, spoken or written and never edited: the
-    origin. Every page links back to it. The engine is open:{' '}
-    <a href="https://github.com/victorsaly/agentic-blog">agentic-blog on GitHub</a>.
-  </p>
+<footer class="site-footer">
+  <div class="frame top">
+    <div class="line">
+      <p class="tagline">{settings.site.tagline}.</p>
+      <p class="small quiet">
+        Every post starts as a note, spoken or written and never edited: the origin. The engine is
+        open: <a href="https://github.com/victorsaly/agentic-blog">agentic-blog on GitHub</a>.
+      </p>
+    </div>
+    <nav aria-labelledby="footer-read">
+      <p class="head" id="footer-read">Read</p>
+      <ul>
+        <li><a href="/">Thoughts</a></li>
+        <li><a href="/themes">Themes</a></li>
+        <li><a href="/all">Archive</a></li>
+        <li><a href="/search">Search</a></li>
+      </ul>
+    </nav>
+    <nav aria-labelledby="footer-follow">
+      <p class="head" id="footer-follow">Follow</p>
+      <ul>
+        <li><a href="/rss.xml">RSS feed</a></li>
+        <li><a href="https://github.com/victorsaly/agentic-blog">GitHub</a></li>
+      </ul>
+    </nav>
+  </div>
+  <div class="base">
+    <p class="frame small quiet">
+      Words and drawings: {licence}. Code: {settings.licence.code}.
+    </p>
+  </div>
 </footer>
 
 <style>
-  footer {
-    width: 100%;
-    box-sizing: border-box;
-    max-width: calc(var(--measure) + 2 * var(--gutter));
-    margin: 0 auto;
-    padding: var(--space-4) var(--gutter) var(--space-5);
-    border-top: var(--rule-width) solid var(--rule);
+  .site-footer {
+    border-top: var(--rule-heavy) solid var(--ink);
   }
-  p {
+  .top {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-5);
+    padding-block: var(--space-5) var(--space-5);
+  }
+  .line {
+    flex: 2 1 22rem;
+    min-width: 0;
+  }
+  .tagline {
+    margin: 0 0 var(--space-3);
+    max-width: 14ch;
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  .line .small {
     margin: 0;
+    max-width: 28rem;
+  }
+  nav {
+    flex: 1 1 10rem;
+  }
+  .head {
+    margin: 0 0 var(--space-2);
+    font-size: var(--size-label);
+    font-weight: 700;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+  }
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  li a {
+    display: flex;
+    align-items: center;
+    min-height: var(--tap);
+    text-decoration: none;
+  }
+  li a:hover {
+    text-decoration: underline;
+  }
+  .base {
+    border-top: var(--rule-width) solid var(--ink);
+  }
+  .base p {
+    margin-block: 0;
+    padding-block: var(--space-3);
   }
 </style>

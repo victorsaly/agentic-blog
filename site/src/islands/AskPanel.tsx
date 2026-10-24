@@ -85,9 +85,9 @@ export function AskPanel({ iconSrc }: AskPanelProps): React.JSX.Element {
 
   return (
     <>
-      <button type="button" className="header-link ask-open" onClick={open} aria-haspopup="dialog">
-        <img className="header-icon" src={iconSrc} alt="" width={24} height={24} />
-        <span>Ask</span>
+      <button type="button" className="control ask-open" onClick={open} aria-haspopup="dialog">
+        <img src={iconSrc} alt="" width={20} height={20} />
+        <span className="word">Ask</span>
       </button>
       <dialog ref={dialog} className="ask" aria-labelledby={`${id}-title`}>
         <div className="ask-head">
