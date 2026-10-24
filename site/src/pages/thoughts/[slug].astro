@@ -13,7 +13,6 @@ import PostTabs, { type Tab } from '../../components/PostTabs.astro';
 import ideaIcon from '../../assets/icons/idea.png';
 import originIcon from '../../assets/icons/origin.png';
 import roadIcon from '../../assets/icons/road.png';
-import sourcesIcon from '../../assets/icons/sources.png';
 import askIcon from '../../assets/icons/ask.png';
 import { settings } from '../../lib/settings';
 import {
@@ -27,6 +26,7 @@ import {
 } from '../../lib/content';
 import { coverOf, picturesFrom } from '../../lib/pictures';
 import { themeLabel } from '../../lib/themes';
+import { parseSources } from '../../lib/sources';
 
 // Every drawing in the repo, so the cover can be looked up by its path in the thought folder.
 const drawings = import.meta.glob<ImageMetadata>('../../../../thoughts/*/image/*.png', {
@@ -62,7 +62,12 @@ const coverImage = cover
 // unreviewed, marked as such, so the review can happen on the page itself.
 const sourcesEntry = (await getCollection('sources', ({ id }) => thoughtSlugOf(id) === slug))[0];
 const showSources = sourcesEntry && (sourcesEntry.data.reviewed || import.meta.env.DEV);
-const sources = showSources ? await render(sourcesEntry) : null;
+// They close the text as a numbered list; the same numbers sit in the text beside each claim.
+const sourceList = showSources ? parseSources(sourcesEntry.body ?? '') : null;
+const sources =
+  sourceList && (sourceList.claims.length > 0 || sourceList.unsourced.length > 0)
+    ? sourceList
+    : null;
 
 const { Content: Structure } = await render(thought);
 const idea = short ? await render(short) : null;
@@ -83,14 +88,11 @@ const unnumbered = roadHeadings
   })
   .join('');
 
-// The order follows the blog's thesis: the thought, where it came from, the whole road, its sources.
+// The order follows the blog's thesis: the thought, where it came from, the whole road.
 const tabs: Tab[] = [
   { id: 'idea', name: 'The idea', hint: 'one screen', icon: ideaIcon },
   { id: 'origin', name: 'The origin', hint: 'the note it started from', icon: originIcon },
   ...(road ? [{ id: 'road', name: 'The road', hint: 'the whole piece', icon: roadIcon }] : []),
-  ...(sources
-    ? [{ id: 'sources', name: 'Sources', hint: 'where each claim leads', icon: sourcesIcon }]
-    : []),
 ];
 const minutes = readingMinutes(long?.body ?? short?.body ?? thought.body ?? '');
 const description = excerpt(thought.data.message, 40);
@@ -129,6 +131,7 @@ const pad = (n: number): string => String(n).padStart(2, '0');
 >
   {unnumbered && <style is:inline set:html={unnumbered} />}
   <article
+    class:list={{ 'no-sources': !sources }}
     data-pagefind-body
     data-pagefind-filter="kind:post"
     data-reading-body
@@ -205,6 +208,13 @@ const pad = (n: number): string => String(n).padStart(2, '0');
                   </li>
                 ))
               }
+              {
+                sources && (
+                  <li>
+                    <a href="#sources">Sources</a>
+                  </li>
+                )
+              }
             </ol>
             <a class="control up" href="#content">
               <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -259,23 +269,50 @@ const pad = (n: number): string => String(n).padStart(2, '0');
             </div>
           )
         }
-
-        {
-          sources && sourcesEntry && (
-            <div slot="sources">
-              {!sourcesEntry.data.reviewed && (
-                <p class="small quiet">
-                  Not reviewed yet. Only visible in local development until {settings.site.author}{' '}
-                  has opened every link and set reviewed to true.
-                </p>
-              )}
-              <div class="sources">
-                <sources.Content />
-              </div>
-            </div>
-          )
-        }
       </PostTabs>
+
+      {
+        sources && (
+          <section class="source-list" id="sources" aria-labelledby="sources-label">
+            <h2 class="label" id="sources-label">
+              Sources
+            </h2>
+            {!sourcesEntry?.data.reviewed && (
+              <p class="small quiet">
+                Not reviewed yet. Only visible in local development until {settings.site.author} has
+                opened every link and set reviewed to true.
+              </p>
+            )}
+            <ol>
+              {sources.claims.map((claim, i) => (
+                <li id={`source-${String(i + 1)}`}>
+                  <span class="n">{i + 1}</span>
+                  <div>
+                    <p class="claim small quiet">{claim.mention}</p>
+                    {claim.doors.map((door) => (
+                      <p class="door">
+                        <a href={door.url}>{door.label}</a>
+                        {door.note && <span class="small quiet"> {door.note}</span>}
+                      </p>
+                    ))}
+                    {claim.about && <p class="behind small">{claim.about}</p>}
+                  </div>
+                </li>
+              ))}
+            </ol>
+            {sources.unsourced.length > 0 && (
+              <details class="unsourced">
+                <summary>Lines with no source</summary>
+                <ul>
+                  {sources.unsourced.map((line) => (
+                    <li class="small">{line}</li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </section>
+        )
+      }
 
       <aside class="rail thought" aria-label="This thought" data-pagefind-ignore>
         <div class="sticky">
@@ -472,7 +509,7 @@ const pad = (n: number): string => String(n).padStart(2, '0');
     padding-top: var(--space-4);
   }
   .rail {
-    grid-row: 2 / span 4;
+    grid-row: 2 / span 6;
     align-self: stretch;
   }
   .contents {
@@ -745,8 +782,11 @@ const pad = (n: number): string => String(n).padStart(2, '0');
     .layout :global(.panel) {
       order: 2;
     }
-    .thought {
+    .source-list {
       order: 3;
+    }
+    .thought {
+      order: 4;
       margin-top: var(--space-5);
     }
     .sticky,
@@ -877,9 +917,74 @@ const pad = (n: number): string => String(n).padStart(2, '0');
     margin: 0;
     padding-left: var(--space-4);
   }
-  /* The sources table scrolls sideways on a phone instead of squeezing the links. */
-  .sources {
-    overflow-x: auto;
+  /* A source number beside a claim: small, raised, a link down to the list. */
+  .layout :global(.cite) {
+    margin-left: 0.15em;
+    padding: 0 0.2em;
+    font-size: 0.72em;
+    font-weight: 700;
+    line-height: 0;
+    vertical-align: super;
+    text-decoration: none;
+  }
+  .layout :global(.cite:hover) {
+    text-decoration: underline;
+  }
+  /* Until the sources are reviewed, their numbers stay out of the text too. */
+  .no-sources :global(.cite) {
+    display: none;
+  }
+
+  /* The sources close the text: numbered, ruled, always open. */
+  .source-list {
+    grid-column: 2;
+    margin-top: var(--space-6);
+  }
+  .source-list ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-width: none;
+  }
+  .source-list li {
+    display: grid;
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+    gap: var(--space-3);
+    padding-block: var(--space-3);
+    border-bottom: var(--rule-width) solid var(--ink);
+    scroll-margin-top: 6rem;
+  }
+  .source-list li:target {
+    background: var(--hover);
+  }
+  .source-list .n {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .source-list p {
+    margin: 0;
+    max-width: none;
+  }
+  .source-list .door {
+    margin-top: var(--space-1);
+  }
+  .source-list .behind {
+    margin-top: var(--space-2);
+  }
+  .unsourced {
+    margin-top: var(--space-4);
+  }
+  .unsourced summary {
+    min-height: var(--tap);
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-weight: 700;
+  }
+  .unsourced ul {
+    margin: 0;
+    padding-left: var(--space-4);
   }
 </style>
 
