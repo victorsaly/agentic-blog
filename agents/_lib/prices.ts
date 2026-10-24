@@ -7,6 +7,11 @@ import { perMillion, type PriceList } from '@roadbook/core';
 /** A picture from Workers AI's flux-1-schnell at 1024px and 8 steps: 4 tiles at 4.8 and 8 steps at 9.6. */
 export const FLUX_NEURONS = 4 * 4.8 + 8 * 9.6;
 
+/** Neurons one picture costs, per Workers AI drawing model; a model not listed here is not called. */
+export const neuronsPerPicture: Record<string, number> = {
+  '@cf/black-forest-labs/flux-1-schnell': FLUX_NEURONS,
+};
+
 export const prices: PriceList = {
   // Claude, from the Claude API pricing table, checked 2026-10-06. Cache writes are 1.25x input (5-minute
   // cache); web searches are $10 per 1,000.

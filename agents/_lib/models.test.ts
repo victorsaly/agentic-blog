@@ -2,7 +2,7 @@
 // these use stand-in adapters, so no provider is called and nothing is spent.
 import { describe, expect, it } from 'vitest';
 import { ModelCallError, UsageLog, type ModelAdapter } from '@roadbook/core';
-import { adapterFor, choose, connect, unpriced } from './models.js';
+import { adapterFor, choose, connect, textModel, unpriced } from './models.js';
 
 function writer(name: string, fail = false): ModelAdapter {
   return {
@@ -104,6 +104,19 @@ describe('connect', () => {
         'claude-sonnet-5-5',
       ),
     ).toEqual(['new-painter']);
+  });
+});
+
+describe('textModel', () => {
+  it('prefers the prompt, then the writer the project declared, then the site setting', () => {
+    const opus = adapterFor('writer', { kind: 'claude', model: 'claude-opus-5-5' });
+    const chosen = { writer: opus, drawers: [] };
+    expect(textModel(chosen, 'claude-fable-5-1', 'claude-sonnet-5-5')).toBe('claude-fable-5-1');
+    expect(textModel(chosen, undefined, 'claude-sonnet-5-5')).toBe('claude-opus-5-5');
+    const bare = { ...writer('writer'), models: () => [] };
+    expect(textModel({ writer: bare, drawers: [] }, undefined, 'claude-sonnet-5-5')).toBe(
+      'claude-sonnet-5-5',
+    );
   });
 });
 

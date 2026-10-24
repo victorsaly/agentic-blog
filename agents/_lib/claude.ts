@@ -68,13 +68,25 @@ export function claudeAdapter(name: string, provider: Provider): ModelAdapter {
 
       // A long search can pause the turn; resend it as it stands and the server carries on.
       for (let round = 0; round < 6; round += 1) {
-        const response = await client.messages.create({
-          model,
-          max_tokens: request.maxOutputTokens,
-          system: request.system,
-          messages,
-          ...(tools ? { tools } : {}),
-        });
+        let response: Anthropic.Message;
+        try {
+          response = await client.messages.create({
+            model,
+            max_tokens: request.maxOutputTokens,
+            system: request.system,
+            messages,
+            ...(tools ? { tools } : {}),
+          });
+        } catch (error: unknown) {
+          // The rounds before this one were billed; the error carries them so the ledger still counts them.
+          if (round === 0) throw error;
+          const reason = error instanceof Error ? error.message : String(error);
+          throw new ModelCallError(`round ${String(round + 1)} failed: ${reason}`, {
+            provider: name,
+            model,
+            usage,
+          });
+        }
         usage = addUsage(usage, usageOf(response));
         if ((response.stop_reason as string) === 'refusal')
           throw new ModelCallError(

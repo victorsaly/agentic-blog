@@ -67,7 +67,7 @@ export interface ModelAdapter {
   provider: string;
   /** Whether it can be called here: its key is set, its account is configured. */
   available: () => boolean;
-  /** The models this adapter may bill for, so a run can check every one has a price before it starts. */
+  /** The models this adapter may bill for, its default first, so a run can check every one has a price before it starts. */
   models: () => string[];
   write?: (request: TextRequest) => Promise<TextReply>;
   draw?: (request: ImageRequest) => Promise<ImageReply>;

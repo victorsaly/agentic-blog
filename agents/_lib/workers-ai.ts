@@ -6,17 +6,20 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import type { ImageReply, ModelAdapter } from '@roadbook/core';
-import { FLUX_NEURONS } from './prices.js';
+import type { ImageReply, ModelAdapter, Provider } from '@roadbook/core';
+import { neuronsPerPicture } from './prices.js';
 
 const run = promisify(execFile);
 
-/** Fast text-to-image on Workers AI; square 1024px output. */
+/** Fast text-to-image on Workers AI; square 1024px output. Used when the provider names no drawModel. */
 export const IMAGE_MODEL = '@cf/black-forest-labs/flux-1-schnell';
 
-function credentials(): { account: string; token: string } | null {
+/** The account and token; the provider's own secret when it names one, else the usual variables. */
+function credentials(secret: string | undefined): { account: string; token: string } | null {
   const account = process.env['CLOUDFLARE_ACCOUNT_ID'];
-  const token = process.env['CLOUDFLARE_AI_TOKEN'] ?? process.env['CLOUDFLARE_API_KEY'];
+  const token = secret
+    ? process.env[secret]
+    : (process.env['CLOUDFLARE_AI_TOKEN'] ?? process.env['CLOUDFLARE_API_KEY']);
   return account && token ? { account, token } : null;
 }
 
@@ -70,26 +73,37 @@ export async function toBlackOnWhite(image: Uint8Array): Promise<Uint8Array> {
 /**
  * Workers AI's fast image model behind the one model contract, as a fallback drawer. Cloudflare does not
  * report usage with the picture, so the neurons are counted the way its pricing page counts them for this
- * model at this size and step count (prices.ts, FLUX_NEURONS); a refused call is not charged.
+ * model at this size and step count (prices.ts, neuronsPerPicture); a refused call is not charged. The
+ * provider's `model` is its transcription model; it draws with `drawModel`.
  */
-export function workersAiAdapter(name: string): ModelAdapter {
+export function workersAiAdapter(name: string, provider: Provider): ModelAdapter {
+  const model = provider.drawModel ?? IMAGE_MODEL;
+  const secret = provider.secret;
   return {
     provider: name,
-    available: () => credentials() !== null,
-    models: () => [IMAGE_MODEL],
+    available: () => credentials(secret) !== null,
+    models: () => [model],
     async draw({ prompt }): Promise<ImageReply> {
-      const metered = { provider: name, model: IMAGE_MODEL };
-      const auth = credentials();
+      const metered = { provider: name, model };
+      const neurons = neuronsPerPicture[model];
+      // A picture whose neurons cannot be counted would go into the ledger as free; it is not drawn.
+      if (neurons === undefined)
+        return {
+          ...metered,
+          usage: {},
+          ok: false,
+          reason: `no neuron count for ${model}; add it to agents/_lib/prices.ts first.`,
+        };
+      const auth = credentials(secret);
       if (!auth)
         return {
           ...metered,
           usage: {},
           ok: false,
-          reason:
-            'CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_AI_TOKEN are not both set, so no picture was made.',
+          reason: `CLOUDFLARE_ACCOUNT_ID and ${secret ?? 'CLOUDFLARE_AI_TOKEN'} are not both set, so no picture was made.`,
         };
       const response = await fetch(
-        `https://api.cloudflare.com/client/v4/accounts/${auth.account}/ai/run/${IMAGE_MODEL}`,
+        `https://api.cloudflare.com/client/v4/accounts/${auth.account}/ai/run/${model}`,
         {
           method: 'POST',
           headers: { authorization: `Bearer ${auth.token}`, 'content-type': 'application/json' },
@@ -109,8 +123,20 @@ export function workersAiAdapter(name: string): ModelAdapter {
           reason: `Workers AI answered ${String(response.status)}${detail ? `: ${detail}` : ''}.${hint}`,
         };
       }
-      const usage = { neurons: FLUX_NEURONS };
-      const image = imageField(await response.json());
+      // The call succeeded, so it was charged: from here every reply carries what it used.
+      const usage = { neurons };
+      let data: unknown;
+      try {
+        data = await response.json();
+      } catch (error) {
+        return {
+          ...metered,
+          usage,
+          ok: false,
+          reason: `Workers AI's answer could not be read: ${String(error)}`,
+        };
+      }
+      const image = imageField(data);
       if (!image) return { ...metered, usage, ok: false, reason: 'Workers AI returned no image.' };
       try {
         return {

@@ -23,7 +23,7 @@ export function adapterFor(name: string, provider: Provider): ModelAdapter {
     case 'openai-images':
       return openAiImagesAdapter(name, provider);
     case 'workers-ai':
-      return workersAiAdapter(name);
+      return workersAiAdapter(name, provider);
     default:
       throw new Error(`provider "${name}" is ${provider.kind}, which has no adapter yet`);
   }
@@ -53,6 +53,15 @@ export function choose(
   const writer = named.find((a) => a.write) ?? [...adapters.values()].find((a) => a.write);
   if (!writer) throw new Error('the project declares no provider that writes');
   return { writer, drawers: named.filter((a) => a.draw) };
+}
+
+/**
+ * The model ask() calls by default: the agent's PROMPT.md when it names one, else the model the project
+ * declared for the chosen writer (its first), else the site-wide setting. Swapping the writer's model in
+ * roadbook.config.ts therefore changes what is called, priced and put on the receipt.
+ */
+export function textModel(chosen: Chosen, override: string | undefined, fallback: string): string {
+  return override ?? chosen.writer.models()[0] ?? fallback;
 }
 
 /** Every model this run may bill for has a price, checked before anything is spent. */

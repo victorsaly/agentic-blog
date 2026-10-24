@@ -10,7 +10,7 @@
 import { resolve } from 'node:path';
 import { UsageLog, costOf, describeUsage, hashOf, type AgentCardInput } from '@roadbook/core';
 import { openLedger, saveLedger } from './_lib/ledger-file.js';
-import { adapterFor, choose, connect, unpriced } from './_lib/models.js';
+import { adapterFor, choose, connect, textModel, unpriced } from './_lib/models.js';
 import { prices } from './_lib/prices.js';
 import { assertNotLedger, endState, lastState, originOf, startedBy, whyOf } from './_lib/record.js';
 import {
@@ -43,13 +43,13 @@ async function main(): Promise<void> {
     loadThought(root, slug),
   ]);
 
-  const model = prompt.meta.model ?? settings.agents.model;
   const { card } = (await import(`./${agent}/card.js`)) as { card: AgentCardInput };
   const project = await import('../roadbook.config.js');
   const adapters = new Map(
     Object.entries(project.default.providers).map(([name, p]) => [name, adapterFor(name, p)]),
   );
   const chosen = choose(card, adapters);
+  const model = textModel(chosen, prompt.meta.model, settings.agents.model);
   // Every model this run may bill for has a price, or nothing is spent.
   const missing = unpriced(chosen, model);
   if (missing.length > 0)

@@ -22,9 +22,14 @@ function firstImage(data: unknown): string | null {
   return typeof b64 === 'string' ? b64 : null;
 }
 
-const count = (value: unknown): number => (typeof value === 'number' ? value : 0);
+/** A token count as OpenAI reports it, or null when it is missing or not a count. */
+const count = (value: unknown): number | null =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : null;
 
-/** The usage OpenAI reports with an image, or null when it reports none. */
+/**
+ * The usage OpenAI reports with an image, or null when it reports none or only part of it. A missing
+ * counter is never read as zero: that would put a billed drawing into the ledger as free.
+ */
 export function imageUsage(data: unknown): Usage | null {
   if (typeof data !== 'object' || data === null) return null;
   const usage: unknown = (data as { usage?: unknown }).usage;
@@ -34,18 +39,18 @@ export function imageUsage(data: unknown): Usage | null {
     output_tokens?: unknown;
     input_tokens_details?: unknown;
   };
-  const details =
-    typeof u.input_tokens_details === 'object' && u.input_tokens_details !== null
-      ? (u.input_tokens_details as { text_tokens?: unknown; image_tokens?: unknown })
-      : null;
-  const imageInput = count(details?.image_tokens);
+  const input = count(u.input_tokens);
+  const output = count(u.output_tokens);
+  if (input === null || output === null) return null;
   // Without the split, every input token is the prompt's: there was no reference photo to count.
-  const textInput = details ? count(details.text_tokens) : count(u.input_tokens);
-  return {
-    inputTokens: textInput,
-    imageInputTokens: imageInput,
-    imageOutputTokens: count(u.output_tokens),
-  };
+  if (u.input_tokens_details === undefined)
+    return { inputTokens: input, imageInputTokens: 0, imageOutputTokens: output };
+  if (typeof u.input_tokens_details !== 'object' || u.input_tokens_details === null) return null;
+  const details = u.input_tokens_details as { text_tokens?: unknown; image_tokens?: unknown };
+  const textInput = count(details.text_tokens);
+  const imageInput = count(details.image_tokens);
+  if (textInput === null || imageInput === null) return null;
+  return { inputTokens: textInput, imageInputTokens: imageInput, imageOutputTokens: output };
 }
 
 function errorText(body: string): string {
