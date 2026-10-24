@@ -128,7 +128,13 @@ const pad = (n: number): string => String(n).padStart(2, '0');
   reading={thought.data.title}
 >
   {unnumbered && <style is:inline set:html={unnumbered} />}
-  <article data-pagefind-body data-reading-body>
+  <article
+    data-pagefind-body
+    data-pagefind-filter="kind:post"
+    data-reading-body
+    data-post={slug}
+    data-post-title={thought.data.title}
+  >
     <header class="frame opening">
       <VersionSwitch
         slug={slug}

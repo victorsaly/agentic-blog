@@ -3,6 +3,7 @@
    the message. Everything is reachable by keyboard and nothing moves unless the reader asked it to. */
 
 @import './tokens.css';
+@import './panels.css';
 
 *,
 *::before,
