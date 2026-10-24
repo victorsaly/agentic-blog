@@ -68,11 +68,15 @@ export async function checkCards(root: string): Promise<string[]> {
     const hasCard = files.includes('card.ts');
     if (!hasPrompt && !hasCard) continue;
     if (!hasPrompt) {
-      issues.push(`agents/${directory.name}: missing PROMPT.md. Fix: add the agent's model instructions.`);
+      issues.push(
+        `agents/${directory.name}: missing PROMPT.md. Fix: add the agent's model instructions.`,
+      );
       continue;
     }
     if (!hasCard) {
-      issues.push(`agents/${directory.name}: missing card.ts. Fix: add the agent facts to its card.`);
+      issues.push(
+        `agents/${directory.name}: missing card.ts. Fix: add the agent facts to its card.`,
+      );
       continue;
     }
 

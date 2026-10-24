@@ -5,7 +5,15 @@ import { coreStep, standardMetrics } from '../_lib/card-presets.js';
 export const card = defineAgentCard({
   name: 'publish',
   phase: 5,
-  reads: ['structure.md', 'versions/*.md', 'safety.md', 'security.md', 'sources.md', 'image/', 'road.md'],
+  reads: [
+    'structure.md',
+    'versions/*.md',
+    'safety.md',
+    'security.md',
+    'sources.md',
+    'image/',
+    'road.md',
+  ],
   writes: ['the pull request body', 'versions/linkedin.md (badge line appended)'],
   purpose: 'Assemble one pull request a reviewer can read in a minute, and record the road.',
   why: 'The last step before a human should make the human’s job short and honest: what is new, what changed, where to look.',

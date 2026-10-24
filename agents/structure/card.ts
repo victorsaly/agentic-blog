@@ -6,7 +6,13 @@ import { coreStep, standardMetrics } from '../_lib/card-presets.js';
 export const card = defineAgentCard({
   name: 'structure',
   phase: 2,
-  reads: ['origin/transcript.md', 'origin/answers.md', 'interview.md', 'profile.md', 'settings.yml'],
+  reads: [
+    'origin/transcript.md',
+    'origin/answers.md',
+    'interview.md',
+    'profile.md',
+    'settings.yml',
+  ],
   writes: ['structure.md'],
   purpose:
     'Find the message, the idea and the small ideas in an origin, each tagged with its themes.',
