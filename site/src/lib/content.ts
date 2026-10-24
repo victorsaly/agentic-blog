@@ -72,3 +72,14 @@ export function excerpt(text: string, words = 30): string {
   const parts = plainText(text).split(' ');
   return parts.length <= words ? parts.join(' ') : `${parts.slice(0, words).join(' ')}…`;
 }
+
+/**
+ * Splits a message at the end of its first sentence, so the highlight can cover the sentence a reader
+ * must get and the rest can stand in plain ink. A message with one sentence has an empty rest.
+ */
+export function splitFirstSentence(text: string): { first: string; rest: string } {
+  const trimmed = text.trim();
+  const match = /^(.*?[.!?…])(?:\s+|$)/s.exec(trimmed);
+  if (!match?.[1]) return { first: trimmed, rest: '' };
+  return { first: match[1], rest: trimmed.slice(match[0].length) };
+}

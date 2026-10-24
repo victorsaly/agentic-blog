@@ -18,6 +18,7 @@ import {
   leafOf,
   readingLabel,
   readingMinutes,
+  splitFirstSentence,
   thoughtSlugOf,
 } from '../../lib/content';
 import { coverOf, picturesFrom } from '../../lib/pictures';
@@ -81,6 +82,8 @@ const tabs: Tab[] = [
 ];
 const minutes = readingMinutes(long?.body ?? short?.body ?? thought.body ?? '');
 const description = excerpt(thought.data.message, 40);
+// The highlight covers the first sentence, the one a reader must get; the rest stands in plain ink.
+const message = splitFirstSentence(thought.data.message);
 ---
 
 <Page
@@ -98,7 +101,10 @@ const description = excerpt(thought.data.message, 40);
       <span>{readingLabel(minutes)} to walk the whole road</span>
     </p>
 
-    <p class="message"><mark>{thought.data.message}</mark></p>
+    <p class="message">
+      <mark>{message.first}</mark>
+      {message.rest && <span class="message-rest"> {message.rest}</span>}
+    </p>
 
     {
       cover && coverImage && (

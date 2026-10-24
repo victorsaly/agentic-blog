@@ -171,6 +171,10 @@ button:hover {
   margin: var(--space-4) 0 var(--space-5);
 }
 
+.message-rest {
+  font-weight: 700;
+}
+
 .message mark {
   background: var(--mark);
   color: var(--mark-ink);

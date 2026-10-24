@@ -20,12 +20,12 @@
   --font: var(--font-read);
   --size-body: 1.1875rem; /* 19px */
   --size-small: 0.9375rem; /* 15px */
-  --size-message: 1.75rem; /* 28px */
+  --size-message: clamp(1.375rem, 1.1rem + 1.4vw, 1.75rem); /* 22px on a phone, 28px on a desk */
   --size-title: 2.25rem; /* 36px */
   --size-h2: 1.5rem; /* 24px */
   --leading: 1.6;
   --leading-tight: 1.25;
-  --measure: 60ch;
+  --measure: 45ch; /* about 70 characters of Atkinson a line; ch is the width of a zero */
   --tracking-message: -0.005em;
 
   /* rhythm */
