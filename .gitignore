@@ -17,3 +17,7 @@ test-results/
 
 # Impeccable critique snapshots and review screenshots: local working files, regenerated each run
 .impeccable/
+
+# The pitch video's source audio: made once with ElevenLabs (npm run pitch:voice) and kept locally to re-cut
+# the video. Only the finished video, its captions and poster in site/public/media/ are committed.
+scripts/pitch/audio/

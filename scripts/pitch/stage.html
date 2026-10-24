@@ -1,0 +1,299 @@
+<!doctype html>
+<!-- Why: the stage the pitch is filmed on. scripts/pitch/record.ts serves it on the dev server's own
+     origin (so it can reach into the framed pages to zoom), fills in the site's tokens and the logo's mark,
+     and calls play().
+     It is never built into the site. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Pitch stage</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap"
+    />
+    <style>
+      /*TOKENS*/
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--font);
+      }
+      .stage {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+        background: var(--paper);
+      }
+      iframe.page {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1920px;
+        height: 1080px;
+        border: 0;
+        background: var(--paper);
+        transform-origin: 0 0;
+        transition: transform 900ms var(--ease-in-out);
+      }
+      .card {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        align-content: center;
+        padding: 0 12rem;
+        background: var(--paper);
+        border-top: var(--rule-heavy) solid var(--ink);
+      }
+      .card h1 {
+        font-size: 8rem;
+        line-height: 1.05;
+        letter-spacing: var(--tracking-display);
+        margin: 0;
+      }
+      .card h1 .w {
+        display: inline-block;
+        clip-path: inset(0 100% 0 0);
+        animation: ink 420ms var(--ease-out) forwards;
+      }
+      .card .rule {
+        height: var(--rule-heavy);
+        background: var(--ink);
+        width: 0;
+        margin-top: 3rem;
+        animation: rule 700ms var(--ease-out) forwards;
+      }
+      .card .sub {
+        font-size: 3.4rem;
+        font-weight: 700;
+        margin: 2.4rem 0 0;
+        opacity: 0;
+        animation: up 500ms var(--ease-out) forwards;
+      }
+      .card .sub mark {
+        background: var(--mark);
+        color: var(--mark-ink);
+        padding: 0 0.3em;
+      }
+      @keyframes ink {
+        to {
+          clip-path: inset(0 0 0 0);
+        }
+      }
+      @keyframes rule {
+        to {
+          width: 40%;
+        }
+      }
+      @keyframes up {
+        from {
+          opacity: 0;
+          transform: translateY(18px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      .wipe {
+        position: absolute;
+        inset: 0;
+        background: var(--ink);
+        transform: translateX(-102%);
+        z-index: 20;
+      }
+      .wipe.go {
+        animation: wipe 560ms var(--ease-in-out) forwards;
+      }
+      @keyframes wipe {
+        0% {
+          transform: translateX(-102%);
+        }
+        45%,
+        55% {
+          transform: translateX(0);
+        }
+        100% {
+          transform: translateX(102%);
+        }
+      }
+      .caption {
+        position: absolute;
+        left: 7rem;
+        bottom: 5rem;
+        z-index: 10;
+        background: var(--paper);
+        border: var(--rule-strong) solid var(--ink);
+        padding: 1.1rem 2rem 1rem;
+        font-size: 3.4rem;
+        font-weight: 700;
+        line-height: 1.1;
+        opacity: 0;
+        transform: translateY(30px);
+        transition:
+          opacity 360ms var(--ease-out),
+          transform 460ms var(--ease-out);
+      }
+      .caption.on {
+        opacity: 1;
+        transform: none;
+      }
+      /* the name, on every frame: above the wipe, so even a cut never hides it */
+      .logo {
+        position: absolute;
+        right: 3rem;
+        bottom: 3rem;
+        z-index: 30;
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        background: var(--ink);
+        color: var(--paper);
+        /* a paper edge, so the name still reads while the ink wipe passes under it */
+        outline: var(--rule-strong) solid var(--paper);
+        padding: 0.6rem 1.3rem 0.6rem 1.1rem;
+        font-size: 2.8rem;
+        line-height: 1;
+        letter-spacing: var(--tracking-display);
+      }
+      /* the mark from site/public/logo/mark.svg, drawn in currentColor: paper lines on the ink block */
+      .logo svg {
+        height: 1.3em;
+        width: auto;
+      }
+      .logo b {
+        font-weight: 700;
+      }
+      .logo i {
+        font-weight: 400;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage" id="stage"></div>
+    <div class="wipe" id="wipe"></div>
+    <div class="caption" id="caption"></div>
+    <div class="logo" aria-label="Agentic Blog">
+      <!--MARK-->
+      <span><b>Agentic</b><i>Blog</i></span>
+    </div>
+    <script>
+      // play(timeline): each scene is {start, dur, kind: 'card'|'page', ...}, as in scripts/pitch/scenes.ts.
+      const stage = document.getElementById('stage');
+      const wipe = document.getElementById('wipe');
+      const caption = document.getElementById('caption');
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      const esc = (s) =>
+        String(s ?? '').replace(
+          /[&<>"']/g,
+          (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+        );
+
+      function card(sc, beat) {
+        let k = 0;
+        const lines = sc.lines
+          .map((line) =>
+            line
+              .split(' ')
+              .map(
+                (w) =>
+                  `<span class="w" style="animation-delay:${k++ * beat * 0.5}ms">${esc(w)}</span>`,
+              )
+              .join(' '),
+          )
+          .join('<br>');
+        const d = k * beat * 0.5 + 150;
+        const sub = sc.sub
+          ? `<p class="sub" style="animation-delay:${d + 300}ms"><mark>${esc(sc.sub)}</mark></p>`
+          : '';
+        return `<div class="card"><h1>${lines}</h1><div class="rule" style="animation-delay:${d}ms"></div>${sub}</div>`;
+      }
+
+      function zoomInto(frame, selector, scale) {
+        const el = frame.contentDocument?.querySelector(selector);
+        if (!el) return;
+        // the frame cannot pan past its own edges, so bring the target to the middle first
+        el.scrollIntoView({ block: 'center', behavior: 'instant' });
+        const r = el.getBoundingClientRect();
+        const s =
+          scale ?? Math.max(1, Math.min(2.2, (1920 * 0.86) / r.width, (1080 * 0.7) / r.height));
+        const tx = Math.min(0, Math.max(1920 - 1920 * s, 960 - s * (r.left + r.width / 2)));
+        const ty = Math.min(0, Math.max(1080 - 1080 * s, 540 - s * (r.top + r.height / 2)));
+        frame.style.transform = `translate(${tx}px, ${ty}px) scale(${s})`;
+      }
+
+      async function page(sc, t0) {
+        const f = document.createElement('iframe');
+        f.className = 'page';
+        f.src = sc.path;
+        // the dev server's toolbar is not part of the site
+        f.addEventListener('load', () => {
+          const hide = f.contentDocument?.createElement('style');
+          if (!hide) return;
+          hide.textContent = 'astro-dev-toolbar { display: none !important; }';
+          f.contentDocument.head.append(hide);
+        });
+        stage.replaceChildren(f);
+        for (const a of sc.actions || []) {
+          const at = t0 + (sc.start + a.t) * 1000 - performance.now();
+          if (at > 0) await wait(at);
+          try {
+            if (a.open) {
+              const d = f.contentDocument?.querySelector(a.open);
+              if (d) d.open = true;
+            }
+            if (a.at) {
+              // the frame may still be loading: wait for the section, then jump without animating
+              for (let k = 0; k < 20 && !f.contentDocument?.querySelector(a.at); k++)
+                await wait(100);
+              const el = f.contentDocument?.querySelector(a.at);
+              if (el)
+                f.contentWindow.scrollTo({
+                  top: el.getBoundingClientRect().top + f.contentWindow.scrollY - 96,
+                  behavior: 'instant',
+                });
+            }
+            if (a.zoom) zoomInto(f, a.zoom, a.scale);
+            if (a.drift) f.contentWindow?.scrollBy({ top: a.drift, behavior: 'smooth' });
+          } catch {
+            // the frame is still loading
+          }
+        }
+      }
+
+      async function play(timeline) {
+        const beat = 60000 / timeline.bpm;
+        const t0 = performance.now();
+        for (let i = 0; i < timeline.scenes.length; i++) {
+          const sc = timeline.scenes[i];
+          const startAt = t0 + sc.start * 1000;
+          if (i > 0) {
+            // the ink wipe covers the cut, centred on the scene boundary
+            const pre = startAt - 280 - performance.now();
+            if (pre > 0) await wait(pre);
+            wipe.classList.remove('go');
+            void wipe.offsetWidth;
+            wipe.classList.add('go');
+          }
+          await wait(Math.max(0, startAt - performance.now()));
+          caption.classList.remove('on');
+          if (sc.kind === 'card') stage.innerHTML = card(sc, beat);
+          else void page(sc, t0);
+          if (sc.caption) {
+            setTimeout(() => {
+              caption.textContent = sc.caption;
+              caption.classList.add('on');
+            }, sc.captionAt * 1000);
+          }
+        }
+        const end = timeline.scenes.at(-1);
+        await wait(Math.max(0, t0 + (end.start + end.dur) * 1000 - performance.now()));
+      }
+      window.play = play;
+    </script>
+  </body>
+</html>

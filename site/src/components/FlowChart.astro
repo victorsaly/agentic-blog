@@ -1,0 +1,175 @@
+---
+// Why: some explanations are a picture of boxes and arrows (the route, the paper trail). These are written
+// as Mermaid text, the same way the business-analyst demo's docs draw theirs, and drawn in the browser in
+// the site's own ink, paper and type, in both themes. A picture that wide shrinks past reading on a phone,
+// so there, and wherever script is off, the same steps show as a numbered list in the site's own type.
+interface Props {
+  /** Mermaid source; start it with accTitle and accDescr so a screen reader hears the picture. */
+  source: string;
+  caption: string;
+  /** The same picture as a numbered list, for a phone and for a page without script. */
+  steps: { label: string; detail?: string }[];
+}
+
+const { source, caption, steps } = Astro.props;
+---
+
+<figure class="flow-chart">
+  <pre class="mermaid-source" data-source={source} aria-hidden="true"></pre>
+  <ol class="flow-steps">
+    {
+      steps.map((s) => (
+        <li>
+          <b>{s.label}</b>
+          {s.detail && <span>{s.detail}</span>}
+        </li>
+      ))
+    }
+  </ol>
+  <figcaption>{caption}</figcaption>
+</figure>
+
+<script>
+  // Mermaid is large: it loads only where a chart is shown as a picture (not on a phone), after the page is up.
+  const charts = [...document.querySelectorAll<HTMLPreElement>('pre.mermaid-source')];
+  const wide = matchMedia('(min-width: 40rem)');
+
+  async function draw(): Promise<void> {
+    if (!wide.matches) return;
+    // Mermaid sizes each box from the text; measured before the font arrives, the labels sit off centre.
+    await document.fonts.ready;
+    const { default: mermaid } = await import('mermaid');
+    const css = getComputedStyle(document.documentElement);
+    const token = (name: string): string => css.getPropertyValue(name).trim();
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: 'strict',
+      theme: 'base',
+      fontFamily: token('--font'),
+      flowchart: {
+        curve: 'linear',
+        htmlLabels: true,
+        padding: 14,
+        nodeSpacing: 36,
+        rankSpacing: 44,
+      },
+      themeVariables: {
+        background: token('--paper'),
+        primaryColor: token('--paper'),
+        primaryTextColor: token('--ink'),
+        primaryBorderColor: token('--ink'),
+        secondaryColor: token('--field'),
+        tertiaryColor: token('--field'),
+        lineColor: token('--ink'),
+        textColor: token('--ink'),
+        clusterBkg: token('--paper'),
+        clusterBorder: token('--rule'),
+        edgeLabelBackground: token('--paper'),
+        fontSize: '16px',
+      },
+    });
+    for (const [i, pre] of charts.entries()) {
+      const source = pre.dataset.source ?? '';
+      try {
+        const { svg } = await mermaid.render(`flow-chart-${String(i)}`, source);
+        pre.innerHTML = svg;
+        pre.closest('.flow-chart')?.classList.add('drawn');
+        pre.removeAttribute('aria-hidden');
+      } catch {
+        /* a chart that will not draw stays as its list */
+      }
+    }
+  }
+
+  if (charts.length > 0) {
+    void draw();
+    // The theme switch changes the tokens: draw again in the new ink. Widening a phone draws it for the first time.
+    new MutationObserver(() => void draw()).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme', 'data-font'],
+    });
+    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => void draw());
+    wide.addEventListener('change', () => void draw());
+  }
+</script>
+
+<style>
+  .flow-chart {
+    margin: var(--space-4) 0 var(--space-5);
+  }
+  pre {
+    display: none;
+    margin: 0;
+    padding: var(--space-4) var(--space-3);
+    border: var(--rule-width) solid var(--ink);
+    background: var(--paper);
+    overflow-x: auto;
+    text-align: center;
+  }
+  /* Drawn, on a screen wide enough to read it: the picture replaces the list. */
+  @media (min-width: 40rem) {
+    .drawn pre {
+      display: block;
+    }
+    .drawn .flow-steps {
+      display: none;
+    }
+  }
+  /* Mermaid names its node text .label, which is also the site's capitals-on-a-rule label: undo that here. */
+  pre :global(.label) {
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: inherit;
+    font-weight: 400;
+    line-height: var(--leading-tight);
+    border: 0;
+    padding: 0;
+    max-width: none;
+  }
+  pre :global(svg) {
+    max-width: 100%;
+    height: auto;
+  }
+  /* The list: boxes joined by a rule, like a flow diagram in a post. */
+  .flow-steps {
+    list-style: none;
+    counter-reset: step;
+    margin: 0;
+    padding: 0;
+    max-width: var(--measure);
+  }
+  .flow-steps li {
+    counter-increment: step;
+    position: relative;
+    border: var(--rule-width) solid var(--ink);
+    padding: var(--space-2) var(--space-3);
+  }
+  .flow-steps li + li {
+    margin-top: var(--space-3);
+  }
+  .flow-steps li + li::before {
+    content: '';
+    position: absolute;
+    left: var(--space-4);
+    top: calc(-1 * var(--space-3) - 1px);
+    height: var(--space-3);
+    border-left: var(--rule-width) solid var(--ink);
+  }
+  .flow-steps b {
+    display: block;
+  }
+  .flow-steps b::before {
+    content: counter(step) '. ';
+  }
+  .flow-steps span {
+    display: block;
+    font-size: var(--size-small);
+    color: var(--quiet);
+  }
+  figcaption {
+    margin-top: var(--space-2);
+    font-size: var(--size-small);
+    color: var(--quiet);
+    max-width: var(--measure);
+  }
+</style>

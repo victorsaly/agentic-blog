@@ -70,6 +70,13 @@
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --duration-panel: 220ms;
   --duration-press: 160ms;
+  --ease-in-out: cubic-bezier(
+    0.77,
+    0,
+    0.175,
+    1
+  ); /* something moving across the page, like the tour */
+  --duration-travel: 520ms; /* the tour's ink running from one station to the next */
 
   color-scheme: light dark;
 }

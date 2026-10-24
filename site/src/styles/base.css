@@ -4,6 +4,7 @@
 
 @import './tokens.css';
 @import './panels.css';
+@import './tour.css';
 
 *,
 *::before,

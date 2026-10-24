@@ -1,0 +1,859 @@
+---
+// Why: this page sells the agentic blog to someone who thinks out loud, and then proves it. It opens with
+// the promise and a print of the blogger, shows a real note beside the message it became (read from the
+// post's own files, so the page cannot tidy the proof), says what changes, and plays the road a thought
+// takes. Everything a sceptic or a builder wants to check (the agents, the route, the files, the sources)
+// sits folded underneath, one layer down, so the pitch stays short and nothing is hidden.
+import { Image } from 'astro:assets';
+import { parse } from 'yaml';
+import Page from '../layouts/Page.astro';
+import FlowChart from '../components/FlowChart.astro';
+import { Tour } from '../islands/Tour';
+import { tour } from '../lib/tour';
+import { firstSentence, phases, rosterFrom } from '../lib/agents';
+import { settings } from '../lib/settings';
+// The hero print shows the route, not the blogger; site/src/assets/how-it-works/prompts.md says how it was drawn.
+import cover from '../assets/how-it-works/hands-around-one-page.png';
+import originRaw from '../../../thoughts/2026-10-23-productive-friction-counts-evidence/origin/text.md?raw';
+import structureRaw from '../../../thoughts/2026-10-23-productive-friction-counts-evidence/structure.md?raw';
+
+const repo = 'https://github.com/victorsaly/agentic-blog';
+const proofSlug = '2026-10-23-productive-friction-counts-evidence';
+
+// The proof: the first lines of the note exactly as written, and the message and why the post was given.
+const body = originRaw.replace(/^---[\s\S]*?\n---\n/, '');
+const said = body
+  .split('\n')
+  .map((l) => l.trim())
+  .filter(Boolean)
+  .slice(2, 5);
+const structure = parse(/^---\r?\n([\s\S]*?)\r?\n---/.exec(structureRaw)?.[1] ?? '') as {
+  message?: unknown;
+  why?: unknown;
+  title?: unknown;
+};
+const text = (v: unknown): string => (typeof v === 'string' ? v.trim().replace(/\s+/g, ' ') : '');
+const message = text(structure.message);
+const cuts = text(structure.why);
+
+const prompts = import.meta.glob<string>('../../../agents/*/PROMPT.md', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
+const roster = rosterFrom(Object.values(prompts));
+const byPhase = Object.entries(phases)
+  .map(([n, name]) => ({ n: Number(n), name, agents: roster.filter((a) => a.phase === Number(n)) }))
+  .filter((p) => p.agents.length > 0);
+
+const route = `flowchart TD
+  accTitle: The route a thought takes
+  accDescr: From the studio to a pull request, through the interview and structure agents, five makers side by side, two agents that can hold, the publish agent, and a human merge. Feedback after publishing reworks the post, and a pattern of feedback changes the route.
+  S["Studio<br/>voice or text"] -->|"lands as"| O["Pull request: new origin<br/>words exactly as said"]
+  O -->|"agent:interview"| I["interview<br/>asks what is missing"]
+  I -->|"you answer"| ST["structure<br/>message · idea · road"]
+  ST --> C["convert<br/>short · long · LinkedIn"]
+  ST --> IM["image<br/>a linocut print"]
+  ST --> D["diagram<br/>boxes, when earned"]
+  ST --> CI["citations<br/>a door out per claim"]
+  ST --> DR["drilldown<br/>wiki pages"]
+  C --> G{"safety + security<br/>pass or hold"}
+  IM --> G
+  D --> G
+  CI --> G
+  DR --> G
+  G -->|"hold, with a reason"| H["Check fails<br/>until you look"]
+  G -->|"pass"| P["publish<br/>one readable pull request"]
+  P --> M(["You merge"])
+  M --> L["Live, with a switch<br/>to the original"]
+  L -.->|"a note about it"| F["feedback<br/>reworks the post"]
+  F -.->|"same note three times"| R["A proposed change<br/>to a prompt or the profile"]`;
+
+const trail = `flowchart LR
+  accTitle: What every post folder holds
+  accDescr: The origin feeds the structure; the structure feeds the versions and the image; the versions feed the sources and the road; feedback notes rework the versions.
+  O["origin/<br/>your words, never edited"] --> S["structure.md<br/>the point, cut three ways"]
+  S --> V["versions/<br/>short · long · LinkedIn<br/>each with its why"]
+  S --> IMG["image/<br/>the print and its prompt"]
+  V --> SRC["sources.md<br/>every claim, every link"]
+  V --> RD["road.md<br/>who ran, in what order,<br/>told what"]
+  FB["feedback/<br/>your notes on the output"] -.-> V`;
+
+const trailSteps = [
+  { label: 'origin/', detail: 'your words, never edited' },
+  { label: 'structure.md', detail: 'the point, cut three ways' },
+  { label: 'versions/ and image/', detail: 'each version and the print, each with its why' },
+  {
+    label: 'sources.md and road.md',
+    detail: 'every claim’s link; who ran, in what order, told what',
+  },
+  { label: 'feedback/', detail: 'your notes on the output, which rework the versions' },
+];
+---
+
+<Page
+  title="How it works"
+  description="Talk or paste a thought; a team of AI agents makes it a complete blog post that keeps your words, shows every change and why, and names its sources. Nothing goes live without you."
+  width="wide"
+>
+  <section class="hero frame" aria-labelledby="hero-title">
+    <div class="hero-text">
+      <p class="label">How it works</p>
+      <h1 id="hero-title">Talk it out. Publish something you can stand behind.</h1>
+      <p class="lead">
+        Say what you think, or paste what you wrote. A small team of AI agents tidies it into a
+        clear, well-made post that keeps your words, shows what changed and why, and names its
+        sources. Nothing goes live until you say so.
+      </p>
+      <div class="actions">
+        <a class="control filled" href="#proof">See a real one</a>
+        <a class="control" href="#tour">Hear the tour</a>
+        <a class="control" href="#film">Watch the minute</a>
+      </div>
+    </div>
+    <figure class="hero-print">
+      <Image
+        src={cover}
+        alt="Hands hold one sheet of paper: one holds a microphone to it, one a rubber stamp above it."
+        width={560}
+        height={560}
+        loading="eager"
+      />
+      <figcaption class="small quiet">
+        Every post gets a linocut print. This one is the route: your words go in, many hands work on
+        the page, and you hold the stamp.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="frame" id="film" aria-labelledby="film-title">
+    <p class="label">The pitch</p>
+    <h2 id="film-title">The whole idea in one minute</h2>
+    <!-- Made by scripts/pitch from the real site; the voice and music are listed in docs/audio-sources.md. -->
+    <video
+      class="film"
+      controls
+      playsinline
+      preload="none"
+      poster="/media/pitch.jpg"
+      width="1920"
+      height="1080"
+    >
+      <source src="/media/pitch.mp4" type="video/mp4" />
+      <track kind="captions" src="/media/pitch.vtt" srclang="en" label="English" default />
+    </video>
+  </section>
+
+  <section class="frame" id="proof" aria-labelledby="proof-title">
+    <p class="label">A real one</p>
+    <h2 id="proof-title">What was written, and what was published</h2>
+    <div class="proof">
+      <div class="said-raw">
+        <p class="side-label">As it was typed, untouched</p>
+        <blockquote>
+          {said.map((line) => <p>{line}</p>)}
+        </blockquote>
+      </div>
+      <div class="said-tidy">
+        <p class="side-label">The message it became</p>
+        <p class="message"><mark>{message}</mark></p>
+      </div>
+    </div>
+    <div class="cuts">
+      <p class="side-label">And what was left out, in its own words</p>
+      <p>{cuts}</p>
+    </div>
+    <div class="actions">
+      <a class="control" href={`/thoughts/${proofSlug}`}>Read the post</a>
+      <a class="control" href={`/thoughts/${proofSlug}/origin`}>Open the original</a>
+    </div>
+  </section>
+
+  <section class="frame" id="pitch" aria-labelledby="pitch-title">
+    <p class="label">What changes</p>
+    <h2 id="pitch-title">Say more, type less, and show your working</h2>
+    <div class="compare">
+      <div class="side">
+        <p class="side-label">Writing it yourself</p>
+        <ul>
+          <li>The idea arrives on a walk and is gone by the time you sit down.</li>
+          <li>A blank page, an evening, and a post that sounds like everyone else's.</li>
+          <li>Readers can't tell what you said from what a tool added.</li>
+          <li>A claim with nothing behind it.</li>
+        </ul>
+      </div>
+      <div class="side after">
+        <p class="side-label">Talking it out here</p>
+        <ul>
+          <li>A few minutes of talking, a few answers, one read-through.</li>
+          <li>A post in your own voice, learned from your own words.</li>
+          <li>A switch to the original on every post, and a note on every change.</li>
+          <li>Every claim with a source, checked before it goes out.</li>
+        </ul>
+      </div>
+    </div>
+    <ul class="promises">
+      <li>
+        <p class="promise">Your words, kept</p>
+        <p>The original stays exactly as it came out, one switch away on every post.</p>
+      </li>
+      <li>
+        <p class="promise">Every change has a why</p>
+        <p>Each file says why it was written that way. Without one, nothing is built.</p>
+      </li>
+      <li>
+        <p class="promise">You press publish</p>
+        <p>The agents only ever propose. You read it, and you decide.</p>
+      </li>
+    </ul>
+  </section>
+
+  <section class="frame" id="tour" aria-labelledby="tour-title">
+    <p class="label">The tour</p>
+    <h2 id="tour-title">From a voice note to a post, in {tour.length} stations</h2>
+    <p class="intro">
+      Press Play to hear it, or step through it yourself. Every word the voice says is on screen.
+    </p>
+    <Tour client:visible stations={tour} />
+    <p class="small quiet">
+      Voice made with ElevenLabs. How each clip was made, and with which voice, is written down in <a
+        href={`${repo}/blob/main/docs/audio-sources.md`}>docs/audio-sources.md</a
+      >.
+    </p>
+  </section>
+
+  <section class="frame" id="underneath" aria-labelledby="underneath-title">
+    <p class="label">Everything underneath</p>
+    <h2 id="underneath-title">For anyone who wants to check</h2>
+    <p class="intro">
+      Nothing here is hidden. Open any part to see the agents, the route a post takes, the files it
+      leaves behind and every service it uses.
+    </p>
+
+    <details class="layer" id="agents">
+      <summary>
+        <span class="layer-name">The agents</span>
+        <span class="quiet">{roster.length} of them, one job each</span>
+      </summary>
+      <div class="layer-body">
+        <p class="intro">
+          Each agent does one thing, reads the blogger's profile first, and writes its why at the
+          top of everything it makes. Two of them can only say no. This list is read from the
+          agents' own instructions every time the site is built.
+        </p>
+        {
+          byPhase.map((p) => (
+            <div class="phase">
+              <h3>
+                <span class="quiet">Phase {p.n}</span> {p.name}
+              </h3>
+              <ul class="roster">
+                {p.agents.map((a) => (
+                  <li>
+                    <details>
+                      <summary>
+                        <b>{a.name}</b>
+                        <span>{firstSentence(a.why)}</span>
+                        {a.canHold && <span class="tag">Can stop a post</span>}
+                      </summary>
+                      <div class="more">
+                        <p>{a.why}</p>
+                        <dl>
+                          <dt>Reads</dt>
+                          <dd>
+                            {a.reads.map((r) => (
+                              <code>{r}</code>
+                            ))}
+                          </dd>
+                          <dt>Writes</dt>
+                          <dd>
+                            {a.writes.map((w) => (
+                              <code>{w}</code>
+                            ))}
+                          </dd>
+                        </dl>
+                        <a class="control" href={`${repo}/blob/main/agents/${a.name}/PROMPT.md`}>
+                          Its instructions, word for word
+                        </a>
+                      </div>
+                    </details>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        }
+      </div>
+    </details>
+
+    <details class="layer" id="route">
+      <summary>
+        <span class="layer-name">The route</span>
+        <span class="quiet">who goes when, and who decides</span>
+      </summary>
+      <div class="layer-body">
+        <p class="intro">
+          There is no hidden pipeline. Every step is a pull request on GitHub, and each agent is
+          called by a label on it. The route is visible, reversible and written down.
+        </p>
+        <FlowChart
+          source={route}
+          caption="Solid arrows are the road to publishing; dotted arrows are what happens after, when you talk back. The diamond is the only place an agent can stop a post, and it says why."
+          steps={tour.map((s) => ({ label: s.name, detail: s.job }))}
+        />
+        <table>
+          <thead>
+            <tr><th scope="col">You do this</th><th scope="col">This happens</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Record or paste in the studio</td>
+              <td>A pull request opens with your words, unedited, as the origin</td>
+            </tr>
+            <tr>
+              <td>Add the label <code>agent:&lt;name&gt;</code></td>
+              <td>That one agent runs on that one thought and commits its files to it</td>
+            </tr>
+            <tr>
+              <td>An agent holds</td>
+              <td>Its reason is committed and the check fails, so nothing merges by accident</td>
+            </tr>
+            <tr>
+              <td>Merge</td>
+              <td>The post goes live. Nothing else can publish</td>
+            </tr>
+            <tr>
+              <td>Record a note about the output</td>
+              <td>The feedback agent reworks only what the note is about</td>
+            </tr>
+          </tbody>
+        </table>
+        <h3 class="sub">Why labels, and not an automatic chain</h3>
+        <div class="prose">
+          <p>
+            An automatic chain is faster, and harder to trust. With a label per agent, every run is
+            a commit you can read, with the agent's name on it and its why at the top of every file
+            it wrote. If one goes wrong you undo that commit and run it again, without starting
+            over.
+          </p>
+          <p>
+            The order follows the phases: ask, shape, make, then check and send. The profile agent
+            learns in the background, from your words and from what you change in review; it only
+            ever proposes, as its own pull request. The labels can be added by a schedule later. The
+            last step never changes: a person merges.
+          </p>
+        </div>
+      </div>
+    </details>
+
+    <details class="layer" id="trail">
+      <summary>
+        <span class="layer-name">The paper trail</span>
+        <span class="quiet">what every post carries</span>
+      </summary>
+      <div class="layer-body">
+        <p class="intro">
+          A post is a folder, not just a page. Everything an agent read, wrote or was told is in it,
+          each file with a reason at the top.
+        </p>
+        <FlowChart
+          source={trail}
+          caption="One folder per thought. The origin is never edited: a correction is a new origin."
+          steps={trailSteps}
+        />
+        <table>
+          <thead>
+            <tr><th scope="col">File</th><th scope="col">What it proves</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>origin/</code></td><td>What you actually said, before any tidying</td></tr
+            >
+            <tr
+              ><td><code>structure.md</code></td><td>What the point was taken to be, and why</td
+              ></tr
+            >
+            <tr>
+              <td><code>versions/</code></td>
+              <td>Each version, which origin it came from, what changed and why</td>
+            </tr>
+            <tr>
+              <td><code>sources.md</code></td><td
+                >Where each claim comes from, and that it was checked</td
+              >
+            </tr>
+            <tr
+              ><td><code>image/</code></td><td
+                >The drawing and the exact prompt it was drawn from</td
+              ></tr
+            >
+            <tr
+              ><td><code>road.md</code></td><td
+                >Which agents ran, in which order, with which instructions</td
+              ></tr
+            >
+            <tr
+              ><td><code>feedback/</code></td><td>What you asked to change after reading it</td></tr
+            >
+          </tbody>
+        </table>
+        <a class="control" href={`${repo}/tree/main/thoughts/${proofSlug}`}
+          >See the whole folder for the post above</a
+        >
+      </div>
+    </details>
+
+    <details class="layer" id="sources">
+      <summary>
+        <span class="layer-name">What it uses</span>
+        <span class="quiet">every source and service, and where it is written down</span>
+      </summary>
+      <div class="layer-body">
+        <p class="intro">
+          Your words are the only facts a post starts from. Everything else it leans on is listed
+          here.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Source</th><th scope="col">What it is for</th><th scope="col"
+                >Written down in</th
+              >
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              ><td>Your voice or text</td><td>The thought itself</td><td><code>origin/</code></td
+              ></tr
+            >
+            <tr>
+              <td>Your answers</td><td>The context a stranger needs</td><td
+                ><code>origin/answers.md</code></td
+              >
+            </tr>
+            <tr>
+              <td>Your profile</td><td>How you talk; every agent reads it first</td><td
+                ><code>profile.md</code></td
+              >
+            </tr>
+            <tr>
+              <td>Site settings</td>
+              <td>Name, languages, themes, the drawing style, the publish switch</td>
+              <td><code>settings.yml</code></td>
+            </tr>
+            <tr>
+              <td>Claude, by Anthropic</td>
+              <td>The thinking agents, and a review of every drawing</td>
+              <td><code>road.md</code>, <code>settings.yml</code></td>
+            </tr>
+            <tr>
+              <td>The web, through Claude's search</td>
+              <td>A source for each claim, and the wiki pages</td>
+              <td><code>sources.md</code>, <code>wiki/</code></td>
+            </tr>
+            <tr>
+              <td>Workers AI, by Cloudflare</td><td>Turning the voice note into text</td><td
+                >The origin pull request</td
+              >
+            </tr>
+            <tr>
+              <td>OpenAI's image model</td><td>The linocut drawings</td><td
+                ><code>image/prompts.md</code></td
+              >
+            </tr>
+            <tr>
+              <td>ElevenLabs</td><td>The voice on the tour</td><td
+                ><code>docs/audio-sources.md</code></td
+              >
+            </tr>
+            <tr>
+              <td>Cloudflare</td><td>Hosting, the audio store, the studio's sign-in</td><td
+                ><code>site/wrangler.toml</code></td
+              >
+            </tr>
+            <tr>
+              <td>GitHub</td><td>Every pull request and every agent run</td><td
+                >The repository's history</td
+              >
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+
+    <details class="layer" id="road">
+      <summary>
+        <span class="layer-name">Why it is built this way</span>
+        <span class="quiet">the long version</span>
+      </summary>
+      <div class="layer-body prose">
+        <p>
+          Most of what people think never gets written down. Not because it isn't worth reading, but
+          because writing it properly takes an evening nobody has. Talking takes two minutes. The
+          gap between the two is where this blog lives.
+        </p>
+        <p>
+          AI can already turn a ramble into a tidy post. The trouble is what you lose: you can't
+          tell any more what the person said and what the machine added, which claims are theirs,
+          and which ones it made up with confidence. A post you can't check is a post you can't
+          trust, however well it reads.
+        </p>
+        <p>
+          So the rule here is the other way round. The thought is kept first, exactly as it came
+          out, and never edited. Everything after it is a version that points back to it, and every
+          file a version is made of starts with why it was made that way.
+        </p>
+        <p>
+          The work is split between small agents, one job each, because a small job is easy to check
+          and easy to fix. Each reads the same profile of how the blogger talks, so the post sounds
+          like a person and not like the average of the internet. Every post can be read at three
+          depths: the message in a few lines, the idea on one screen, and the road, with everything
+          behind it.
+        </p>
+        <p>
+          And at the end there is always a person. When the output goes the wrong way, the blogger
+          says so out loud, and the post is reworked. When the same complaint comes three times, the
+          instructions that caused it are changed. The complaint fixes the post; the pattern of
+          complaints fixes the machine.
+        </p>
+      </div>
+    </details>
+  </section>
+
+  <section class="close frame" aria-labelledby="close-title">
+    <h2 id="close-title">Want one for your own thoughts?</h2>
+    <p class="lead">
+      The engine is open source. Run it yourself, or get in touch about setting it up for you or
+      your team.
+    </p>
+    <div class="actions">
+      <a class="control filled" href={`mailto:${settings.site.email}?subject=The%20agentic%20blog`}
+        >Get in touch</a
+      >
+      <a class="control" href={repo}>The code on GitHub</a>
+    </div>
+  </section>
+</Page>
+
+<style>
+  section {
+    padding-block: var(--space-6) 0;
+  }
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: var(--space-5);
+    align-items: end;
+    padding-top: var(--space-5);
+  }
+  .hero h1 {
+    font-size: var(--size-display);
+    line-height: 1.02;
+    letter-spacing: var(--tracking-display);
+    max-width: 16ch;
+    margin: var(--space-4) 0 var(--space-4);
+    text-wrap: balance;
+  }
+  .hero-print {
+    margin: 0;
+  }
+  .hero-print :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: var(--print-paper);
+    padding: var(--print-pad);
+    filter: var(--print-filter);
+  }
+  .hero-print figcaption {
+    margin-top: var(--space-2);
+  }
+  .lead {
+    font-size: var(--size-message);
+    line-height: 1.4;
+    max-width: 34ch;
+    margin: 0 0 var(--space-4);
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+  }
+  .actions .control {
+    font-size: var(--size-body);
+    padding-inline: var(--space-3);
+  }
+  section > h2 {
+    font-size: var(--size-title);
+    line-height: 1.1;
+    max-width: 22ch;
+    margin: var(--space-4) 0 var(--space-3);
+  }
+  .intro,
+  .prose {
+    max-width: var(--measure);
+  }
+  .film {
+    display: block;
+    width: 100%;
+    max-width: 64rem;
+    height: auto;
+    margin-top: var(--space-4);
+  }
+  .side-label {
+    font-weight: 700;
+    margin: 0 0 var(--space-2);
+  }
+
+  /* The proof: the raw note in the reader's own type, quiet; the message it became, marked. */
+  .proof {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    gap: var(--space-5);
+    margin-top: var(--space-4);
+  }
+  .said-raw,
+  .said-tidy,
+  .cuts {
+    border-top: var(--rule-strong) solid var(--ink);
+    padding-top: var(--space-3);
+  }
+  .said-raw blockquote {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .said-raw blockquote p {
+    margin: 0 0 var(--space-2);
+    color: var(--quiet);
+  }
+  .message {
+    font-size: var(--size-message);
+    line-height: 1.4;
+    letter-spacing: var(--tracking-message);
+    margin: 0;
+  }
+  .message mark {
+    background: var(--mark);
+    color: var(--mark-ink);
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+    padding: 0 0.15em;
+  }
+  .cuts {
+    margin-top: var(--space-5);
+    max-width: var(--measure);
+    border-top-width: var(--rule-width);
+  }
+  .cuts p:last-child {
+    margin: 0;
+  }
+
+  .compare {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    gap: var(--space-5);
+    margin: var(--space-4) 0 0;
+  }
+  .side {
+    border-top: var(--rule-strong) solid var(--rule);
+    padding-top: var(--space-3);
+  }
+  .side.after {
+    border-top-color: var(--ink);
+  }
+  .side ul {
+    padding-left: 1.1em;
+    margin: 0;
+  }
+  .side:not(.after) li {
+    color: var(--quiet);
+  }
+  .side li + li {
+    margin-top: var(--space-2);
+  }
+  .promises {
+    max-width: none;
+    list-style: none;
+    padding: 0;
+    margin: var(--space-5) 0 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: var(--space-5);
+  }
+  .promises li {
+    border-top: var(--rule-width) solid var(--ink);
+    padding-top: var(--space-3);
+  }
+  .promises p {
+    margin: 0;
+    max-width: 30ch;
+  }
+  .promise {
+    font-size: var(--size-h2);
+    font-weight: 700;
+    line-height: var(--leading-tight);
+    margin-bottom: var(--space-2) !important;
+  }
+
+  /* Everything underneath: one ruled row per part, opened on request. */
+  .layer {
+    max-width: none;
+    border-bottom: var(--rule-width) solid var(--ink);
+  }
+  .layer:first-of-type {
+    margin-top: var(--space-4);
+    border-top: var(--rule-strong) solid var(--ink);
+  }
+  .layer > summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-1) var(--space-3);
+    min-height: var(--tap);
+    padding: var(--space-3) 0;
+    cursor: pointer;
+    list-style: none;
+  }
+  .layer > summary::-webkit-details-marker {
+    display: none;
+  }
+  .layer-name {
+    font-size: var(--size-h2);
+    font-weight: 700;
+  }
+  .layer-name::before {
+    content: '+';
+    display: inline-block;
+    width: 1.2em;
+    font-weight: 400;
+  }
+  .layer[open] .layer-name::before {
+    content: '−';
+  }
+  .layer-body {
+    padding: 0 0 var(--space-5);
+  }
+  .layer-body > .intro:first-child {
+    margin-top: 0;
+  }
+  .sub {
+    font-size: var(--size-body);
+    margin: var(--space-5) 0 var(--space-2);
+  }
+
+  .phase {
+    margin-top: var(--space-5);
+    max-width: 60rem;
+  }
+  .phase h3 {
+    font-size: var(--size-label);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    padding-bottom: var(--space-2);
+    border-bottom: var(--rule-strong) solid var(--ink);
+    margin: 0;
+  }
+  .roster {
+    max-width: none;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .roster li {
+    border-bottom: var(--rule-width) solid var(--rule);
+  }
+  .roster summary {
+    display: grid;
+    grid-template-columns: 8rem 1fr auto;
+    gap: var(--space-3);
+    align-items: baseline;
+    padding: var(--space-3) 0;
+    cursor: pointer;
+    min-height: var(--tap);
+    list-style: none;
+  }
+  .roster summary::-webkit-details-marker {
+    display: none;
+  }
+  .roster summary b::before {
+    content: '+';
+    display: inline-block;
+    width: 1.1em;
+    font-weight: 400;
+  }
+  .roster details[open] summary b::before {
+    content: '−';
+  }
+  .tag {
+    font-size: var(--size-small);
+    font-weight: 700;
+    border: var(--rule-width) solid var(--ink);
+    padding: 0 var(--space-2);
+    white-space: nowrap;
+  }
+  .more {
+    padding: 0 0 var(--space-4) calc(8rem + var(--space-3));
+    max-width: calc(var(--measure) + 8rem);
+  }
+  .more p {
+    margin-top: 0;
+  }
+  dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-1) var(--space-3);
+    margin: 0 0 var(--space-3);
+  }
+  dt {
+    font-weight: 700;
+  }
+  dd {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-2);
+  }
+  code {
+    font-size: 0.85em;
+  }
+  table {
+    width: 100%;
+    max-width: 48rem;
+    margin: var(--space-4) 0;
+  }
+
+  .close {
+    margin-top: var(--space-6);
+    padding-block: var(--space-5) var(--space-6);
+    border-top: var(--rule-heavy) solid var(--ink);
+  }
+  .close h2 {
+    font-size: var(--size-display);
+    line-height: 1.02;
+    letter-spacing: var(--tracking-display);
+    max-width: 14ch;
+    margin: 0 0 var(--space-4);
+  }
+
+  @media (max-width: 48rem) {
+    .hero {
+      grid-template-columns: 1fr;
+    }
+    .hero-print {
+      max-width: 20rem;
+    }
+  }
+  @media (max-width: 40rem) {
+    .roster summary {
+      grid-template-columns: 1fr;
+      gap: var(--space-1);
+    }
+    .tag {
+      justify-self: start;
+    }
+    .more {
+      padding-left: 0;
+    }
+  }
+</style>
