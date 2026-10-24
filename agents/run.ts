@@ -5,11 +5,13 @@
 // Every run is recorded in the thought's ledger (thoughts/<slug>/ledger.jsonl and ledger.head): that it
 // started, the state it moved through, what it cost as the model reported it, and each file it wrote with a
 // receipt. A run that fails is recorded as failed before the error goes on.
+// Agents never call a provider themselves: ask() and draw() go to the providers the agent's card allows,
+// declared once in roadbook.config.ts, and every call's usage is logged and priced the same way.
 import { resolve } from 'node:path';
-import { hashOf, type AgentCardInput } from '@roadbook/core';
-import { createAskClient } from './_lib/claude.js';
-import { hasPrice, unitsOf, usdFor } from './_lib/costs.js';
+import { UsageLog, costOf, describeUsage, hashOf, type AgentCardInput } from '@roadbook/core';
 import { openLedger, saveLedger } from './_lib/ledger-file.js';
+import { adapterFor, choose, connect, unpriced } from './_lib/models.js';
+import { prices } from './_lib/prices.js';
 import { assertNotLedger, endState, lastState, originOf, startedBy, whyOf } from './_lib/record.js';
 import {
   loadProfile,
@@ -42,14 +44,23 @@ async function main(): Promise<void> {
   ]);
 
   const model = prompt.meta.model ?? settings.agents.model;
-  if (!hasPrice(model))
-    throw new Error(
-      `no price for ${model}; add it to agents/_lib/costs.ts before running ${agent}`,
-    );
   const { card } = (await import(`./${agent}/card.js`)) as { card: AgentCardInput };
+  const project = await import('../roadbook.config.js');
+  const adapters = new Map(
+    Object.entries(project.default.providers).map(([name, p]) => [name, adapterFor(name, p)]),
+  );
+  const chosen = choose(card, adapters);
+  // Every model this run may bill for has a price, or nothing is spent.
+  const missing = unpriced(chosen, model);
+  if (missing.length > 0)
+    throw new Error(
+      `no price for ${missing.join(', ')}; add it to agents/_lib/prices.ts before running ${agent}`,
+    );
 
   const system = systemMessage(profile, prompt, settings);
-  const client = createAskClient(system, {
+  const log = new UsageLog();
+  const calls = connect(chosen, log, {
+    system,
     model,
     maxOutputTokens: prompt.meta.max_output_tokens ?? settings.agents.max_output_tokens,
   });
@@ -60,7 +71,8 @@ async function main(): Promise<void> {
     settings,
     profile,
     thought,
-    ask: client.ask,
+    ask: calls.ask,
+    draw: calls.draw,
     today: new Date().toISOString().slice(0, 10),
   };
 
@@ -78,18 +90,18 @@ async function main(): Promise<void> {
   });
   await ledger.append({ type: 'node.state', node, from, to: 'running' });
 
-  // One cost event per model, from the usage the model reported; returns the run's total.
+  // One cost event per provider and model, from the usage each reported; returns the run's total.
   const recordCosts = async (): Promise<number> => {
     let total = 0;
-    for (const [used, usage] of client.usage()) {
-      const usd = usdFor(used, usage);
+    for (const used of log.totals()) {
+      const usd = costOf(prices, used.model, used.usage);
       total += usd;
       await ledger.append({
         type: 'cost.incurred',
         node,
-        provider: card.model.default,
+        provider: used.provider,
         usd,
-        units: unitsOf(used, usage),
+        units: describeUsage(used.model, used.usage),
       });
     }
     return Math.round(total * 1_000_000) / 1_000_000;
@@ -128,12 +140,15 @@ async function main(): Promise<void> {
     agent,
     cardVersion: card.version,
     promptHash: await hashOf(system),
-    provider: card.model.default,
+    provider: chosen.writer.provider,
     model,
     at: new Date().toISOString(),
     // What the whole run cost; every file it wrote carries the same figure.
     usd,
   };
+  // A picture names the provider that drew it; the text the writer wrote names the writer.
+  const drawers = new Set(chosen.drawers.map((d) => d.provider));
+  const drew = log.totals().find((t) => drawers.has(t.provider));
   for (const file of result.files) {
     if (file.remove === true) continue;
     const base = file.base ?? fallback;
@@ -141,7 +156,10 @@ async function main(): Promise<void> {
       type: 'node.output',
       node,
       why: whyOf(file, result.summary, prompt.meta.why),
-      receipt,
+      receipt:
+        file.bytes !== undefined && drew
+          ? { ...receipt, provider: drew.provider, model: drew.model }
+          : receipt,
       ref: base === 'thought' ? `thoughts/${slug}/${file.path}` : file.path,
       authoredBy: 'agent',
     });
