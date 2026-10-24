@@ -18,6 +18,13 @@ where each lives). This file says what to build next and in what order.
 - The review fixes are in (commit 1c4959c): RB010 is checked from every node that makes work, RB032 counts
   only approve gates, RB043 covers fallback providers (`data.fallbackSends`), the ledger queues appends,
   copies events, verifies a cut end against a saved head, and the CLI never crashes on a bad config.
+- **Slice 2 is built** (`feat/roadbook-ledger`): every `npm run agent` run is recorded in its own file,
+  `thoughts/<slug>/ledger/<run>.jsonl` with `<run>.head` beside it, and CI runs `roadbook verify-ledgers`
+  and refuses a pull request that changes or removes a merged run. One file per run (not one chain per
+  thought) is what lets two branches run agents on the same thought and both merge. Cost
+  comes from the usage Claude reports, priced from `agents/_lib/costs.ts`; a model with no price is refused
+  before anything is spent. Known gap: the image agent's drawing calls (OpenAI, Workers AI) are not costed
+  yet; its Claude review calls are. Slice 5's adapters close that.
 - **Nothing runs through Roadbook yet.** The agents still run through `agents/run.ts` and their
   `PROMPT.md`; the cards describe them alongside. That is deliberate: the existing logic keeps working
   while the framework grows under it.
@@ -44,12 +51,15 @@ green and every item below it holds.
 
 ### Slice 2: the existing runner writes a ledger
 
-- `agents/run.ts` appends `run.started`, `node.state`, `cost.incurred` and `node.output` (with a full
-  `Receipt`) to `thoughts/<slug>/ledger.jsonl`, and saves `ledger.head` (count and last hash) beside it.
-- The workflow in `.github/workflows/agents.yml` commits both with the agent's files.
-- CI verifies every `ledger.jsonl` against its head (`Ledger.verify(events, head)`).
+- `agents/run.ts` records `run.started`, `node.state`, `cost.incurred` and `node.output` (with a full
+  `Receipt`) in `thoughts/<slug>/ledger/<run>.jsonl`, and saves `<run>.head` (count and last hash) beside
+  it. Reading and writing these lives in `@roadbook/core/node`, shared with the CLI.
+- The workflow in `.github/workflows/agents.yml` commits both with the agent's files, and commits the
+  ledger alone when the run failed.
+- CI verifies every run against its head (`Ledger.verify(events, head)`), and fails a pull request that
+  changes or removes a run already on the base branch.
 - Keep everything the runner does today: same exit codes (0 done, 3 held, 4 not implemented), same files.
-- Done: running one agent locally adds events that verify; editing a past line of `ledger.jsonl` fails CI.
+- Done: running one agent locally adds events that verify; editing a past line of a run fails CI.
 - Good for: Opus or Fable (touches the live pipeline; needs care with the existing logic).
 
 ### Slice 3: test sets that run
@@ -62,7 +72,7 @@ green and every item below it holds.
 
 ### Slice 4: the disclosure on every post
 
-- The post page reads `ledger.jsonl` and shows "How this was made" from `disclosure()`: which parts an
+- The post page reads every run in `ledger/` and shows "How this was made" from `disclosure()`: which parts an
   agent wrote, which a person edited, any override and its reason. Nothing typed by hand.
 - Monochrome, the house controls, WCAG 2.2 AA; run `/impeccable critique` before merge (CLAUDE.md).
 - Done: a post with a ledger shows the box; a post without one shows nothing, not an empty box.
