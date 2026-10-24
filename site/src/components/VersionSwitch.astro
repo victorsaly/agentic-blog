@@ -86,9 +86,11 @@ const of = recorded ? ` of ${formatDate(recorded)}` : '';
     width: 20px;
     height: 20px;
     filter: var(--drawing-filter);
+    mix-blend-mode: var(--drawing-blend);
   }
   .switch a[aria-current='page'] :global(img) {
     filter: var(--drawing-filter-on-ink);
+    mix-blend-mode: var(--drawing-blend-on-ink);
   }
   p {
     margin: 0;

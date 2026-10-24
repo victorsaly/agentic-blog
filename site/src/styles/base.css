@@ -232,6 +232,7 @@ button:hover {
   height: 20px;
   flex: none;
   filter: var(--drawing-filter);
+  mix-blend-mode: var(--drawing-blend);
 }
 
 .control svg {
@@ -252,6 +253,7 @@ button:hover {
 .control[aria-expanded='true'] img,
 .control.filled img {
   filter: var(--drawing-filter-on-ink);
+  mix-blend-mode: var(--drawing-blend-on-ink);
 }
 
 @media (prefers-reduced-motion: reduce) {
