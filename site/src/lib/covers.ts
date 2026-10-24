@@ -18,7 +18,8 @@ export interface Cover {
 
 /** Slug → cover, for every thought that has a drawn cover. */
 export async function coversBySlug(): Promise<Map<string, Cover>> {
-  const lists = await getCollection('pictures');
+  // Typed at the boundary: on a fresh checkout Astro has not generated its content types yet when lint runs.
+  const lists = (await getCollection('pictures')) as unknown as { id: string; data: unknown }[];
   const covers = new Map<string, Cover>();
   for (const list of lists) {
     const slug = thoughtSlugOf(list.id);
