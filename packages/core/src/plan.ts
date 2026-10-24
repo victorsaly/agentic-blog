@@ -103,7 +103,9 @@ function planWorkflow(p: Project, wf: Workflow): PlannedWorkflow {
       },
     ];
   });
-  const sinks = entries.flatMap(([id, n]) => (n.kind === 'sink' ? [{ id, target: sinkLabel(n) }] : []));
+  const sinks = entries.flatMap(([id, n]) =>
+    n.kind === 'sink' ? [{ id, target: sinkLabel(n) }] : [],
+  );
   const maxUsdPerRun = nodes.reduce((sum, n) => sum + (n.maxUsdPerRun ?? 0), 0);
   return { id: wf.id, why: wf.why, nodes, gates, sinks, maxUsdPerRun };
 }
@@ -144,7 +146,8 @@ export function plan(p: Project, env: Readonly<Record<string, string | undefined
   for (const wf of p.workflows) {
     for (const [id, n] of Object.entries(wf.nodes)) {
       const provider = providerOf(n);
-      if (provider !== undefined) usedBy.set(provider, [...(usedBy.get(provider) ?? []), `${wf.id}/${id}`]);
+      if (provider !== undefined)
+        usedBy.set(provider, [...(usedBy.get(provider) ?? []), `${wf.id}/${id}`]);
     }
   }
 
@@ -172,7 +175,10 @@ export function plan(p: Project, env: Readonly<Record<string, string | undefined
   for (const wf of p.workflows) {
     for (const n of Object.values(wf.nodes)) {
       if (n.kind === 'sink' && n.target.kind === 'github-pr') {
-        secretUse.set('GITHUB_TOKEN', [...(secretUse.get('GITHUB_TOKEN') ?? []), `sink ${n.target.repo}`]);
+        secretUse.set('GITHUB_TOKEN', [
+          ...(secretUse.get('GITHUB_TOKEN') ?? []),
+          `sink ${n.target.repo}`,
+        ]);
       }
     }
   }
@@ -194,6 +200,9 @@ export function plan(p: Project, env: Readonly<Record<string, string | undefined
       monthlyCapUsd: p.budget.monthlyCapUsd,
       runsAtCap: costliest > 0 ? Math.floor(p.budget.monthlyCapUsd / costliest) : null,
     },
-    capacity: Object.entries(p.flow.capacity).map(([gate, c]) => ({ gate, limit: capacityLabel(c) })),
+    capacity: Object.entries(p.flow.capacity).map(([gate, c]) => ({
+      gate,
+      limit: capacityLabel(c),
+    })),
   };
 }

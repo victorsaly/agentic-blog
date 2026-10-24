@@ -36,7 +36,12 @@ export type EventBody =
       authoredBy: 'agent' | 'person';
     }
   | { type: 'gate.opened'; node: string; asks: 'answer' | 'approve' | 'pick'; question: string }
-  | { type: 'gate.closed'; node: string; decision: 'approved' | 'answered' | 'picked' | 'redirected'; by: string }
+  | {
+      type: 'gate.closed';
+      node: string;
+      decision: 'approved' | 'answered' | 'picked' | 'redirected';
+      by: string;
+    }
   | {
       type: 'feedback.given';
       node: string;
@@ -118,7 +123,9 @@ export class Ledger {
     const reason = refuse(body);
     if (reason !== null) throw new LedgerError(`refused: ${reason}`);
     if (body.type === 'correction' && (body.of < 0 || body.of >= this.#events.length)) {
-      throw new LedgerError(`refused: a correction must point at an earlier event (got ${String(body.of)})`);
+      throw new LedgerError(
+        `refused: a correction must point at an earlier event (got ${String(body.of)})`,
+      );
     }
     const last = this.#events.at(-1);
     const head = {

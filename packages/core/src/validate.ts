@@ -214,13 +214,7 @@ function checkWorkflow(p: Project, wf: Workflow, options: ValidateOptions): Issu
   }
   if (!g.ids.some((nodeId) => g.get(nodeId)?.kind === 'input')) {
     issues.push(
-      issue(
-        'RB022',
-        'error',
-        at(wf),
-        'The workflow has no input.',
-        'Add an input node.',
-      ),
+      issue('RB022', 'error', at(wf), 'The workflow has no input.', 'Add an input node.'),
     );
   }
   const sinks = g.ids.filter((nodeId) => g.get(nodeId)?.kind === 'sink');

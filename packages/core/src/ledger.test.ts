@@ -25,7 +25,13 @@ async function sampleRun(): Promise<Ledger> {
   const ledger = new Ledger({ now: fixedClock() });
   await ledger.append({ type: 'run.started', workflow: 'post', origin: 'o', by: 'owner' });
   await ledger.append({ type: 'node.state', node: 'write', from: 'waiting', to: 'running' });
-  await ledger.append({ type: 'cost.incurred', node: 'write', provider: 'writer', usd: 0.02, units: '1.2k tokens' });
+  await ledger.append({
+    type: 'cost.incurred',
+    node: 'write',
+    provider: 'writer',
+    usd: 0.02,
+    units: '1.2k tokens',
+  });
   await ledger.append({
     type: 'node.output',
     node: 'write',
@@ -47,7 +53,9 @@ describe('Ledger', () => {
 
   it('detects an edited past event', async () => {
     const ledger = await sampleRun();
-    const tampered = ledger.events.map((e) => (e.seq === 2 && e.type === 'cost.incurred' ? { ...e, usd: 0 } : e));
+    const tampered = ledger.events.map((e) =>
+      e.seq === 2 && e.type === 'cost.incurred' ? { ...e, usd: 0 } : e,
+    );
     expect(await Ledger.verify(tampered)).toBe(2);
   });
 
@@ -59,21 +67,35 @@ describe('Ledger', () => {
   it('refuses an output without a why', async () => {
     const ledger = new Ledger();
     await expect(
-      ledger.append({ type: 'node.output', node: 'write', why: 'ok', receipt: receipt('write'), ref: 'x', authoredBy: 'agent' }),
+      ledger.append({
+        type: 'node.output',
+        node: 'write',
+        why: 'ok',
+        receipt: receipt('write'),
+        ref: 'x',
+        authoredBy: 'agent',
+      }),
     ).rejects.toBeInstanceOf(LedgerError);
   });
 
   it('refuses an override without a reason', async () => {
     const ledger = new Ledger();
-    await expect(ledger.append({ type: 'override.given', node: 'safety', reason: '', by: 'owner' })).rejects.toThrow(
-      /needs a reason/,
-    );
+    await expect(
+      ledger.append({ type: 'override.given', node: 'safety', reason: '', by: 'owner' }),
+    ).rejects.toThrow(/needs a reason/);
   });
 
   it('only corrects, never rewrites: a correction must point backwards', async () => {
     const ledger = await sampleRun();
-    await expect(ledger.append({ type: 'correction', of: 99, reason: 'wrong cost', by: 'owner' })).rejects.toThrow();
-    const fixed = await ledger.append({ type: 'correction', of: 2, reason: 'the cost was counted twice', by: 'owner' });
+    await expect(
+      ledger.append({ type: 'correction', of: 99, reason: 'wrong cost', by: 'owner' }),
+    ).rejects.toThrow();
+    const fixed = await ledger.append({
+      type: 'correction',
+      of: 2,
+      reason: 'the cost was counted twice',
+      by: 'owner',
+    });
     expect(fixed.seq).toBe(4);
     expect(ledger.events[2]?.type).toBe('cost.incurred');
   });
@@ -82,7 +104,13 @@ describe('Ledger', () => {
 describe('readings', () => {
   it('adds up costs by node and by provider', async () => {
     const ledger = await sampleRun();
-    await ledger.append({ type: 'cost.incurred', node: 'image', provider: 'images', usd: 0.04, units: '1 image' });
+    await ledger.append({
+      type: 'cost.incurred',
+      node: 'image',
+      provider: 'images',
+      usd: 0.04,
+      units: '1 image',
+    });
     const c = costs(ledger.events);
     expect(c.totalUsd).toBeCloseTo(0.06);
     expect(c.byNode).toEqual({ write: 0.02, image: 0.04 });
@@ -92,7 +120,13 @@ describe('readings', () => {
   it('counts an output as edited by a person only when an edit was recorded', async () => {
     const ledger = await sampleRun();
     expect(disclosure(ledger.events).byAgent).toEqual(['write']);
-    await ledger.append({ type: 'feedback.given', node: 'write', kind: 'edit', words: 'changed the opening', by: 'owner' });
+    await ledger.append({
+      type: 'feedback.given',
+      node: 'write',
+      kind: 'edit',
+      words: 'changed the opening',
+      by: 'owner',
+    });
     const d = disclosure(ledger.events);
     expect(d.byAgent).toEqual([]);
     expect(d.editedByPerson).toEqual(['write']);
@@ -100,7 +134,12 @@ describe('readings', () => {
 
   it('lists every override with its reason', async () => {
     const ledger = await sampleRun();
-    await ledger.append({ type: 'override.given', node: 'safety', reason: 'the quote is the author’s own', by: 'owner' });
+    await ledger.append({
+      type: 'override.given',
+      node: 'safety',
+      reason: 'the quote is the author’s own',
+      by: 'owner',
+    });
     expect(disclosure(ledger.events).overrides).toEqual([
       { node: 'safety', reason: 'the quote is the author’s own', by: 'owner' },
     ]);

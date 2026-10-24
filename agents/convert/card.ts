@@ -4,7 +4,8 @@ import { defineAgentCard } from '@roadbook/core';
 
 export const card = defineAgentCard({
   name: 'convert',
-  purpose: 'Write each version a reader might take in: short, long, a social post, another language.',
+  purpose:
+    'Write each version a reader might take in: short, long, a social post, another language.',
   why: 'One honest minute of talking should reach a reader in whatever form they take in best.',
   inputs: [
     { name: 'structure', type: 'markdown' },
@@ -23,7 +24,10 @@ export const card = defineAgentCard({
   ],
   doneMeans: [
     { id: 'short-length', says: 'The short version is under 250 words.' },
-    { id: 'changes-listed', says: 'The long version ends with what changed from the origin, and why.' },
+    {
+      id: 'changes-listed',
+      says: 'The long version ends with what changed from the origin, and why.',
+    },
     { id: 'converted-from', says: 'Every version names the origin it was converted from.' },
   ],
   qualityBar: { approvedWithoutRewrite: 0.75 },

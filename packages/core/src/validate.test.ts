@@ -37,7 +37,9 @@ describe('RB010: a person approves before anything leaves', () => {
     }));
     const result = validate(input);
     expect(result.ok).toBe(false);
-    expect(result.issues.find((i) => i.rule === 'RB010')?.message).toMatch(/without a person approving/);
+    expect(result.issues.find((i) => i.rule === 'RB010')?.message).toMatch(
+      /without a person approving/,
+    );
   });
 
   it('refuses a sink that one path reaches around the gate', () => {
@@ -68,7 +70,10 @@ describe('RB010: a person approves before anything leaves', () => {
   });
 
   it('cannot be switched off: there is no field for it', () => {
-    const input = { ...project(), accountability: { ...project().accountability, overrideNeedsReason: false } };
+    const input = {
+      ...project(),
+      accountability: { ...project().accountability, overrideNeedsReason: false },
+    };
     expect(validate(input).ok).toBe(false);
   });
 });
@@ -77,7 +82,12 @@ describe('graph rules', () => {
   it('RB020: refuses a link to a node that does not exist', () => {
     const input = withNodes((nodes) => ({
       ...nodes,
-      write: { kind: 'agent', why: 'Waits for a node that is missing.', after: ['ghost'], card: card('write') },
+      write: {
+        kind: 'agent',
+        why: 'Waits for a node that is missing.',
+        after: ['ghost'],
+        card: card('write'),
+      },
     }));
     expect(rulesOf(input)).toContain('RB020');
   });
@@ -98,7 +108,11 @@ describe('graph rules', () => {
   it('RB022: refuses a workflow that starts anywhere but an input', () => {
     const input = withNodes((nodes) => ({
       ...nodes,
-      stray: { kind: 'tool', why: 'A tool waiting for nothing at all.', does: 'Counts words in nothing.' },
+      stray: {
+        kind: 'tool',
+        why: 'A tool waiting for nothing at all.',
+        does: 'Counts words in nothing.',
+      },
     }));
     expect(rulesOf(input)).toContain('RB022');
   });
@@ -157,7 +171,12 @@ describe('agent rules', () => {
         ...p.data,
         exits: {
           ...p.data.exits,
-          other: { sends: ['text' as const], region: 'eu' as const, retention: 'zero' as const, why: 'Another writing model, declared so only RB040 is tested.' },
+          other: {
+            sends: ['text' as const],
+            region: 'eu' as const,
+            retention: 'zero' as const,
+            why: 'Another writing model, declared so only RB040 is tested.',
+          },
         },
       },
     };
@@ -174,7 +193,10 @@ describe('agent rules', () => {
 describe('data rules', () => {
   it('RB041: refuses a provider with no declared exit', () => {
     const p = project();
-    const input = { ...p, providers: { ...p.providers, images: { kind: 'openai-images' as const } } };
+    const input = {
+      ...p,
+      providers: { ...p.providers, images: { kind: 'openai-images' as const } },
+    };
     expect(rulesOf(input)).toContain('RB041');
   });
 
@@ -184,7 +206,14 @@ describe('data rules', () => {
       ...p,
       data: {
         ...p.data,
-        exits: { writer: { sends: ['text' as const], region: 'us' as const, retention: 'zero' as const, why: 'Moved to a region the owner has not allowed.' } },
+        exits: {
+          writer: {
+            sends: ['text' as const],
+            region: 'us' as const,
+            retention: 'zero' as const,
+            why: 'Moved to a region the owner has not allowed.',
+          },
+        },
       },
     };
     expect(rulesOf(input)).toContain('RB042');

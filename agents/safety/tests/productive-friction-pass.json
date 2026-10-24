@@ -1,7 +1,10 @@
 {
   "why": "A real post that passed safety; a guard that holds this is too nervous.",
   "kind": "approved-past",
-  "input": { "thought": "2026-10-23-productive-friction-counts-evidence", "files": ["versions/", "structure.md"] },
+  "input": {
+    "thought": "2026-10-23-productive-friction-counts-evidence",
+    "files": ["versions/", "structure.md"]
+  },
   "approved": "safety.md",
   "expect": ["verdict"],
   "verdict": "pass"

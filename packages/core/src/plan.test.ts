@@ -12,7 +12,9 @@ describe('plan', () => {
     const p = plan(parsed);
     const [wf] = p.workflows;
     expect(wf?.nodes.map((n) => n.id)).toEqual(['origin', 'write', 'approve', 'publish']);
-    expect(wf?.gates).toEqual([{ id: 'approve', asks: 'approve', question: 'Publish this draft?', capacity: '2 a day' }]);
+    expect(wf?.gates).toEqual([
+      { id: 'approve', asks: 'approve', question: 'Publish this draft?', capacity: '2 a day' },
+    ]);
     expect(wf?.sinks).toEqual([{ id: 'publish', target: 'GitHub pull request on owner/repo' }]);
   });
 
@@ -24,7 +26,14 @@ describe('plan', () => {
 
   it('shows every data exit and who uses it', () => {
     expect(plan(parsed).exits).toEqual([
-      { provider: 'writer', kind: 'claude', sends: ['text'], region: 'eu', retention: 'zero', usedBy: ['post/write'] },
+      {
+        provider: 'writer',
+        kind: 'claude',
+        sends: ['text'],
+        region: 'eu',
+        retention: 'zero',
+        usedBy: ['post/write'],
+      },
     ]);
   });
 

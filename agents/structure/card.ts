@@ -4,7 +4,8 @@ import { defineAgentCard } from '@roadbook/core';
 
 export const card = defineAgentCard({
   name: 'structure',
-  purpose: 'Find the message, the idea and the small ideas in an origin, each tagged with its themes.',
+  purpose:
+    'Find the message, the idea and the small ideas in an origin, each tagged with its themes.',
   why: 'A voice note is rarely about one thing; a reader needs the point first and the graph needs the small ideas.',
   inputs: [
     { name: 'origin', type: 'markdown' },

@@ -2,13 +2,7 @@
 // deployment. `npm run roadbook -- validate` checks it against every accountability rule; `npm run
 // roadbook -- plan` says in plain words what it will do, send, cost and create. Today the gates are the
 // pull request reviews Victor already does; the live studio will open the same gates on its canvas.
-import {
-  claude,
-  defineProject,
-  githubPullRequest,
-  openaiImages,
-  workersAi,
-} from '@roadbook/core';
+import { claude, defineProject, githubPullRequest, openaiImages, workersAi } from '@roadbook/core';
 import { card as citations } from './agents/citations/card.js';
 import { card as convert } from './agents/convert/card.js';
 import { card as diagram } from './agents/diagram/card.js';

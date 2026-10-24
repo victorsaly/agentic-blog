@@ -9,14 +9,23 @@ export const card = defineAgentCard({
     { name: 'structure', type: 'markdown' },
     { name: 'long', type: 'markdown' },
   ],
-  outputs: [{ name: 'sources', type: 'markdown', limit: 'reviewed: false until the blogger opens each link' }],
+  outputs: [
+    {
+      name: 'sources',
+      type: 'markdown',
+      limit: 'reviewed: false until the blogger opens each link',
+    },
+  ],
   mustNot: [
     'Guess or build a URL; a source that cannot be found is written as "no door found".',
     'Cite a content farm or a page that only repeats the claim.',
   ],
   doneMeans: [
     { id: 'opened', says: 'Every listed page was opened, with the date it was opened.' },
-    { id: 'unreviewed', says: 'The sources file is marked unreviewed until the blogger reviews it.' },
+    {
+      id: 'unreviewed',
+      says: 'The sources file is marked unreviewed until the blogger reviews it.',
+    },
   ],
   qualityBar: { approvedWithoutRewrite: 0.8 },
   model: { default: 'writer', allowed: ['writer'] },

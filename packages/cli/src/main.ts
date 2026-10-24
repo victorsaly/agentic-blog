@@ -31,7 +31,9 @@ function parseArgs(argv: string[]): Args {
 async function loadConfig(path: string): Promise<unknown> {
   const mod = (await import(pathToFileURL(path).href)) as { default?: unknown };
   if (mod.default === undefined) {
-    throw new Error(`${path} has no default export; it should end with "export default defineProject({ … })".`);
+    throw new Error(
+      `${path} has no default export; it should end with "export default defineProject({ … })".`,
+    );
   }
   return mod.default;
 }
@@ -39,8 +41,9 @@ async function loadConfig(path: string): Promise<unknown> {
 /** Counts *.json cases in agents/<name>/tests/ next to the config, for every card the project names. */
 async function countTests(configPath: string, input: unknown): Promise<Record<string, number>> {
   const names = new Set<string>();
-  const workflows = (input as { workflows?: { nodes?: Record<string, { card?: { name?: unknown } }> }[] })
-    .workflows;
+  const workflows = (
+    input as { workflows?: { nodes?: Record<string, { card?: { name?: unknown } }> }[] }
+  ).workflows;
   for (const wf of workflows ?? []) {
     for (const node of Object.values(wf.nodes ?? {})) {
       if (typeof node.card?.name === 'string') names.add(node.card.name);
@@ -89,13 +92,18 @@ function printPlan(p: Plan): void {
   for (const wf of p.workflows) {
     console.info(`${bold(`Workflow ${wf.id}`)}: ${wf.why}`);
     for (const n of wf.nodes) {
-      const extra = [n.provider && `on ${n.provider}`, n.maxUsdPerRun !== undefined && `≤ ${usd(n.maxUsdPerRun)}`]
+      const extra = [
+        n.provider && `on ${n.provider}`,
+        n.maxUsdPerRun !== undefined && `≤ ${usd(n.maxUsdPerRun)}`,
+      ]
         .filter(Boolean)
         .join(', ');
       console.info(`  ${n.kind.padEnd(6)} ${n.id}${extra ? `  (${extra})` : ''}`);
     }
     for (const g of wf.gates) {
-      console.info(`  a person ${g.asks}s at "${g.id}": ${g.question}${g.capacity ? ` [capacity ${g.capacity}]` : ''}`);
+      console.info(
+        `  a person ${g.asks}s at "${g.id}": ${g.question}${g.capacity ? ` [capacity ${g.capacity}]` : ''}`,
+      );
     }
     for (const s of wf.sinks) console.info(`  leaves by "${s.id}": ${s.target}`);
     console.info(`  at most ${usd(wf.maxUsdPerRun)} a run if every agent runs once\n`);
@@ -114,7 +122,9 @@ function printPlan(p: Plan): void {
   }
   console.info(`\n${bold('Budget')}: ${usd(p.budget.monthlyCapUsd)} a month; at cap, work queues.`);
   if (p.budget.runsAtCap !== null) {
-    console.info(`  That is at least ${String(p.budget.runsAtCap)} full runs of the costliest workflow.`);
+    console.info(
+      `  That is at least ${String(p.budget.runsAtCap)} full runs of the costliest workflow.`,
+    );
   }
   if (p.capacity.length > 0) {
     console.info(`\n${bold('Capacity')}`);

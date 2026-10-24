@@ -43,7 +43,10 @@ export const provider = z.object({
   /** The default model this provider is called with; a card may name another allowed one. */
   model: z.string().min(1).optional(),
   /** The environment variable that holds the key. Never the key itself. */
-  secret: z.string().regex(/^[A-Z][A-Z0-9_]*$/).optional(),
+  secret: z
+    .string()
+    .regex(/^[A-Z][A-Z0-9_]*$/)
+    .optional(),
   /** For openai-compatible and azure-openai: where the endpoint lives. */
   endpoint: z.string().url().optional(),
 });
@@ -183,10 +186,11 @@ export const flow = z.object({
     })
     .optional(),
   /** Expensive steps only run for work due to reach a person within this window, e.g. '3d'. */
-  prepareAhead: z.string().regex(/^\d+[dhw]$/).optional(),
-  categories: z
-    .record(id, z.object({ importance: z.enum(['high', 'medium', 'low']) }))
-    .default({}),
+  prepareAhead: z
+    .string()
+    .regex(/^\d+[dhw]$/)
+    .optional(),
+  categories: z.record(id, z.object({ importance: z.enum(['high', 'medium', 'low']) })).default({}),
   ageing: z.string().optional(),
   holds: z.array(z.object({ when: z.string().min(3), until: z.string().min(3), why })).default([]),
 });

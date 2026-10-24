@@ -3,13 +3,20 @@ import { defineAgentCard } from '@roadbook/core';
 
 export const card = defineAgentCard({
   name: 'security',
-  purpose: 'Check what is about to leave for other people’s data, secrets and internal links, and hold it if found.',
+  purpose:
+    'Check what is about to leave for other people’s data, secrets and internal links, and hold it if found.',
   why: 'A friend’s name, a face or an email must not leave until the blogger has confirmed it should.',
   inputs: [
     { name: 'versions', type: 'markdown' },
     { name: 'sources', type: 'markdown', optional: true },
   ],
-  outputs: [{ name: 'verdict', type: 'markdown', limit: 'pass, or hold with the text quoted and the kind of data' }],
+  outputs: [
+    {
+      name: 'verdict',
+      type: 'markdown',
+      limit: 'pass, or hold with the text quoted and the kind of data',
+    },
+  ],
   mustNot: [
     'Redact or rewrite the text itself; the blogger decides what is theirs to share.',
     'Send a secret it finds anywhere, including into its own report.',

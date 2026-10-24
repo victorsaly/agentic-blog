@@ -1,15 +1,8 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "noEmit": true
   },
-  "include": [
-    "scripts/**/*.ts",
-    "eslint.config.js",
-    "vitest.config.ts",
-    "roadbook.config.ts"
-  ]
+  "include": ["scripts/**/*.ts", "eslint.config.js", "vitest.config.ts", "roadbook.config.ts"]
 }
