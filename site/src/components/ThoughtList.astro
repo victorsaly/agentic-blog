@@ -1,31 +1,52 @@
 ---
-// Why: the home page and every theme page list thoughts the same way, message first, so a reader sees
-// the point of each post before its title. One component keeps the two lists identical.
+// Why: the home page, theme pages and the archive list thoughts the same way: the post's linocut cover as a
+// small print, the title as the one marigold mark, then the message in plain ink, the date and its
+// themes. Spacing and rules only, no cards, so the list reads like a wall of prints with captions.
 import type { CollectionEntry } from 'astro:content';
+import { Image } from 'astro:assets';
 import { formatDate, thoughtSlugOf } from '../lib/content';
+import { coversBySlug } from '../lib/covers';
+import { themeLabel } from '../lib/themes';
 
 interface Props {
   thoughts: CollectionEntry<'thoughts'>[];
 }
 
 const { thoughts } = Astro.props;
+const covers = await coversBySlug();
 ---
 
 <ol class="thoughts">
   {
     thoughts.map((t) => {
       const slug = thoughtSlugOf(t.id);
+      const cover = covers.get(slug);
       return (
-        <li>
-          <p class="message">
-            <a href={`/thoughts/${slug}`}>
-              <mark>{t.data.message}</mark>
+        <li class:list={{ 'has-cover': cover }}>
+          {cover && (
+            <a class="print" href={`/thoughts/${slug}`} tabindex="-1" aria-hidden="true">
+              <Image
+                class="drawing"
+                src={cover.image}
+                alt=""
+                width={240}
+                height={240}
+                loading="lazy"
+              />
             </a>
-          </p>
-          <p class="small quiet meta">
-            <span>{t.data.title}</span>
-            <time datetime={t.data.date.toISOString()}>{formatDate(t.data.date)}</time>
-          </p>
+          )}
+          <div class="text">
+            <h2 class="title">
+              <a href={`/thoughts/${slug}`}>
+                <mark>{t.data.title}</mark>
+              </a>
+            </h2>
+            <p class="summary">{t.data.message}</p>
+            <p class="small quiet meta">
+              <time datetime={t.data.date.toISOString()}>{formatDate(t.data.date)}</time>
+              <span>{t.data.themes.map(themeLabel).join(', ')}</span>
+            </p>
+          </div>
         </li>
       );
     })
@@ -38,25 +59,53 @@ const { thoughts } = Astro.props;
     padding: 0;
     margin: 0;
   }
-  .thoughts li + li {
-    border-top: var(--rule-width) solid var(--rule);
-    padding-top: var(--space-4);
+  li {
+    padding: var(--space-4) 0;
   }
-  .message {
+  li + li {
+    border-top: var(--rule-width) solid var(--rule);
+  }
+  li.has-cover {
+    display: grid;
+    grid-template-columns: 7.5rem 1fr;
+    gap: var(--space-3);
+    align-items: start;
+  }
+  .print {
+    display: block;
+  }
+  .print :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    filter: var(--drawing-filter);
+  }
+  .title {
+    font-size: var(--size-message);
+    line-height: 1.25;
     margin: 0 0 var(--space-2);
   }
-  .message a {
+  .title a {
     text-decoration: none;
   }
-  .message a:hover mark,
-  .message a:focus-visible mark {
+  .title a:hover mark,
+  .title a:focus-visible mark {
     text-decoration: underline;
     text-decoration-thickness: 0.12em;
+  }
+  .summary {
+    margin: 0 0 var(--space-2);
   }
   .meta {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-3);
-    margin-bottom: var(--space-4);
+    gap: var(--space-1) var(--space-3);
+    margin: 0;
+  }
+  @media (max-width: 30rem) {
+    li.has-cover {
+      grid-template-columns: 5rem 1fr;
+      gap: var(--space-2);
+    }
   }
 </style>

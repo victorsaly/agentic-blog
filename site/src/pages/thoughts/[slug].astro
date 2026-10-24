@@ -6,7 +6,11 @@ import { Image } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
 import Page from '../../layouts/Page.astro';
 import Badge from '../../components/Badge.astro';
-import Depth from '../../components/Depth.astro';
+import PostTabs, { type Tab } from '../../components/PostTabs.astro';
+import ideaIcon from '../../assets/icons/idea.png';
+import originIcon from '../../assets/icons/origin.png';
+import roadIcon from '../../assets/icons/road.png';
+import sourcesIcon from '../../assets/icons/sources.png';
 import { settings } from '../../lib/settings';
 import {
   excerpt,
@@ -60,6 +64,21 @@ const idea = short ? await render(short) : null;
 const road = long ? await render(long) : null;
 
 const originHref = `/thoughts/${slug}/origin`;
+
+// The sections a reader walks; the notes on what changed are about the conversion, not the road.
+const readerSections = (road?.headings ?? []).filter(
+  (h) => h.depth === 2 && !/^what changed/i.test(h.text),
+);
+
+// The order follows the blog's thesis: the thought, where it came from, the whole road, its sources.
+const tabs: Tab[] = [
+  { id: 'idea', name: 'The idea', hint: 'one screen', icon: ideaIcon },
+  { id: 'origin', name: 'Where it came from', hint: 'the origin, unedited', icon: originIcon },
+  ...(road ? [{ id: 'road', name: 'The road', hint: 'the whole piece', icon: roadIcon }] : []),
+  ...(sources
+    ? [{ id: 'sources', name: 'Sources', hint: 'where each claim leads', icon: sourcesIcon }]
+    : []),
+];
 const minutes = readingMinutes(long?.body ?? short?.body ?? thought.body ?? '');
 const description = excerpt(thought.data.message, 40);
 ---
@@ -97,78 +116,78 @@ const description = excerpt(thought.data.message, 40);
       )
     }
 
-    <Depth name="The idea" hint="one screen" open={true} id="idea">
-      {idea ? <idea.Content /> : <Structure />}
-    </Depth>
+    <PostTabs label="Read this thought" tabs={tabs}>
+      <div slot="idea">
+        {idea ? <idea.Content /> : <Structure />}
+      </div>
 
-    {
-      road && (
-        <Depth name="The road" hint="the whole piece" id="road">
-          {road.headings.filter((h) => h.depth === 2 && !/^what changed/i.test(h.text)).length >
-            1 && (
-            <nav class="contents small" aria-label="In this road" data-pagefind-ignore>
-              <p class="quiet">In this road</p>
-              <ol>
-                {road.headings
-                  .filter((h) => h.depth === 2)
-                  .map((h) => (
+      <div slot="origin">
+        {
+          firstOrigin ? (
+            <>
+              <p>
+                {firstOrigin.data.medium === 'text'
+                  ? `Written ${formatDate(firstOrigin.data.recorded)}, never edited.`
+                  : `Recorded ${formatDate(firstOrigin.data.recorded)}, ${
+                      firstOrigin.data.speakers.length === 1
+                        ? 'one voice'
+                        : `${String(firstOrigin.data.speakers.length)} voices`
+                    }, never edited.`}{' '}
+                It starts like this:
+              </p>
+              <blockquote>{excerpt(firstOrigin.body ?? '', 60)}</blockquote>
+              <p>
+                <a href={originHref}>Read the whole origin</a>
+              </p>
+            </>
+          ) : (
+            <p class="quiet">The origin for this thought is not on the site yet.</p>
+          )
+        }
+      </div>
+
+      {
+        road && (
+          <div slot="road" id="road-body">
+            {readerSections.length > 1 && (
+              <nav class="contents small" aria-label="In this road" data-pagefind-ignore>
+                <p class="quiet">In this road</p>
+                <ol>
+                  {readerSections.map((h) => (
                     <li>
                       <a href={`#${h.slug}`}>{h.text}</a>
                     </li>
                   ))}
-              </ol>
-            </nav>
-          )}
-          <road.Content />
-          {!long?.data.reviewed && (
-            <p class="small quiet">
-              This version has not yet been reviewed by {settings.site.author}. It can still change.
-            </p>
-          )}
-        </Depth>
-      )
-    }
-
-    {
-      sources && sourcesEntry && (
-        <Depth name="Sources" hint="where each claim leads" id="sources">
-          {!sourcesEntry.data.reviewed && (
-            <p class="small quiet">
-              Not reviewed yet. Only visible in local development until {settings.site.author} has
-              opened every link and set reviewed to true.
-            </p>
-          )}
-          <div class="sources">
-            <sources.Content />
+                </ol>
+              </nav>
+            )}
+            <road.Content />
+            {!long?.data.reviewed && (
+              <p class="small quiet">
+                This version has not yet been reviewed by {settings.site.author}. It can still
+                change.
+              </p>
+            )}
           </div>
-        </Depth>
-      )
-    }
-
-    <Depth name="Where it came from" hint="the origin, unedited" id="origin">
-      {
-        firstOrigin ? (
-          <>
-            <p>
-              {firstOrigin.data.medium === 'text'
-                ? `Written ${formatDate(firstOrigin.data.recorded)}, never edited.`
-                : `Recorded ${formatDate(firstOrigin.data.recorded)}, ${
-                    firstOrigin.data.speakers.length === 1
-                      ? 'one voice'
-                      : `${String(firstOrigin.data.speakers.length)} voices`
-                  }, never edited.`}{' '}
-              It starts like this:
-            </p>
-            <blockquote>{excerpt(firstOrigin.body ?? '', 60)}</blockquote>
-            <p>
-              <a href={originHref}>Read the whole origin</a>
-            </p>
-          </>
-        ) : (
-          <p class="quiet">The origin for this thought is not on the site yet.</p>
         )
       }
-    </Depth>
+
+      {
+        sources && sourcesEntry && (
+          <div slot="sources">
+            {!sourcesEntry.data.reviewed && (
+              <p class="small quiet">
+                Not reviewed yet. Only visible in local development until {settings.site.author} has
+                opened every link and set reviewed to true.
+              </p>
+            )}
+            <div class="sources">
+              <sources.Content />
+            </div>
+          </div>
+        )
+      }
+    </PostTabs>
 
     <nav class="small quiet themes" aria-label="Themes of this thought" data-pagefind-ignore>
       Themes:{' '}
@@ -212,7 +231,7 @@ const description = excerpt(thought.data.message, 40);
   }
   /* Drawings: black ink on white, inverted with the theme, never wider than the text. */
   .drawing,
-  article :global(#road img) {
+  article :global(#road-body img) {
     display: block;
     width: 100%;
     max-width: var(--measure);
@@ -227,14 +246,14 @@ const description = excerpt(thought.data.message, 40);
     max-width: var(--measure);
   }
   /* The line a drawing shows, then the artist's note: quiet, close to the drawing it belongs to. */
-  article :global(#road .caption) {
+  article :global(#road-body .caption) {
     margin: calc(-1 * var(--space-3)) 0 var(--space-4);
     max-width: 30ch;
     font-size: var(--size-small);
     color: var(--quiet);
   }
   /* Section drawings are square with generous white space; half the measure keeps the road readable. */
-  article :global(#road img) {
+  article :global(#road-body img) {
     max-width: min(100%, 30ch);
     margin: var(--space-3) 0 var(--space-4);
   }
