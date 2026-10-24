@@ -10,6 +10,9 @@ export const GET: APIRoute = () => {
         'Allow: /',
         'Disallow: /studio',
         'Disallow: /api/',
+        // The chat's endpoint and its source file are not pages; readers reach the chat from the header.
+        'Disallow: /ask',
+        'Disallow: /ask-corpus.json',
         `Sitemap: https://${settings.site.domain}/sitemap-index.xml`,
       ]
     : ['User-agent: *', 'Disallow: /'];

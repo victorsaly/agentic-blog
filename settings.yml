@@ -26,7 +26,7 @@ depths: # the three reading depths, in order
   - road
 
 publishing:
-  index: false # robots: keep search engines out until this is true
+  index: true # robots: search engines welcome; also opens the reader chat (false keeps both closed)
   badge_text: Converted with AI, not made by AI
   social: [linkedin] # which short versions the publish agent prepares
 
