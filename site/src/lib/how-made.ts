@@ -40,9 +40,15 @@ const endingOf = (state: string): Ending =>
       ? 'running'
       : 'not-run';
 
-/** A run that produced something but recorded no cost: what it spent is unknown, not zero. */
-const madeWithoutCost = (events: readonly LedgerEvent[]): boolean =>
-  events.some((e) => e.type === 'node.output') && !events.some((e) => e.type === 'cost.incurred');
+/**
+ * A run whose cost is unknown, not zero: it produced something, or it failed (a provider can bill a call
+ * that then errors before its usage is read), and no cost was recorded. A run that stopped before calling
+ * anything (held by a check, nothing to do) really cost nothing.
+ */
+const costUnknown = (events: readonly LedgerEvent[]): boolean =>
+  !events.some((e) => e.type === 'cost.incurred') &&
+  (events.some((e) => e.type === 'node.output') ||
+    events.some((e) => e.type === 'node.state' && e.to === 'failed'));
 
 /** What a post may say about how it was made; null when nothing is recorded, so no empty box is drawn. */
 export function howMade(
@@ -65,15 +71,14 @@ export function howMade(
       on: (run.events[0]?.at ?? '').slice(0, 10),
       ended: endingOf(last?.to ?? 'idle'),
       usd: spent.totalUsd,
-      costed: !madeWithoutCost(run.events),
+      costed: !costUnknown(run.events),
       runs: 0,
     });
   }
   const steps = [...latest.values()].map((s) => ({ ...s, runs: count.get(s.agent) ?? 1 }));
 
-  // A run that produced something without a recorded cost leaves the total as a floor; one that stopped
-  // before calling anything (held by a check, nothing to do) really cost nothing.
-  const uncosted = runs.some((r) => madeWithoutCost(r.events));
+  // A run whose cost is unknown leaves the total as a floor.
+  const uncosted = runs.some((r) => costUnknown(r.events));
   const told = disclosure(all);
   return {
     steps,
@@ -130,7 +135,7 @@ export function runRows(runs: readonly { id: string; events: readonly LedgerEven
         on: (run.events[0]?.at ?? '').slice(0, 10),
         ended: endingOf(states.at(-1)?.to ?? 'idle'),
         usd: costs(run.events).totalUsd,
-        costed: !madeWithoutCost(run.events),
+        costed: !costUnknown(run.events),
       };
     })
     .sort((a, b) => b.id.localeCompare(a.id));

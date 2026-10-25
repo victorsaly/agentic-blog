@@ -104,6 +104,19 @@ describe('howMade', () => {
     ]);
     expect(made?.totalIsFloor).toBe(true);
   });
+
+  it('treats a failed run with no recorded cost as unknown, never as free', async () => {
+    const made = howMade([
+      await run('2026-10-25-f', [
+        started,
+        state('voice', 'idle', 'running'),
+        state('voice', 'running', 'failed', 'network error'),
+      ]),
+    ]);
+    expect(made?.steps[0]).toMatchObject({ agent: 'voice', ended: 'failed', costed: false });
+    expect(made?.totalIsFloor).toBe(true);
+    expect(JSON.stringify(made)).not.toContain('network error');
+  });
 });
 
 describe('moneyOf', () => {
