@@ -6,6 +6,7 @@ import { RunTimeline } from '../../../islands/RunTimeline';
 import { loadCosted } from '../../../lib/studio-data';
 import { settings } from '../../../lib/settings';
 import { layoutOf } from '@roadbook/core/route';
+import { allowanceOf } from '../../../lib/run-again';
 import project from '../../../../../roadbook.config';
 
 const costed = await loadCosted();
@@ -13,6 +14,15 @@ const titles = Object.fromEntries(costed.map((t) => [t.slug, t.title]));
 const workflow = project.workflows.find((w) => w.id === 'blog-post');
 const layout = workflow ? layoutOf(workflow) : { steps: [], edges: [], columns: 0, rows: 0 };
 const builtStates = Object.fromEntries(costed.map((t) => [t.slug, t.states]));
+// What one run of each agent and guard may cost, by its card, for Run again.
+const allowances = Object.fromEntries(
+  workflow
+    ? Object.keys(workflow.nodes).flatMap((id) => {
+        const usd = allowanceOf(workflow, id);
+        return usd === null ? [] : [[id, usd]];
+      })
+    : [],
+);
 const { show, per_usd: perUsd } = settings.publishing.currency;
 ---
 
@@ -23,6 +33,7 @@ const { show, per_usd: perUsd } = settings.publishing.currency;
     currency={{ show, perUsd }}
     layout={layout}
     builtStates={builtStates}
+    allowances={allowances}
   />
 </Studio>
 
@@ -84,6 +95,12 @@ const { show, per_usd: perUsd } = settings.publishing.currency;
     white-space: pre-wrap;
   }
   /* A waiting gate's answer sits under the summary, opened by a strong rule like every section. */
+  .run-again {
+    margin: 0 0 var(--space-5);
+  }
+  .run-again p {
+    margin: 0 0 var(--space-2);
+  }
   .gate-answer {
     margin: 0 0 var(--space-5);
   }
