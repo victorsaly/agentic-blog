@@ -1,9 +1,18 @@
 // Why: nothing on the graph is placed by hand, so these are the promises the picture keeps: the biggest
 // topic at the top, each arc as long as its ideas, a shared idea between its two topics, names that never
-// touch, and the same picture for the same posts.
+// touch each other or the dots, a ring that knows when it is too full, and the same picture for the same
+// posts, for the blog as it is and for any number of topics it may grow to.
 import { describe, expect, it } from 'vitest';
 import { graphOf, type GraphPost } from './graph.js';
-import { deskLayout, layoutGraph, phoneLayout, ringOrder, wrapLabel } from './graph-layout.js';
+import { capped, reachOf } from './graph-labels.js';
+import {
+  CROWDED,
+  deskLayout,
+  layoutGraph,
+  phoneLayout,
+  ringOrder,
+  wrapLabel,
+} from './graph-layout.js';
 
 const known = [
   'ai-changing-work',
@@ -153,16 +162,21 @@ describe('layoutGraph', () => {
         }
       });
 
-      it('joins every idea to each of its topics, and draws no line through the middle', () => {
+      it('joins a dot over an arc straight to it, leaves a dot in a gap alone, and keeps out of the middle', () => {
         for (const idea of layout.ideas) {
-          const reached = layout.edges.filter((e) => e.idea === idea.id).flatMap((e) => e.topics);
-          for (const t of idea.topics) expect(reached, `${idea.id} → ${t}`).toContain(t);
+          const lines = layout.edges.filter((e) => e.idea === idea.id);
+          expect(lines, idea.id).toHaveLength(idea.inGap ? 0 : 1);
         }
-        // Every point a line passes through stays outside the space kept for the mark and the words.
         for (const e of layout.edges) {
           for (const [x, y] of pointsOf(e.d)) {
             expect(Math.hypot(x, y), e.d).toBeGreaterThan(options.topicRadius * 0.9);
           }
+        }
+      });
+
+      it('keeps every name and count off the ring of dots', () => {
+        for (const p of layout.topics) {
+          expect(reachOf(p.box), p.topic).toBeGreaterThan(options.ideaRadius + options.dot);
         }
       });
 
@@ -183,13 +197,12 @@ describe('layoutGraph', () => {
         for (const p of layout.topics) expect(p.ticks.match(/M/g)).toHaveLength(2);
       });
 
-      it('bundles ideas between two neighbouring topics into one knot', () => {
-        const shared = layout.edges.filter(
-          (e) => e.topics.includes('ai-changing-work') && e.topics.includes('credibility'),
+      it('sits the ideas two neighbouring topics share in the gap between them', () => {
+        const shared = layout.ideas.filter(
+          (i) => i.topics.includes('ai-changing-work') && i.topics.includes('credibility'),
         );
         expect(shared).toHaveLength(2);
-        const knots = new Set(shared.map((e) => e.d.split(' ').slice(-2).join(' ')));
-        expect(knots.size).toBe(1);
+        for (const i of shared) expect(i.inGap, i.id).toBe(true);
       });
 
       it('draws the same picture for the same posts', () => {
@@ -288,4 +301,89 @@ describe('layoutGraph', () => {
     expect(empty.topics).toEqual([]);
     expect(empty.edges).toEqual([]);
   });
+
+  it('says the ring is crowded once the dots would touch, and keeps a dot easy to point at until then', () => {
+    expect(layoutGraph(graph, deskLayout).crowded).toBe(false);
+    expect(layoutGraph(graph, phoneLayout).crowded).toBe(false);
+    const full = layoutGraph(
+      graphOf(
+        [
+          post(
+            '2026-01-01-a',
+            Array.from(
+              { length: 70 },
+              (_, i) => `I${String(i)} | ${known[i % known.length] ?? ''}`,
+            ),
+          ),
+        ],
+        known,
+      ),
+      phoneLayout,
+    );
+    expect(full.spacing).toBeLessThan(CROWDED * phoneLayout.dot);
+    expect(full.crowded).toBe(true);
+    // A pointer's reach round a dot never meets the next dot's.
+    for (const l of [layoutGraph(graph, deskLayout), full]) {
+      expect(l.hitRadius * 2).toBeLessThanOrEqual(l.spacing + 1e-9);
+    }
+  });
+
+  it('cuts a long topic name to three lines and ends it in an ellipsis', () => {
+    expect(capped(['one', 'two'])).toEqual(['one', 'two']);
+    expect(capped(['one', 'two', 'three', 'four'])).toEqual(['one', 'two', 'three…']);
+  });
+});
+
+describe('layoutGraph, as the blog grows', () => {
+  // Three to twelve topics, some with long names, ideas shared between neighbours and across the ring.
+  const longNames: Record<string, string> = {
+    t0: 'What a person can answer for when an agent acts',
+    t3: 'Small teams shipping large systems',
+    t7: 'Writing in public without a safety net',
+  };
+  for (let n = 3; n <= 12; n++) {
+    const topics = Array.from({ length: n }, (_, k) => `t${String(k)}`);
+    const rows = topics.flatMap((t, k) => [
+      ...Array.from({ length: 1 + (k % 4) }, (_, i) => `${t}-${String(i)} | ${t}`),
+      `${t}-next | ${t}, ${topics[(k + 1) % n] ?? t}`,
+      ...(k % 3 === 0 ? [`${t}-far | ${t}, ${topics[(k + Math.floor(n / 2)) % n] ?? t}`] : []),
+    ]);
+    const g = graphOf([post('2026-01-01-a', rows)], topics);
+    for (const [name, options] of [
+      ['desk', deskLayout],
+      ['phone', phoneLayout],
+    ] as const) {
+      it(`${String(n)} topics on a ${name}: names apart, off the dots, inside the picture`, () => {
+        const layout = layoutGraph(g, options, longNames);
+        expect(layout.topics).toHaveLength(n);
+        expect(layout.ideas).toHaveLength(g.ideas.length);
+        const [vx, vy, vw, vh] = layout.viewBox.split(' ').map(Number) as [
+          number,
+          number,
+          number,
+          number,
+        ];
+        for (const p of layout.topics) {
+          expect(p.lines.length).toBeLessThanOrEqual(3);
+          expect(reachOf(p.box), p.topic).toBeGreaterThan(options.ideaRadius + options.dot);
+          expect(p.box.x0).toBeGreaterThanOrEqual(vx);
+          expect(p.box.y0).toBeGreaterThanOrEqual(vy);
+          expect(p.box.x1).toBeLessThanOrEqual(vx + vw);
+          expect(p.box.y1).toBeLessThanOrEqual(vy + vh);
+          for (const q of layout.topics) {
+            if (q === p) continue;
+            const apart =
+              p.box.x1 <= q.box.x0 ||
+              q.box.x1 <= p.box.x0 ||
+              p.box.y1 <= q.box.y0 ||
+              q.box.y1 <= p.box.y0;
+            expect(apart, `${p.topic} and ${q.topic}`).toBe(true);
+          }
+        }
+        // Every idea has a place of its own: no two dots on the same spot.
+        const spots = new Set(layout.ideas.map((i) => `${String(i.x)},${String(i.y)}`));
+        expect(spots.size).toBe(layout.ideas.length);
+      });
+    }
+  }
 });

@@ -49,6 +49,11 @@ const posts: GraphPost[] = entries.map((e) => ({
 const graph = graphOf(posts, settings.themes);
 const desk = layoutGraph(graph, deskLayout, settings.topic_names);
 const phone = layoutGraph(graph, phoneLayout, settings.topic_names);
+// Each face says what it shows: dots while they fit, the topics alone once they would touch.
+const captionOf = (crowded: boolean): string =>
+  crowded
+    ? 'The more small ideas a topic holds, the longer its arc. They are too many to draw one by one here; the list holds every one.'
+    : 'The more small ideas a topic holds, the longer its arc. A dot in the gap between two arcs belongs to both.';
 
 // A topic has its own page only when a whole post carries it (see topics/[topic].astro).
 const topicPages = new Set(entries.filter((e) => !e.data.draft).flatMap((e) => e.data.themes));
@@ -211,8 +216,14 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
               name={settings.site.author}
             />
             <figcaption class="small quiet">
-              The more small ideas a topic holds, the longer its arc. A dot in the gap between two
-              arcs belongs to both.
+              {desk.crowded === phone.crowded ? (
+                captionOf(desk.crowded)
+              ) : (
+                <>
+                  <span class="for-desk">{captionOf(desk.crowded)}</span>
+                  <span class="for-phone">{captionOf(phone.crowded)}</span>
+                </>
+              )}
             </figcaption>
           </figure>
         </div>
@@ -309,7 +320,8 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
     margin: 0;
     container-type: inline-size;
   }
-  .picture :global(.desk) {
+  .picture :global(.desk),
+  .for-desk {
     display: none;
   }
   /* On a phone the picture takes the whole width of the screen, so its names can be read; its own margin
@@ -543,10 +555,12 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
   }
 
   @container (min-width: 35rem) {
-    .picture :global(.desk) {
+    .picture :global(.desk),
+    .for-desk {
       display: block;
     }
-    .picture :global(.phone) {
+    .picture :global(.phone),
+    .for-phone {
       display: none;
     }
   }
