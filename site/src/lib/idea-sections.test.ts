@@ -93,7 +93,7 @@ describe('the real posts', () => {
     'Think first, act after': 'My advice',
     'Learn how AI works': 'My advice',
     'Keep the raw note': 'The road',
-    'A badge that says': 'The road',
+    'A badge that says': 'Talked out loud, tidied by AI',
     'The blog as a graph': 'A graph you can walk',
     'Show the road, not just': 'Show the road, not just the building',
     'Every claim gets a door out': 'Every claim gets a door out',

@@ -42,8 +42,8 @@ is the last section of the long version.
 
 | Idea | Themes |
 | --- | --- |
-| Keep the raw note; everything else is a conversion that links back | ai-changing-work, credibility |
-| A badge that says converted, not made | credibility |
+| Keep the raw note; everything else is tidied from it and links back | ai-changing-work, credibility |
+| A badge that says tidied, not made | credibility |
 | The blog as a graph: core, themes, small ideas on more than one theme | ai-changing-work |
 | Show the road, not just the building | accountability, credibility |
 | Every claim gets a door out (citations) | credibility |
