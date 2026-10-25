@@ -35,6 +35,9 @@ where each lives). This file says what to build next and in what order.
   or override with its reason); the studio's "Runs and costs" shows every run of every post with how it
   ended, holds included, its cost in pounds, and the month against the budget. Both read `ledger/` at build
   time; a run that does not verify stops the build. A post with no runs shows no box.
+- **The studio is split into areas** (PR #72, `feat/studio-areas`): `/studio` (Today), `talk`, `feedback`,
+  `review`, `comments` and `runs`, each its own page under one layout with a tab row, full frame width.
+  Slices 6 to 8 below build on it.
 - **Nothing runs through Roadbook yet.** The agents still run through `agents/run.ts` and their
   `PROMPT.md`; the cards describe them alongside. That is deliberate: the existing logic keeps working
   while the framework grows under it.
@@ -96,10 +99,72 @@ green and every item below it holds.
 - Done: an agent's `index.ts` no longer chooses its provider; the image fallback goes through the adapter.
 - Good for: Opus or Fable.
 
+### The studio sees agents working (Slices 6 to 8)
+
+Today a run is only visible after its pull request merges and the site deploys: the studio reads `ledger/`
+at build time. The events that would show work in progress (`node.state`, `node.delta`, `gate.opened`,
+`hold.raised`, `cost.incurred`) already exist; they sit in a file on a branch until the merge.
+
+Decision (Victor, 25 October 2026): **git stays the record; a database is added for what is happening now.**
+
+|          | What happened (the record)                      | What is happening now (live)                                |
+| -------- | ----------------------------------------------- | ----------------------------------------------------------- |
+| Holds    | outputs, receipts, costs, the merge as approval | running, queued, which step, waiting on Victor, cost so far |
+| Lives in | git: `ledger/` and the content (unchanged)      | D1: a projection of the ledger (new)                        |
+| If lost  | must never be lost                              | rebuilt from git                                            |
+
+The database never decides anything and never replaces a ledger file; the build keeps reading git. No new
+vendor and no heavier database: the volume is a few dozen runs a day, and D1 already holds the comments.
+
+#### Slice 6: an Agents area from GitHub (no new infrastructure)
+
+- `/studio/agents`: a Worker endpoint asks the GitHub API, when the page opens, for the runs of
+  `.github/workflows/agents.yml` and the open pull requests with an `agent:` label.
+- Shows queued, running, done, held and failed, with the thought, the agent, how long it took, and links to
+  the log and the pull request. Refreshes while the page is open; nothing moves but the numbers.
+- Needs: the Worker's GitHub token gains **Actions: read** (Victor changes it in GitHub; open question).
+- Done: a label added to a pull request shows as queued, then running, on the page within a minute,
+  without a deploy; with the token missing the area says so in plain words instead of showing nothing.
+- Good for: Opus or Fable (UI); Copilot for the endpoint and its tests.
+
+#### Slice 7: the runner reports as it goes (D1)
+
+- `agents/run.ts` sends each ledger event, as it appends it, to `POST /api/runs/:id/events`. The Worker
+  checks the hash chain before storing (an event whose `prev` does not match the last one is refused).
+  A send that fails never fails the run: the ledger file is still the record.
+- GitHub Actions calls through a Cloudflare Access service token, so `/api/*` keeps its one gate.
+- A new migration adds `runs` (one row per run: thought, agent, state, cost so far, started, ended, the
+  commit once merged) and `run_events`. On merge the row is marked recorded and linked to the commit.
+- `roadbook rebuild-live` (or a script) rebuilds both tables from `ledger/`, so losing them costs nothing.
+- The studio:
+  - **Agents**: running now, needs you, held, recently done; open a run for its timeline as it happens,
+    the streamed text included. Updated by polling or server-sent events.
+  - **Pipeline**: one row per thought, one column per phase from the cards, each cell the state of that
+    step. This is the view that shows the blog working.
+  - **Today**: one "needs you" list across review, comments, holds and agents' questions, with counts on
+    the tabs.
+- Monochrome and still: states are words and filled or empty marks, elapsed time ticks as numbers, no
+  decorative motion (CLAUDE.md: motion only when the reader asked for it).
+- Done: a local run (`npm run agent`) appears on the board within seconds and its timeline matches its
+  ledger file event for event; deleting the tables and rebuilding gives the same board; an event with a
+  broken chain is refused with a plain message.
+- Good for: Opus or Fable (touches the runner and adds an endpoint that writes).
+
+#### Slice 8: questions that wait (needs its own plan first)
+
+This is the runtime under Later, made concrete by what Slice 7 shows Victor actually wants to answer.
+
+- One Cloudflare Agent (Durable Object) per run. On `gate.opened` the run pauses; Victor answers in the
+  studio; `gate.closed` records who decided and the run goes on. Today a question can only end in a hold.
+- Start an agent from the studio ("run structure on this thought") instead of a pull request label.
+- WebSockets from the run to the studio, replacing polling.
+- Check first: Durable Objects may need the Workers Paid plan; agents moving from Actions to Workers
+  changes where secrets and time limits live.
+
 ### Later (each needs its own plan before work starts)
 
 - Runtime: one Cloudflare Agent (Durable Object) per run; gates become states the studio shows as
-  "needs you".
+  "needs you". Slice 8 is its first step.
 - `roadbook build` and `deploy` for the owner's own Cloudflare account.
 - The builder and an MCP server, so Claude can edit a project through `validate`.
 - The second project on the framework: bug fixing.
