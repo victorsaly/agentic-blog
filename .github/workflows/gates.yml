@@ -76,3 +76,13 @@ jobs:
           labels: gate
           commit-message: ${{ steps.close.outputs.title }}
           delete-branch: true
+
+      # The run goes on: the steps after the gate (or before it, when it was sent back) start on its branch.
+      - name: Start what comes next
+        if: steps.close.outputs.start != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEXT: ${{ steps.close.outputs.start }}
+          BRANCH: ${{ github.event.client_payload.branch || steps.close.outputs.branch }}
+          THOUGHT: ${{ github.event.client_payload.thought }}
+        run: node scripts/start-next.mjs

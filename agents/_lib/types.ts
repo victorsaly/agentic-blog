@@ -88,6 +88,8 @@ export interface AgentContext {
   speak: (text: string, voice: { id: string; model?: string }) => Promise<SpeechReply>;
   /** Today, so output files carry a date the runner controls. */
   today: string;
+  /** What Victor said when he sent back the gate after this step (Not this), if he has since its last run. */
+  sentBack?: string | null;
 }
 
 export interface AskOptions {

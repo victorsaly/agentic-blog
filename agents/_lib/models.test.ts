@@ -2,6 +2,7 @@
 // these use stand-in adapters, so no provider is called and nothing is spent.
 import { describe, expect, it } from 'vitest';
 import { ModelCallError, UsageLog, type ModelAdapter } from '@roadbook/core';
+import { BudgetError } from './budget.js';
 import { adapterFor, choose, connect, textModel, unpriced } from './models.js';
 
 function writer(name: string, fail = false): ModelAdapter {
@@ -104,6 +105,30 @@ describe('connect', () => {
         'claude-sonnet-5-5',
       ),
     ).toEqual(['new-painter']);
+  });
+});
+
+describe('the cap, checked before every call', () => {
+  it('makes no call that could take the month past its cap, counting what the run has spent', async () => {
+    const log = new UsageLog();
+    let asked = 0;
+    const counting: ModelAdapter = {
+      ...writer('writer'),
+      write: (request) => {
+        asked += 1;
+        return writer('writer').write?.(request) ?? Promise.reject(new Error('no writer'));
+      },
+    };
+    // The most "why?" can cost: 3 input tokens and all 100 output tokens of Sonnet, $0.001006.
+    const calls = connect({ writer: counting, drawers: [drawer('images', true)] }, log, defaults, {
+      leftUsd: 0.00102,
+      unknownUsd: 0.6,
+    });
+    expect(await calls.ask('why?')).toBe('answer to why?');
+    // The first call spent $0.00004, so the same call no longer fits, and is not made.
+    await expect(calls.ask('why?')).rejects.toThrow(BudgetError);
+    await expect(calls.draw('a door')).rejects.toThrow(/stopped at the monthly cap: a drawing/);
+    expect(asked).toBe(1);
   });
 });
 
