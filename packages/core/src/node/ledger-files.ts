@@ -127,13 +127,18 @@ export async function saveRun(thoughtDir: string, id: string, ledger: Ledger): P
 }
 
 /**
- * Writes a run that carries on from one already saved (a gate closed after it waited). The saved file must be
- * exactly the start of the new events, checked hash by hash; anything else is refused and nothing is written,
- * so extending can never rewrite what was there.
+ * Writes a run that carries on from one already saved (a gate closed after it waited). The saved run must
+ * verify against its saved head first (so a changed or cut file is refused, not carried on), and then be
+ * exactly the start of the new events, hash by hash; anything else is refused and nothing is written, so
+ * extending can never rewrite what was there.
  */
 export async function extendRun(thoughtDir: string, id: string, ledger: Ledger): Promise<void> {
   const dir = join(thoughtDir, LEDGER_DIR);
   const saved = readEvents(await readFile(join(dir, `${id}${EVENTS}`), 'utf8'));
+  const head = readHead(await readFile(join(dir, `${id}${HEAD}`), 'utf8'));
+  const broken = await Ledger.verify(saved, head);
+  if (broken !== null)
+    throw new LedgerError(`refused: ${id} on disk does not verify from event ${String(broken)}`);
   const events = ledger.events;
   const prefix = saved.length <= events.length && saved.every((e, i) => e.hash === events[i]?.hash);
   if (!prefix)

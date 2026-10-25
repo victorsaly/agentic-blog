@@ -19,9 +19,10 @@ describe('the answer as an origin', () => {
       '2026-10-25',
       'info@victorsaly.com',
     );
-    const { data, content } = matter(text);
+    const { data } = matter(text);
     expect(originFrontMatter.safeParse(data).success).toBe(true);
-    expect(content.trim()).toBe('On a walk.\n\nA podcast.');
+    // Not a character changed: indentation and trailing spaces are kept, only a final line ending added.
+    expect(text.endsWith('---\n\n  On a walk.\n\nA podcast.  \n')).toBe(true);
     expect(data).toMatchObject({ medium: 'text', edited: false });
   });
 });

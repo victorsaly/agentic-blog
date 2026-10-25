@@ -34,6 +34,15 @@ describe('blocksOf', () => {
     ]);
   });
 
+  it('keeps a fenced block exactly, so a diagram in text keeps its alignment', () => {
+    const diagram = '[ talk ] ──> [ tidy ]\n    │\n    └──> [ origin ]';
+    expect(blocksOf(`Before.\n\n\`\`\`\n${diagram}\n\`\`\`\n\nAfter.`)).toEqual([
+      { kind: 'para', parts: [{ kind: 'text', text: 'Before.' }] },
+      { kind: 'code', text: diagram },
+      { kind: 'para', parts: [{ kind: 'text', text: 'After.' }] },
+    ]);
+  });
+
   it('keeps a quote, and HTML as plain words', () => {
     expect(blocksOf('> said once\n\n<b>not bold</b>')).toEqual([
       { kind: 'quote', parts: [{ kind: 'text', text: 'said once' }] },

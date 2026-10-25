@@ -215,6 +215,18 @@ const title = current === 'today' || !area ? 'Studio' : `${area.name} · Studio`
     padding-left: var(--space-3);
     border-left: var(--rule-strong) solid var(--ink);
   }
+  /* A fenced block keeps every space, so a diagram drawn in text stays aligned; it scrolls, never wraps. */
+  .studio .markdown pre {
+    overflow-x: auto;
+    max-width: 100%;
+    padding: var(--space-2) 0;
+    font-size: var(--size-small);
+    line-height: 1.4;
+  }
+  .studio .markdown pre:focus-visible {
+    outline: var(--focus);
+    outline-offset: var(--focus-offset);
+  }
   .studio .markdown-table {
     overflow-x: auto;
     max-width: 100%;

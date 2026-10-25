@@ -44,6 +44,16 @@ function BlockView({ block }: { block: Block }): React.JSX.Element {
           <Parts parts={block.parts} />
         </p>
       );
+    case 'code':
+      return (
+        <pre
+          // A line wider than the screen scrolls, and the keyboard can only scroll what takes focus.
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+          tabIndex={0}
+        >
+          <code>{block.text}</code>
+        </pre>
+      );
     case 'quote':
       return (
         <blockquote>

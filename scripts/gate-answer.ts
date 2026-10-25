@@ -60,7 +60,9 @@ export function answerOrigin(
     'edited: false',
     '---',
     '',
-    words.trim(),
+    // The words exactly as given, never trimmed: an origin is kept as it came. Only a final line ending is
+    // added when there is none, so the file ends like every other.
+    words.endsWith('\n') ? words.slice(0, -1) : words,
     '',
   ].join('\n');
 }

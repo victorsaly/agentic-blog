@@ -15,9 +15,10 @@ permissions:
   contents: write
   pull-requests: write
 
-# One change to a thought at a time, shared with the agents, so a gate closing and an agent writing never race.
+# One writer per branch at a time, shared with the agents workflow (the same key), so a gate closing and an
+# agent writing never push to the same branch at once.
 concurrency:
-  group: agents-${{ github.event.client_payload.thought }}
+  group: agents-${{ github.event.client_payload.branch || github.event.repository.default_branch }}
   cancel-in-progress: false
 
 jobs:
@@ -25,9 +26,13 @@ jobs:
     name: Record the decision on the gate's branch
     runs-on: ubuntu-latest
     steps:
+      # The tools come from main, so a gate branch made before they existed is still closed with them; the
+      # gate's branch is checked out apart, in target/, and only its content is changed.
+      - uses: actions/checkout@v5
       - uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.client_payload.branch || github.ref }}
+          ref: ${{ github.event.client_payload.branch || github.event.repository.default_branch }}
+          path: target
           # Pushes made with GitHub's own token never start CI; BOT_TOKEN pushes as a person.
           token: ${{ secrets.BOT_TOKEN || github.token }}
       - uses: actions/setup-node@v5
@@ -40,6 +45,7 @@ jobs:
         env:
           # Through the environment, never pasted into the script: it carries Victor's own words.
           PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+          CONTENT_ROOT: target
           STUDIO_URL: ${{ vars.STUDIO_URL }}
           STUDIO_ACCESS_CLIENT_ID: ${{ secrets.STUDIO_ACCESS_CLIENT_ID }}
           STUDIO_ACCESS_CLIENT_SECRET: ${{ secrets.STUDIO_ACCESS_CLIENT_SECRET }}
@@ -47,6 +53,7 @@ jobs:
 
       - name: Commit on the gate's branch
         if: github.event.client_payload.branch != ''
+        working-directory: target
         env:
           TITLE: ${{ steps.close.outputs.title }}
           BODY: ${{ steps.close.outputs.body }}
@@ -61,6 +68,7 @@ jobs:
         if: github.event.client_payload.branch == ''
         uses: peter-evans/create-pull-request@v8
         with:
+          path: target
           token: ${{ secrets.BOT_TOKEN || github.token }}
           branch: ${{ steps.close.outputs.branch }}
           title: ${{ steps.close.outputs.title }}

@@ -3,7 +3,8 @@
 // the gate is still open and the decision fits (closeGate in @roadbook/core), writes an answer as an origin
 // file when there is one, and carries the gate's run on: the words, who closed it, and done. The run is
 // reported live as it goes, so the studio shows the gate closed. An answer file that is already there is
-// never overwritten: origin is append-only.
+// never overwritten: origin is append-only. The tools run from main; CONTENT_ROOT names the checkout of the
+// gate's branch that is changed (the repository itself when unset).
 //   PAYLOAD='{"run":…,"thought":…,"decision":…,"words":…,"by":…}' npx tsx scripts/close-gate.ts
 import { appendFile, mkdir, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
@@ -12,7 +13,7 @@ import { extendRun, readRuns } from '@roadbook/core/node';
 import { liveFromEnv } from '../agents/_lib/live';
 import { answerFileFor, answerOrigin, closeGatePayload } from './gate-answer';
 
-const root = resolve(import.meta.dirname, '..');
+const root = resolve(process.env['CONTENT_ROOT'] ?? resolve(import.meta.dirname, '..'));
 const payload = closeGatePayload.parse(JSON.parse(process.env['PAYLOAD'] ?? 'null'));
 const thoughtDir = join(root, 'thoughts', payload.thought);
 

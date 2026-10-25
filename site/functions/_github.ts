@@ -21,12 +21,15 @@ export interface OpenPull {
 const CHECKS = 8;
 
 /**
- * The open pull request whose branch holds `path`, or null when none does (the file is on main, or not
- * pushed). Branches that name the thought are asked first.
+ * The open pull request whose branch holds `path`, or null when none does: the file is on main (every branch
+ * made since inherits it, so main is asked first and wins), or it is not pushed. Branches that name the
+ * thought are asked first.
  */
 export async function pullHolding(env: Env, path: string, slug: string): Promise<OpenPull | null> {
   const base = `https://api.github.com/repos/${env.GITHUB_REPO}`;
   const headers = githubHeaders(env);
+  const onMain = await fetch(`${base}/contents/${path}?ref=main`, { headers });
+  if (onMain.ok) return null;
   const response = await fetch(`${base}/pulls?state=open&per_page=50`, { headers });
   if (!response.ok)
     throw new Error(`GitHub did not list the pull requests (${String(response.status)}).`);

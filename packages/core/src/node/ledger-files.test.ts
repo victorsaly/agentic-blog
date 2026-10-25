@@ -111,6 +111,30 @@ describe('extendRun', () => {
     expect(runs[0]?.events).toHaveLength(saved.events.length + 1);
   });
 
+  it('refuses to carry on a saved run that was cut short or changed, and writes nothing', async () => {
+    const id = '20261025T120000Z-answers-aaaa';
+    const dir = await thoughtWithRuns(id);
+    const [saved] = (await readRuns(dir)).runs;
+    if (!saved) throw new Error('no run');
+    const last = saved.events.at(-1);
+    const ledger = await Ledger.resume(saved.events, {
+      count: saved.events.length,
+      hash: last?.hash ?? '',
+    });
+    await ledger.append({
+      type: 'gate.closed',
+      node: 'answers',
+      decision: 'answered',
+      by: 'owner',
+    });
+    // Cut the saved file to its first event: every hash still matches the new run, but the head says more.
+    const file = join(dir, 'ledger', `${id}.jsonl`);
+    const cut = (await readFile(file, 'utf8')).split('\n').slice(0, 1).join('\n');
+    await writeFile(file, `${cut}\n`);
+    await expect(extendRun(dir, id, ledger)).rejects.toThrow(/does not verify/);
+    expect(await readFile(file, 'utf8')).toBe(`${cut}\n`);
+  });
+
   it('refuses a run that is not the saved one carried on, and writes nothing', async () => {
     const dir = await thoughtWithRuns('20261025T120000Z-answers-aaaa');
     const other = new Ledger();

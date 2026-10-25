@@ -1,7 +1,8 @@
 // Why: in the studio Victor reads what an agent wrote (the interview's questions, the structure with its small
 // ideas table) and what he is about to send, and raw Markdown is hard to review. This reads the Markdown
 // those files use into plain parts a component draws as elements: headings, paragraphs, lists, a table,
-// a quote, and bold, italic, code and links inside them. No HTML from a file ever reaches the page, and a
+// a quote, a fenced block kept exactly (a diagram drawn in text keeps its alignment), and bold, italic, code
+// and links inside them. No HTML from a file ever reaches the page, and a
 // link only becomes one when it goes to a web address or a place on this site. Pure, so it is tested.
 
 export type Inline =
@@ -16,13 +17,16 @@ export type Block =
   | { kind: 'para'; parts: Inline[] }
   | { kind: 'list'; ordered: boolean; items: Inline[][] }
   | { kind: 'quote'; parts: Inline[] }
-  | { kind: 'table'; head: Inline[][]; rows: Inline[][][] };
+  | { kind: 'table'; head: Inline[][]; rows: Inline[][][] }
+  /** A fenced block, every line exactly as written. */
+  | { kind: 'code'; text: string };
 
 const INLINE =
   /\*\*([^*\n]+)\*\*|\*([^*\n]+)\*|_([^_\n]+)_|`([^`\n]+)`|\[([^\]\n]+)\]\(([^)\s]+)\)/g;
 const BULLET = /^\s*[-*•]\s+/;
 const NUMBERED = /^\s*\d+[.)]\s+/;
 const HEADING = /^(#{1,6})\s+(.*)$/;
+const FENCE = /^\s*(```|~~~)/;
 const TABLE_ROW = /^\s*\|.*\|\s*$/;
 const TABLE_RULE = /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/;
 
@@ -73,7 +77,18 @@ export function blocksOf(markdown: string): Block[] {
   for (let i = 0; i < lines.length; i += 1) {
     const line = (lines[i] ?? '').trim();
     const heading = HEADING.exec(line);
-    if (line === '') {
+    const fence = FENCE.exec(lines[i] ?? '');
+    if (fence) {
+      // Everything to the closing fence (or the end) is kept as written, untrimmed.
+      flush();
+      const kept: string[] = [];
+      i += 1;
+      while (i < lines.length && !(lines[i] ?? '').trim().startsWith(fence[1] ?? '```')) {
+        kept.push(lines[i] ?? '');
+        i += 1;
+      }
+      blocks.push({ kind: 'code', text: kept.join('\n') });
+    } else if (line === '') {
       flush();
     } else if (heading) {
       flush();

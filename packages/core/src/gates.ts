@@ -98,7 +98,15 @@ export function closeGate(
   const said: EventBody[] =
     closing.decision === 'answered' || words === ''
       ? []
-      : [{ type: 'feedback.given', node, kind: kinds[closing.decision], words, by: closing.by }];
+      : [
+          {
+            type: 'feedback.given',
+            node,
+            kind: kinds[closing.decision],
+            words: closing.words,
+            by: closing.by,
+          },
+        ];
   return {
     ok: true,
     node,
