@@ -4,9 +4,12 @@
 // rule where it held or failed, quiet where it has not run. The step this page is about carries a heavy rule
 // under it. Each step opens its latest run. Drawn by hand from the layout core gives (no graph library: the
 // picture is the same every time, and a screen reader reads each step as a link with its state). On a phone
-// the same route is a numbered list. A route wider than the frame opens scrolled to where the work is: the
+// the same route is a numbered list. Work in progress moves, in marigold, the one colour: ink dashes flow along
+// a marigold band into a running step, and an ink bar sweeps along the foot of the step itself, so a glance
+// says something is happening and where (Victor asked for it; still when the reader asks for less motion).
+// A route wider than the frame opens scrolled to where the work is: the
 // step this page is about, or else the furthest step that has run, once the frame is shown.
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import type { RouteLayout, RouteStep, StepState } from '@roadbook/core/route';
 import { agentName } from '../lib/agent-runs';
 
@@ -63,6 +66,8 @@ export function RouteDrawing({
   const focus = current ?? reached?.id;
   const focusX = focus === undefined ? 0 : (at.get(focus)?.x ?? 0);
   const scroller = useRef<HTMLDivElement | null>(null);
+  // Clip ids are page-wide, and the pipeline draws one route per thought.
+  const clip = `route-clip${useId().replace(/:/g, '')}`;
   useEffect(() => {
     const el = scroller.current;
     if (!el) return;
@@ -105,16 +110,18 @@ export function RouteDrawing({
             const y2 = b.y + H / 2;
             const mid = x1 + GAP_X / 2;
             const lit = states[to] !== 'not-run';
-            return (
-              <path
-                key={`${from}-${to}`}
-                className={lit ? 'route-line lit' : 'route-line'}
-                d={
-                  y1 === y2
-                    ? `M${String(x1)} ${String(y1)}H${String(x2)}`
-                    : `M${String(x1)} ${String(y1)}H${String(mid)}V${String(y2)}H${String(x2)}`
-                }
-              />
+            const d =
+              y1 === y2
+                ? `M${String(x1)} ${String(y1)}H${String(x2)}`
+                : `M${String(x1)} ${String(y1)}H${String(mid)}V${String(y2)}H${String(x2)}`;
+            // Into a running step the line carries the work: a marigold band with ink flowing along it.
+            return states[to] === 'running' ? (
+              <g key={`${from}-${to}`}>
+                <path className="route-line band" d={d} />
+                <path className="route-line flow" d={d} />
+              </g>
+            ) : (
+              <path key={`${from}-${to}`} className={lit ? 'route-line lit' : 'route-line'} d={d} />
             );
           })}
           {layout.steps.map((s) => {
@@ -125,6 +132,21 @@ export function RouteDrawing({
             const drawn = (
               <g className={`route-step state-${state}${gate ? ' gate' : ''}`}>
                 <rect x={x} y={y} width={W} height={H} rx={gate ? H / 2 : 0} />
+                {state === 'running' && (
+                  <>
+                    <clipPath id={`${clip}-${s.id}`}>
+                      <rect x={x} y={y} width={W} height={H} rx={gate ? H / 2 : 0} />
+                    </clipPath>
+                    <rect
+                      className="sweep"
+                      clipPath={`url(#${clip}-${s.id})`}
+                      x={x}
+                      y={y + H - 5}
+                      width={W / 3}
+                      height={5}
+                    />
+                  </>
+                )}
                 <text x={x + W / 2} y={y + 22} textAnchor="middle" className="name">
                   {name}
                 </text>
@@ -168,7 +190,8 @@ export function RouteDrawing({
         })}
       </ol>
       <p className="route-key small quiet">
-        Round: your call. Filled: working, or waiting on you. Heavy rule: held or did not finish.
+        Round: your call. Marigold and moving: working now. Filled: waiting on you. Heavy rule: held
+        or did not finish.
       </p>
     </div>
   );
