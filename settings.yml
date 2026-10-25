@@ -30,6 +30,12 @@ publishing:
   index: true # robots: search engines welcome; also opens the reader chat (false keeps both closed)
   badge_text: Talked out loud, tidied by AI # printed on LinkedIn posts, beside the link
   social: [linkedin] # which short versions the publish agent prepares
+  # What readers see costs in. Providers bill, and the ledger records, in US dollars; the page converts at
+  # this fixed rate so a cost reads the same on every deploy. Update the rate and the date together.
+  currency:
+    show: GBP
+    per_usd: 0.748 # pounds to one US dollar, ECB reference rates of 23 October 2026 (0.83728 / 1.1193)
+    rate_date: 2026-10-23
 
 licence:
   code: MIT

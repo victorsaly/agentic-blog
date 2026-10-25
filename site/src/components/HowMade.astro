@@ -15,6 +15,9 @@ interface Props {
 
 const { made, jobs } = Astro.props;
 const author = settings.site.author.split(' ')[0] ?? settings.site.author;
+const { show, per_usd: perUsd, rate_date: rateDate } = settings.publishing.currency;
+const currency = { show, perUsd };
+const money = (usd: number): string => moneyOf(usd, currency);
 const endings: Record<Ending, string> = {
   done: 'Done',
   held: `Held for ${author}`,
@@ -46,7 +49,7 @@ const day = (iso: string): string => formatDate(new Date(`${iso}T12:00:00Z`));
               {endings[step.ended]}
             </span>
             <span class="quiet">
-              {step.costed ? moneyOf(step.usd) : 'cost not recorded'}
+              {step.costed ? money(step.usd) : 'cost not recorded'}
               {step.runs > 1 && ` · ran ${String(step.runs)} times`}
             </span>
           </div>
@@ -76,9 +79,17 @@ const day = (iso: string): string => formatDate(new Date(`${iso}T12:00:00Z`));
     )
   }
   <p class="small total">
-    {made.totalIsFloor ? 'At least ' : ''}{moneyOf(made.totalUsd)} of AI across {runs}
+    {made.totalIsFloor ? 'At least ' : ''}{money(made.totalUsd)} of AI across {runs}
     {runs === 1 ? ' run' : ' runs'}. <a href="/how-it-works">How the agents work</a>
   </p>
+  {
+    show !== 'USD' && (
+      <p class="small quiet rate">
+        The providers bill in US dollars, and the ledger records dollars. Shown here in pounds at £
+        {perUsd} to the dollar ({formatDate(rateDate)}).
+      </p>
+    )
+  }
 </section>
 
 <style>
@@ -136,6 +147,10 @@ const day = (iso: string): string => formatDate(new Date(`${iso}T12:00:00Z`));
   }
   .total {
     margin: var(--space-3) 0 0;
+    max-width: none;
+  }
+  .rate {
+    margin: var(--space-1) 0 0;
     max-width: none;
   }
   /* On a phone each row is one column, so every outcome sits in the same place under its agent. */

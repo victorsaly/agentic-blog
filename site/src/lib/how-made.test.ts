@@ -114,4 +114,11 @@ describe('moneyOf', () => {
     expect(moneyOf(0)).toBe('0.0¢');
     expect(moneyOf(1.2)).toBe('$1.20');
   });
+
+  it('shows pounds and pence at the given rate, from the dollars recorded', () => {
+    const gbp = { show: 'GBP' as const, perUsd: 0.748 };
+    expect(moneyOf(0.049224, gbp)).toBe('3.7p');
+    expect(moneyOf(0.074, gbp)).toBe('5.5p');
+    expect(moneyOf(2, gbp)).toBe('£1.50');
+  });
 });
