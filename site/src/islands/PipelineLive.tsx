@@ -8,28 +8,32 @@ import { agentName } from '../lib/agent-runs';
 import {
   standingOf,
   withLive,
+  type CellEnding,
   type PipelineAgent,
   type PipelineRow,
   type Standing,
 } from '../lib/pipeline';
 import { formatDate } from '../lib/content';
-import type { Ending } from '../lib/how-made';
 import { useRunsFeed } from './runs-feed';
 
-const words: Record<Ending, string> = {
+const words: Record<CellEnding, string> = {
   done: 'Done',
   held: 'Held',
   failed: 'Did not finish',
+  waiting: 'Needs you',
   running: 'Running',
   'not-run': 'Not run',
 };
 const standingWords: Record<Standing['state'], string> = {
   held: 'Held',
   stopped: 'Did not finish',
+  waiting: 'Needs you',
   running: 'Running',
   moving: 'Moving',
   untouched: 'Not started',
 };
+// A run waiting on Victor looks the same here as on the board and on Today.
+const stateClass = (state: string): string => (state === 'waiting' ? 'needs-you' : state);
 const day = (iso: string): string => formatDate(new Date(`${iso}T12:00:00Z`));
 const short = (iso: string): string =>
   new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
@@ -83,7 +87,9 @@ export function PipelineLive({
           const s = standingOf(r, agents);
           return (
             <li key={r.slug}>
-              <span className={`state state-${s.state === 'stopped' ? 'failed' : s.state}`}>
+              <span
+                className={`state state-${stateClass(s.state === 'stopped' ? 'failed' : s.state)}`}
+              >
                 {standingWords[s.state]}
               </span>
               <span className="what">
@@ -144,7 +150,9 @@ export function PipelineLive({
                       </td>
                     ) : (
                       <td key={key} className={opens || undefined}>
-                        <span className={`state state-${cell.ended}`}>{words[cell.ended]}</span>
+                        <span className={`state state-${stateClass(cell.ended)}`}>
+                          {words[cell.ended]}
+                        </span>
                         <span className="when quiet">
                           {short(cell.on)}
                           {cell.runs > 1 && ` · ${String(cell.runs)} runs`}
