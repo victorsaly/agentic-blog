@@ -5,11 +5,13 @@
 import {
   ModelCallError,
   type ImageReply,
+  type SpeechReply,
   type ModelAdapter,
   type Provider,
   type UsageLog,
 } from '@roadbook/core';
 import { claudeAdapter } from './claude.js';
+import { elevenLabsAdapter } from './elevenlabs.js';
 import { openAiImagesAdapter } from './openai-images.js';
 import { hasPrice } from './prices.js';
 import type { AskOptions } from './types.js';
@@ -24,12 +26,8 @@ export function adapterFor(name: string, provider: Provider): ModelAdapter {
       return openAiImagesAdapter(name, provider);
     case 'workers-ai':
       return workersAiAdapter(name, provider);
-    case 'elevenlabs': {
-      // Speech is made by the voice agent's own client, which also needs the clock of every word; this only
-      // declares the provider so the project can name it and the runner can tell whether its key is set.
-      const secret = provider.secret ?? 'ELEVENLABS_API_KEY';
-      return { provider: name, available: () => Boolean(process.env[secret]), models: () => [] };
-    }
+    case 'elevenlabs':
+      return elevenLabsAdapter(name, provider);
     default:
       throw new Error(`provider "${name}" is ${provider.kind}, which has no adapter yet`);
   }
@@ -40,6 +38,8 @@ export interface Chosen {
   writer: ModelAdapter;
   /** Who may draw, in the card's order; the first one set up here draws. */
   drawers: ModelAdapter[];
+  /** Who may speak, in the card's order; the first one set up here speaks. */
+  speakers?: ModelAdapter[];
 }
 
 /**
@@ -58,7 +58,11 @@ export function choose(
   });
   const writer = named.find((a) => a.write) ?? [...adapters.values()].find((a) => a.write);
   if (!writer) throw new Error('the project declares no provider that writes');
-  return { writer, drawers: named.filter((a) => a.draw) };
+  return {
+    writer,
+    drawers: named.filter((a) => a.draw),
+    speakers: named.filter((a) => a.speak),
+  };
 }
 
 /**
@@ -74,7 +78,9 @@ export function textModel(chosen: Chosen, override: string | undefined, fallback
 export function unpriced(chosen: Chosen, textModel: string): string[] {
   const models = [
     textModel,
-    ...chosen.drawers.filter((d) => d.available()).flatMap((d) => d.models()),
+    ...[...chosen.drawers, ...(chosen.speakers ?? [])]
+      .filter((d) => d.available())
+      .flatMap((d) => d.models()),
   ];
   return [...new Set(models)].filter((m) => !hasPrice(m));
 }
@@ -82,15 +88,17 @@ export function unpriced(chosen: Chosen, textModel: string): string[] {
 export interface Calls {
   ask: (user: string, options?: AskOptions) => Promise<string>;
   draw: (prompt: string, reference?: Uint8Array) => Promise<ImageReply>;
+  speak: (text: string, voice: { id: string; model?: string }) => Promise<SpeechReply>;
 }
 
-/** The two calls an agent gets, each logging what it used. */
+/** The calls an agent gets, each logging what it used. */
 export function connect(
   chosen: Chosen,
   log: UsageLog,
   defaults: { system: string; model: string; maxOutputTokens: number },
 ): Calls {
   const { writer, drawers } = chosen;
+  const speakers = chosen.speakers ?? [];
   const write = writer.write;
   if (!write) throw new Error(`provider "${writer.provider}" cannot write`);
   return {
@@ -127,6 +135,29 @@ export function connect(
         };
       try {
         const reply = await drawer.draw({ prompt, ...(reference ? { reference } : {}) });
+        log.record(reply);
+        return reply;
+      } catch (error: unknown) {
+        if (error instanceof ModelCallError) log.record(error.metered);
+        throw error;
+      }
+    },
+    async speak(text, voice) {
+      const speaker = speakers.find((s) => s.available());
+      if (!speaker?.speak)
+        throw new Error(
+          `no voice provider is set up here (the card allows ${speakers.map((s) => s.provider).join(', ') || 'none'})`,
+        );
+      const model = voice.model ?? speaker.models()[0];
+      // A call the ledger could not cost is never made.
+      if (model !== undefined && !hasPrice(model))
+        throw new Error(`no price for ${model}; add it to agents/_lib/prices.ts first`);
+      try {
+        const reply = await speaker.speak({
+          text,
+          voice: voice.id,
+          ...(model !== undefined ? { model } : {}),
+        });
         log.record(reply);
         return reply;
       } catch (error: unknown) {

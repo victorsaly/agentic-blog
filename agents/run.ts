@@ -91,6 +91,7 @@ async function main(): Promise<void> {
     thought,
     ask: calls.ask,
     draw: calls.draw,
+    speak: calls.speak,
     today: new Date().toISOString().slice(0, 10),
   };
 
@@ -164,9 +165,9 @@ async function main(): Promise<void> {
       model,
       at: new Date().toISOString(),
     };
-    // A picture names the provider that drew it; the text the writer wrote names the writer.
-    const drawers = new Set(chosen.drawers.map((d) => d.provider));
-    const drew = log.totals().find((t) => drawers.has(t.provider));
+    // A picture or a recording names the provider that made it; the text the writer wrote names the writer.
+    const makers = new Set([...chosen.drawers, ...(chosen.speakers ?? [])].map((d) => d.provider));
+    const drew = log.totals().find((t) => makers.has(t.provider));
     // The run's cost is shared across the files it wrote, so adding up receipts gives the run's cost once.
     const kept = result.files.filter((file) => file.remove !== true);
     const split = shares(usd, kept.length);

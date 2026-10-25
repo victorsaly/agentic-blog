@@ -37,6 +37,7 @@ function context(
     },
     ask: () => Promise.reject(new Error('the voice agent asks no model')),
     draw: () => Promise.reject(new Error('the voice agent draws nothing')),
+    speak: () => Promise.reject(new Error('the tests read aloud through their own stand-in')),
     today: '2026-10-24',
   };
 }

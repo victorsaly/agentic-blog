@@ -1,9 +1,9 @@
 // Why: every model a project uses, whoever makes it, is reached through one small contract: an adapter
-// that writes text or draws a picture, and that always says what the call used. Usage is counted in named
-// meters (tokens of each kind, web searches, neurons) so one price list can cost any provider the same way,
-// and the ledger records what a run really used instead of an estimate. Agents never call a provider
-// directly; swapping Claude for another writer, or one image model for another, is a change to the project's
-// providers, not to an agent.
+// that writes text, draws a picture or speaks, and that always says what the call used. Usage is counted in
+// named meters (tokens of each kind, web searches, neurons, characters spoken) so one price list can cost
+// any provider the same way, and the ledger records what a run really used instead of an estimate. Agents
+// never call a provider directly; swapping Claude for another writer, or one image model or voice for
+// another, is a change to the project's providers, not to an agent.
 
 /** The things a provider charges for. Each provider reports the ones it uses; the rest stay at zero. */
 export const meters = [
@@ -15,6 +15,7 @@ export const meters = [
   'imageOutputTokens',
   'webSearches',
   'neurons',
+  'characters',
 ] as const;
 
 export type Meter = (typeof meters)[number];
@@ -62,6 +63,23 @@ export class ModelCallError extends Error {
   }
 }
 
+export interface SpeechRequest {
+  text: string;
+  /** The provider's id for the voice. */
+  voice: string;
+  /** A different model from the same provider, when the card allows it. */
+  model?: string;
+}
+
+/** When each character of the spoken text starts and ends, so a page can follow the voice word by word. */
+export interface CharacterTimes {
+  characters: string[];
+  characterStartTimesSeconds: number[];
+  characterEndTimesSeconds: number[];
+}
+
+export type SpeechReply = Metered & { audio: Uint8Array; clock: CharacterTimes };
+
 export interface ModelAdapter {
   /** The provider's name in the project. */
   provider: string;
@@ -71,6 +89,7 @@ export interface ModelAdapter {
   models: () => string[];
   write?: (request: TextRequest) => Promise<TextReply>;
   draw?: (request: ImageRequest) => Promise<ImageReply>;
+  speak?: (request: SpeechRequest) => Promise<SpeechReply>;
 }
 
 export function addUsage(a: Usage, b: Usage): Usage {
@@ -117,6 +136,7 @@ const meterWords: Record<Meter, [string, string]> = {
   imageOutputTokens: ['image output token', 'image output tokens'],
   webSearches: ['web search', 'web searches'],
   neurons: ['neuron', 'neurons'],
+  characters: ['character', 'characters'],
 };
 
 /** The usage in words, for a ledger's units field: "claude-sonnet-5-5: 4152 input tokens, 2730 output tokens". */

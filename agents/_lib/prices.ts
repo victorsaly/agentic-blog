@@ -13,6 +13,10 @@ export const neuronsPerPicture: Record<string, number> = {
 };
 
 export const prices: PriceList = {
+  // ElevenLabs text to speech, from elevenlabs.io/pricing/api, checked 2026-10-25: $0.08 per 1,000
+  // characters for Eleven v3, the same on pay-as-you-go and every plan. A plan's included characters are not
+  // taken off.
+  eleven_v3: { characters: 0.08 / 1000 },
   // Claude, from the Claude API pricing table, checked 2026-10-06. Cache writes are 1.25x input (5-minute
   // cache); web searches are $10 per 1,000.
   'claude-fable-5-1': {
