@@ -5,7 +5,7 @@
 // without a last word. Pure, and free of the ledger's own code, so it runs in the browser and is tested here.
 import type { LiveRunRow } from './live-runs';
 import type { LiveCell } from './pipeline';
-import { agentName } from './agent-runs';
+import { agentName, type LiveRun } from './agent-runs';
 import { moneyOf, type Currency } from './money';
 
 /** A run that has sent nothing for this long, while saying it is going, may have stopped without a word. */
@@ -30,6 +30,28 @@ export function isQuiet(run: Pick<LiveRunRow, 'state' | 'updatedAt'>, now: strin
     run.state !== 'needs-you' &&
     isGoing(run.state) &&
     Date.parse(now) - Date.parse(run.updatedAt) > QUIET_MS
+  );
+}
+
+/** How long before GitHub says a run started its runner may already be reporting (clocks differ a little). */
+const SLACK_MS = 60_000;
+
+/**
+ * Runs GitHub has queued or started that the runner has not reported yet: for the first minute or so GitHub
+ * is installing, and the live copy hears nothing until the agent itself starts. The board shows them as
+ * starting, so it never says nothing is running while GitHub is. A run counts as heard once the live copy
+ * has a run of the same agent on the same thought that started after it (give or take a minute).
+ */
+export function startingOn(github: readonly LiveRun[], live: readonly ListedRun[]): LiveRun[] {
+  return github.filter(
+    (run) =>
+      (run.state === 'queued' || run.state === 'running') &&
+      !live.some(
+        (heard) =>
+          heard.agent === run.agent &&
+          heard.thought === run.thought &&
+          Date.parse(heard.startedAt) >= Date.parse(run.started) - SLACK_MS,
+      ),
   );
 }
 

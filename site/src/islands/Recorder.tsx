@@ -7,7 +7,8 @@
 // hearing. Opened with ?start=1 (the overview's Say it), it starts recording at once. Only a short status
 // line is announced to a screen reader, not every change on screen. A gate's answer uses it too (mode
 // answer, with deliver): the words go to the gate instead of a pull request of their own, and before sending
-// they are shown as they will read, Markdown and all.
+// they are shown as they will read, Markdown and all. After a send it says the pull request is open only once
+// GitHub has opened it (it takes a minute), and links that pull request, not a list.
 import { Markdown } from './Markdown';
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { MicIcon } from './MicIcon';
@@ -20,6 +21,7 @@ type Phase =
   | { kind: 'ready'; key: string; transcript: string }
   | { kind: 'sending'; key: string; transcript: string }
   | { kind: 'writing'; text: string; sending: boolean }
+  | { kind: 'opening'; asked: string; label: string; list: string; late: boolean }
   | { kind: 'sent'; prUrl: string | null }
   | { kind: 'failed'; message: string; retry?: () => void };
 
@@ -32,8 +34,16 @@ interface TranscribeResponse {
 }
 
 interface OriginResponse {
-  prUrl: string;
+  /** When the studio asked GitHub, so the pull request opened since then can be found. */
+  asked: string;
+  label: string;
+  /** GitHub's list of open pull requests with the label, for when it takes longer than it should. */
+  list: string;
 }
+
+/** How often the studio asks whether GitHub has opened the pull request, and when it says it is late. */
+const OPENING_MS = 4_000;
+const LATE_MS = 3 * 60_000;
 
 /** What was said or written, handed to whoever takes it instead of the origin pull request. */
 export type Delivery =
@@ -138,8 +148,9 @@ const spoken: Record<Phase['kind'], string> = {
   uploading: 'Saving the recording.',
   transcribing: 'Writing down what you said.',
   ready: 'Written down. Read it, then send it or discard it.',
-  sending: 'Opening the pull request.',
+  sending: 'Sending.',
   writing: '',
+  opening: 'Sent. Waiting for GitHub to open the pull request.',
   sent: 'Done. The pull request is open.',
   failed: '',
 };
@@ -191,7 +202,8 @@ export function Recorder({
   const words = copy[mode];
   const [preview, setPreview] = useState(false);
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
-  const busy = phase.kind !== 'idle' && phase.kind !== 'sent';
+  // Once sent, nothing is lost by leaving: GitHub opens the pull request whether the page waits or not.
+  const busy = phase.kind !== 'idle' && phase.kind !== 'sent' && phase.kind !== 'opening';
   useEffect(() => {
     onBusyChange?.(busy);
   }, [busy, onBusyChange]);
@@ -201,6 +213,40 @@ export function Recorder({
     },
     [onBusyChange],
   );
+  // Sent: ask every few seconds whether GitHub has opened the pull request, and link it once it has.
+  const asked = phase.kind === 'opening' ? phase.asked : null;
+  const label = phase.kind === 'opening' ? phase.label : null;
+  useEffect(() => {
+    if (asked === null || label === null) return;
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const ask = async (): Promise<void> => {
+      try {
+        const response = await fetch(
+          `/api/origin?label=${encodeURIComponent(label)}&since=${encodeURIComponent(asked)}`,
+        );
+        const data = (await response.json().catch(() => null)) as {
+          pull?: { url?: unknown } | null;
+        } | null;
+        const url = data?.pull?.url;
+        if (!stopped && typeof url === 'string') {
+          setPhase({ kind: 'sent', prUrl: url });
+          return;
+        }
+      } catch {
+        // A missed ask is asked again; the send itself already happened.
+      }
+      if (stopped) return;
+      if (Date.now() - Date.parse(asked) > LATE_MS)
+        setPhase((at) => (at.kind === 'opening' && !at.late ? { ...at, late: true } : at));
+      timer = setTimeout(() => void ask(), OPENING_MS);
+    };
+    timer = setTimeout(() => void ask(), OPENING_MS);
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+  }, [asked, label]);
   const [now, setNow] = useState<number>(() => Date.now());
   const recorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
@@ -353,8 +399,12 @@ export function Recorder({
         return;
       }
       const body = JSON.stringify({ key, transcript, mode, thought: thoughtSlug ?? null });
-      const { prUrl } = await postJson<OriginResponse>('/api/origin', body, 'application/json');
-      setPhase({ kind: 'sent', prUrl });
+      const { asked, label, list } = await postJson<OriginResponse>(
+        '/api/origin',
+        body,
+        'application/json',
+      );
+      setPhase({ kind: 'opening', asked, label, list, late: false });
     } catch (error) {
       setPhase({
         kind: 'failed',
@@ -380,8 +430,12 @@ export function Recorder({
           mode,
           thought: thoughtSlug ?? null,
         });
-        const { prUrl } = await postJson<OriginResponse>('/api/origin', body, 'application/json');
-        setPhase({ kind: 'sent', prUrl });
+        const { asked, label, list } = await postJson<OriginResponse>(
+          '/api/origin',
+          body,
+          'application/json',
+        );
+        setPhase({ kind: 'opening', asked, label, list, late: false });
       } catch (error) {
         setPhase({
           kind: 'failed',
@@ -574,12 +628,35 @@ export function Recorder({
         </div>
       )}
 
-      {phase.kind === 'sent' && !deliver && phase.prUrl !== null && (
+      {phase.kind === 'opening' && (
         <div className="done">
           <p>
-            Done. <a href={phase.prUrl}>The pull request is open</a>. Merge it and it becomes{' '}
-            {words.sent}.
+            Sent. GitHub is writing the files and opening the pull request, which takes about a
+            minute. This page links it as soon as it is open.
           </p>
+          {phase.late && (
+            <p>
+              It is taking longer than usual. <a href={phase.list}>Look at the pull requests</a>;
+              this page keeps checking.
+            </p>
+          )}
+        </div>
+      )}
+
+      {phase.kind === 'sent' && !deliver && phase.prUrl !== null && (
+        <div className="done">
+          {mode === 'origin' ? (
+            <p>
+              Done. <a href={phase.prUrl}>The pull request is open</a>. The interview starts on it
+              now and asks its questions, and the rest of the post is built there too, so
+              don&rsquo;t merge it yet: the studio asks you to merge when the post is ready.
+            </p>
+          ) : (
+            <p>
+              Done. <a href={phase.prUrl}>The pull request is open</a>. Merge it and it becomes{' '}
+              {words.sent}.
+            </p>
+          )}
           <button type="button" className="control" onClick={toIdle}>
             {words.again}
           </button>

@@ -1,6 +1,8 @@
 # Why: a transcript becomes an origin only by landing in the repo as a pull request Victor merges. The studio
 # sends a repository_dispatch with the recording key and the transcript; this workflow writes the files,
-# exactly as spoken, and opens the pull request. The audio stays in R2; the key is recorded here.
+# exactly as spoken, and opens the pull request. The audio stays in R2; the key is recorded here. A new origin
+# starts the interview on its own pull request at once, so the post is built there, agent after agent, and
+# Victor is never left wondering whether anything is happening.
 name: New origin
 
 on:
@@ -28,6 +30,7 @@ jobs:
           PAYLOAD: ${{ toJSON(github.event.client_payload) }}
         run: node scripts/land-origin.mjs
       - name: Open the pull request
+        id: pr
         uses: peter-evans/create-pull-request@v8
         with:
           # A pull request opened with GitHub's own token never starts CI, so it could never pass the checks
@@ -39,3 +42,13 @@ jobs:
           labels: ${{ steps.write.outputs.label }}
           commit-message: ${{ steps.write.outputs.title }}
           delete-branch: true
+
+      # The run goes on from the start: the interview runs on the new pull request's branch (agents.yml).
+      - name: Start the interview on it
+        if: github.event.action == 'new-origin' && steps.pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEXT: interview
+          BRANCH: ${{ steps.write.outputs.branch }}
+          THOUGHT: ${{ steps.write.outputs.slug }}
+        run: node scripts/start-next.mjs

@@ -1,21 +1,12 @@
 // Why: what the agents are doing on GitHub right now, without waiting for a deploy: what is running and on
-// which step, what is queued, and how the latest runs ended, each with its log and pull request. It asks
-// again every few seconds while something is going and the page is in view, less often when all is quiet,
-// and never while the page is hidden. When GitHub cannot be asked it says so, and what it showed before is
+// which step, what is queued, and how the latest runs ended, each with its log and pull request. The page's
+// GitHub feed asks again every few seconds while something is going and the page is in view, less often
+// when all is quiet, and never while the page is hidden. When GitHub cannot be asked it says so, and what it showed before is
 // marked with the time it was true: a failure never reads as all quiet. Only the summary line is announced, so a screen reader is not
 // talked over by every refresh.
-import { useCallback, useState } from 'react';
-import {
-  agentName,
-  durationOf,
-  readLiveRuns,
-  type LiveRun,
-  type LiveState,
-} from '../lib/agent-runs';
-import { usePoll } from './use-poll';
+import { agentName, durationOf, type LiveRun, type LiveState } from '../lib/agent-runs';
+import { useGithubFeed } from './github-feed';
 
-const BUSY_MS = 15_000;
-const QUIET_MS = 60_000;
 const RECENT = 10;
 
 const words: Record<LiveState, string> = {
@@ -27,53 +18,14 @@ const words: Record<LiveState, string> = {
   stopped: 'Stopped',
 };
 
-/** What GitHub last told the page, and whether the latest ask failed. A failure never pretends all is quiet. */
-interface Status {
-  known: { runs: LiveRun[]; at: string } | null;
-  error: string | null;
-}
-
-function errorOf(data: unknown): string {
-  return typeof data === 'object' &&
-    data !== null &&
-    typeof (data as { error?: unknown }).error === 'string'
-    ? (data as { error: string }).error
-    : 'The studio could not read the agent runs.';
-}
-
 export interface AgentsLiveProps {
   /** Thought titles by folder name, so a run names its thought the way the site does. */
   titles: Record<string, string>;
 }
 
 export function AgentsLive({ titles }: AgentsLiveProps): React.JSX.Element {
-  const [status, setStatus] = useState<Status>({ known: null, error: null });
-
-  const load = useCallback(async (): Promise<LiveRun[]> => {
-    try {
-      const response = await fetch('/api/agents');
-      const data: unknown = await response.json().catch(() => null);
-      const runs = response.ok ? readLiveRuns(data) : null;
-      if (runs === null) throw new Error(errorOf(data));
-      setStatus({ known: { runs, at: new Date().toISOString() }, error: null });
-      return runs;
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error && error.message !== 'Failed to fetch'
-          ? error.message
-          : 'The studio could not be reached. Check the connection.';
-      setStatus((now) => ({ known: now.known, error: message }));
-      return [];
-    }
-  }, []);
-
-  const ask = useCallback(async (): Promise<number> => {
-    const runs = await load();
-    const busy = runs.some((r) => r.state === 'running' || r.state === 'queued');
-    return busy ? BUSY_MS : QUIET_MS;
-  }, [load]);
-  usePoll(ask);
-
+  // The page's one GitHub asker (github-feed.ts), shared with the board above.
+  const status = useGithubFeed();
   const { known, error } = status;
   if (known === null && error === null)
     return <p className="quiet">Asking GitHub what the agents are doing…</p>;

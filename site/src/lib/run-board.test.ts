@@ -9,11 +9,13 @@ import {
   readRunDetail,
   readRunRows,
   readRunsAnswer,
+  startingOn,
   waitingOnVictor,
   timelineOf,
   type ListedRun,
   type ShownEvent,
 } from './run-board';
+import type { LiveRun } from './agent-runs';
 
 const USD = { show: 'USD', perUsd: 1 } as const;
 const NOW = '2026-10-25T12:00:00.000Z';
@@ -128,6 +130,33 @@ describe('the board', () => {
       NOW,
     );
     expect(board.held.map((r) => r.id)).toEqual(['other']);
+  });
+
+  it('shows what GitHub started until the runner reports it, so the top never says nothing runs', () => {
+    const onGithub = (over: Partial<LiveRun>): LiveRun => ({
+      id: 1,
+      agent: 'interview',
+      thought: '2026-10-23-a-thought',
+      title: 'agent:interview',
+      state: 'running',
+      step: 'Run npm ci --no-audit --no-fund',
+      started: ago(30_000),
+      updated: ago(5_000),
+      url: 'https://github.com/o/r/actions/runs/1',
+      pr: null,
+      prUrl: null,
+      ...over,
+    });
+    const installing = onGithub({});
+    // Before the agent starts, the live copy has only an older run of it.
+    const older = aRow({ agent: 'interview', state: 'done', startedAt: ago(3_600_000) });
+    expect(startingOn([installing], [older])).toEqual([installing]);
+    // Once the runner reports, the live copy's own row is the one shown.
+    const heard = aRow({ agent: 'interview', startedAt: ago(10_000) });
+    expect(startingOn([installing], [older, heard])).toEqual([]);
+    // Finished on GitHub, or another agent's run, is not starting.
+    expect(startingOn([onGithub({ state: 'done' })], [])).toEqual([]);
+    expect(startingOn([installing], [aRow({ startedAt: ago(10_000) })])).toEqual([installing]);
   });
 
   it('never calls a run that needs Victor quiet, however long it waits', () => {
