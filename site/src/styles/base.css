@@ -353,6 +353,7 @@ details.depth > .body {
 }
 
 .field input,
+.field select,
 .field textarea {
   font: inherit;
   min-height: var(--tap);

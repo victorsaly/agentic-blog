@@ -4,11 +4,14 @@
 // store, not at build time, so this page is as fresh as the moment it opens.
 import Studio from '../../layouts/Studio.astro';
 import { CommentsReview } from '../../islands/CommentsReview';
+import { loadCosted } from '../../lib/studio-data';
+
+const titles = Object.fromEntries((await loadCosted()).map((t) => [t.slug, t.title]));
 ---
 
 <Studio description="What readers wrote, waiting for a decision.">
   <h1>Comments</h1>
-  <CommentsReview client:load />
+  <CommentsReview client:load titles={titles} />
 </Studio>
 
 <style is:global>
@@ -50,6 +53,12 @@ import { CommentsReview } from '../../islands/CommentsReview';
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     max-width: var(--measure);
+  }
+  .comments-review .delete {
+    margin-left: auto;
+  }
+  .review .status:focus {
+    outline: none;
   }
   .comments-review .actions {
     display: flex;

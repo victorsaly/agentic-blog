@@ -3,13 +3,18 @@
 // The feedback lands as a note on that one thought, and the feedback agent reworks the versions from it.
 import Studio from '../../layouts/Studio.astro';
 import { FeedbackStudio } from '../../islands/FeedbackStudio';
+import { loadCosted } from '../../lib/studio-data';
+
+const thoughts = (await loadCosted())
+  .map(({ slug, title }) => ({ slug, title }))
+  .sort((a, b) => b.slug.localeCompare(a.slug));
 ---
 
 <Studio description="Say what an output got wrong.">
   <h1>Talk back</h1>
   <p class="quiet">
-    When an output went down the wrong road, say so here instead of editing sentences. Name the
+    When an output went down the wrong road, say so here instead of editing sentences. Choose the
     thought first.
   </p>
-  <FeedbackStudio client:load />
+  <FeedbackStudio client:load thoughts={thoughts} />
 </Studio>

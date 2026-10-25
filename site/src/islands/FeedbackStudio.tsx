@@ -1,36 +1,40 @@
 // Why: feedback is a voice note about one specific output, so the thought has to be named before the
-// recorder appears. Keeping the name and the recorder in one island keeps that rule in one place.
+// recorder appears. Victor picks it by its title from the thoughts the site knows, newest first, instead of
+// typing a dated folder name from memory on a phone; a list cannot be mistyped. Keeping the choice and the
+// recorder in one island keeps that rule in one place.
 import { useId, useState } from 'react';
 import { Recorder } from './Recorder';
 
-const SLUG = /^\d{4}-\d{2}-\d{2}-[a-z0-9-]+$/;
+export interface FeedbackStudioProps {
+  /** Every thought, newest first. */
+  thoughts: { slug: string; title: string }[];
+}
 
-export function FeedbackStudio(): React.JSX.Element {
+export function FeedbackStudio({ thoughts }: FeedbackStudioProps): React.JSX.Element {
   const [slug, setSlug] = useState('');
   const id = useId();
-  const valid = SLUG.test(slug);
+  const chosen = thoughts.some((t) => t.slug === slug);
 
   return (
     <div>
       <label htmlFor={id} className="field">
-        Thought folder
-        <input
+        Which thought
+        <select
           id={id}
-          type="text"
-          inputMode="text"
-          autoComplete="off"
-          placeholder="2026-10-23-talked-out-loud-tidied-by-ai"
           value={slug}
           onChange={(event) => {
-            setSlug(event.target.value.trim());
+            setSlug(event.target.value);
           }}
-          aria-describedby={`${id}-hint`}
-        />
+        >
+          <option value="">Choose a thought</option>
+          {thoughts.map((t) => (
+            <option key={t.slug} value={t.slug}>
+              {t.title}
+            </option>
+          ))}
+        </select>
       </label>
-      <p id={`${id}-hint`} className="small quiet">
-        The folder name under thoughts/, date first.
-      </p>
-      {valid && <Recorder mode="feedback" thoughtSlug={slug} />}
+      {chosen && <Recorder key={slug} mode="feedback" thoughtSlug={slug} />}
     </div>
   );
 }

@@ -1,13 +1,15 @@
 ---
-// Why: the door into the studio. Most visits are to say something new, so that is the one big thing here;
-// beside it, what is waiting for Victor, each as a number that opens its area: the agents' writing to read,
-// readers' comments to decide, and what this month has cost against the budget. Review and money are as of
-// the last deploy; comments are counted when the page opens, since readers write at any time.
+// Why: the door into the studio. Most visits are to say something new, so that is the one big thing here,
+// and one press starts the recording; beside it, what is waiting for Victor, each as a number that opens its
+// area: the agents' writing to read, readers' comments to decide, and what this month has cost against the
+// budget. Review and money are as of the last deploy; comments are counted when the page opens, since
+// readers write at any time, and when they cannot be counted the page says so rather than guess.
 import Studio from '../../layouts/Studio.astro';
 import { loadCosted, loadWaiting } from '../../lib/studio-data';
 import { moneyOf, shareOfCap, spendIn } from '../../lib/how-made';
 import { formatDate } from '../../lib/content';
 import { settings } from '../../lib/settings';
+import { MicIcon } from '../../islands/MicIcon';
 import project from '../../../../roadbook.config';
 
 const waiting = await loadWaiting();
@@ -29,10 +31,15 @@ const plural = (n: number, one: string, many: string): string => (n === 1 ? one 
   <h1>Today</h1>
 
   <div class="today">
-    <a class="say-it" href="/studio/talk">
-      <span class="say-it-name">Say it</span>
-      <span class="quiet">Talk. Don't tidy. Or paste it.</span>
-    </a>
+    <div class="start">
+      <a class="say-it" href="/studio/talk?start=1">
+        <MicIcon />
+        Say it
+      </a>
+      <p class="small quiet">
+        Talk. Don't tidy. Already written down? <a href="/studio/talk">Paste it instead</a>.
+      </p>
+    </div>
 
     <section aria-labelledby="waiting-label">
       <h2 class="label" id="waiting-label">Waiting for you</h2>
@@ -54,20 +61,22 @@ const plural = (n: number, one: string, many: string): string => (n === 1 ? one 
         </li>
         <li>
           <a href="/studio/comments">
-            <span class="number" data-today-comments>–</span>
+            <span class="number" data-today-comments>…</span>
             <span class="what">
               comments to decide
-              <span class="quiet">counted just now</span>
+              <span class="quiet" data-today-comments-note>counting…</span>
             </span>
           </a>
         </li>
         <li>
           <a href="/studio/runs">
-            <span class="number">{month.isFloor ? '≥ ' : ''}{money(month.usd)}</span>
+            <span class="number">{money(month.usd)}</span>
             <span class="what">
               spent this month
               <span class="quiet">
-                {shareOfCap(month.usd, cap)} of {money(cap)}, as of {formatDate(builtAt)}
+                {month.isFloor ? 'at least; ' : ''}{shareOfCap(month.usd, cap)} of {money(cap)}, as
+                of
+                {formatDate(builtAt)}
               </span>
             </span>
           </a>
@@ -81,16 +90,24 @@ const plural = (n: number, one: string, many: string): string => (n === 1 ? one 
   import { COMMENTS_CHANGED } from '../../lib/studio-areas';
 
   const cell = document.querySelector<HTMLElement>('[data-today-comments]');
+  const note = document.querySelector<HTMLElement>('[data-today-comments-note]');
   async function count(): Promise<void> {
-    if (!cell) return;
+    if (!cell || !note) return;
+    let pending: unknown = null;
     try {
       const response = await fetch('/api/comments/count');
       const data: unknown = await response.json();
-      const pending =
-        typeof data === 'object' && data !== null ? (data as { pending?: unknown }).pending : null;
-      if (response.ok && typeof pending === 'number') cell.textContent = String(pending);
+      if (response.ok && typeof data === 'object' && data !== null)
+        pending = (data as { pending?: unknown }).pending;
     } catch {
-      /* the dash stays: open the area to see what failed */
+      /* said below */
+    }
+    if (typeof pending === 'number') {
+      cell.textContent = String(pending);
+      note.textContent = `counted at ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+    } else {
+      cell.textContent = '?';
+      note.textContent = 'could not be counted; open Comments to see why';
     }
   }
   void count();
@@ -108,28 +125,12 @@ const plural = (n: number, one: string, many: string): string => (n === 1 ? one 
       align-items: start;
     }
   }
-  .say-it {
+  .start {
     display: grid;
-    place-content: center;
-    gap: var(--space-1);
-    min-height: calc(var(--tap) * 4);
-    padding: var(--space-4);
-    border: 2px solid var(--ink);
-    text-align: center;
-    text-decoration: none;
-    transition: scale var(--duration-press) var(--ease-out);
+    gap: var(--space-2);
   }
-  .say-it-name {
-    font-size: var(--size-message);
-    font-weight: 700;
-  }
-  @media (hover: hover) and (pointer: fine) {
-    .say-it:hover {
-      background: var(--hover);
-    }
-  }
-  .say-it:active {
-    scale: 0.98;
+  .start p {
+    margin: 0;
   }
   .waiting {
     list-style: none;
@@ -178,10 +179,5 @@ const plural = (n: number, one: string, many: string): string => (n === 1 ? one 
   .what .quiet {
     font-weight: 400;
     font-size: var(--size-small);
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .say-it {
-      transition: none;
-    }
   }
 </style>

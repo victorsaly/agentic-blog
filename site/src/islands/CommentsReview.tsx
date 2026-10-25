@@ -28,7 +28,12 @@ interface Note {
   text: string;
 }
 
-export function CommentsReview(): React.JSX.Element {
+export interface CommentsReviewProps {
+  /** Post titles by folder name, so each comment names its post the way the site does. */
+  titles: Record<string, string>;
+}
+
+export function CommentsReview({ titles }: CommentsReviewProps): React.JSX.Element {
   const [pending, setPending] = useState<OwnerListState>({ kind: 'loading' });
   const [approved, setApproved] = useState<OwnerListState>({ kind: 'loading' });
   const [busy, setBusy] = useState<number | null>(null);
@@ -110,6 +115,10 @@ export function CommentsReview(): React.JSX.Element {
         setters[from]((now) => without(now, comment.id));
         if (action === 'approve' && response.ok) setApproved((now) => withApproved(now, comment));
         window.dispatchEvent(new Event(COMMENTS_CHANGED));
+        // The row is gone, so focus goes to the line that says what happened, not to the top of the page.
+        requestAnimationFrame(() => {
+          document.getElementById(`comments-${from}-status`)?.focus();
+        });
         setNote({
           list: from,
           text:
@@ -140,6 +149,7 @@ export function CommentsReview(): React.JSX.Element {
         empty="No comments waiting."
         state={pending}
         busy={busy}
+        titles={titles}
         note={note?.list === 'pending' ? note.text : ''}
         onApprove={onApprove}
         onDelete={onDelete}
@@ -154,6 +164,7 @@ export function CommentsReview(): React.JSX.Element {
         empty="No approved comments yet."
         state={approved}
         busy={busy}
+        titles={titles}
         note={note?.list === 'approved' ? note.text : ''}
         onApprove={onApprove}
         onDelete={onDelete}
