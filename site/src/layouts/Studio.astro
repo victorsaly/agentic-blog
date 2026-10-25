@@ -301,13 +301,56 @@ const title = current === 'today' || !area ? 'Studio' : `${area.name} · Studio`
   .route-step .word {
     font-size: 12px;
   }
-  .route-step.state-running rect,
+  .route-step rect,
+  .route-step text,
+  .route-line {
+    transition:
+      fill 200ms ease,
+      stroke 200ms ease;
+  }
   .route-step.state-needs-you rect {
     fill: var(--ink);
   }
-  .route-step.state-running text,
   .route-step.state-needs-you text {
     fill: var(--paper);
+  }
+  /* Working now: marigold, the one colour, with an ink bar sweeping along its foot and ink flowing along
+     the lines into it. Constant motion, so linear; only transforms and a dash offset move. */
+  .route-step.state-running rect {
+    fill: var(--mark);
+    stroke: var(--mark-ink);
+  }
+  .route-step.state-running text {
+    fill: var(--mark-ink);
+  }
+  .route-step.state-running rect.sweep {
+    fill: var(--mark-ink);
+    stroke: none;
+    transform-box: fill-box;
+    animation: route-sweep 1.4s linear infinite;
+  }
+  .route-line.band {
+    stroke: var(--mark);
+    stroke-width: 6;
+  }
+  .route-line.flow {
+    stroke: var(--mark-ink);
+    stroke-width: 2;
+    stroke-dasharray: 6 6;
+    animation: route-flow 0.8s linear infinite;
+  }
+  @keyframes route-sweep {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(300%);
+    }
+  }
+  @keyframes route-flow {
+    to {
+      stroke-dashoffset: -12;
+    }
   }
   .route-step.state-held rect,
   .route-step.state-failed rect {
@@ -347,6 +390,30 @@ const title = current === 'today' || !area ? 'Studio' : `${area.name} · Studio`
   }
   .route-list > li.here {
     font-weight: 700;
+  }
+  .studio .route-list .state-running {
+    position: relative;
+    overflow: hidden;
+    background: var(--mark);
+    color: var(--mark-ink);
+    border-color: var(--mark-ink);
+  }
+  .studio .route-list .state-running::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 33%;
+    height: 3px;
+    background: var(--mark-ink);
+    animation: route-sweep 1.4s linear infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .route-step.state-running rect.sweep,
+    .route-line.flow,
+    .studio .route-list .state-running::after {
+      animation: none;
+    }
   }
   .route-key {
     margin: 0;
