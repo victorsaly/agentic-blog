@@ -125,6 +125,8 @@ describe('fileFromReply', () => {
     expect(fileFromReply(file)).toBe(file);
     expect(fileFromReply('```markdown\n' + file + '\n```')).toBe(file);
     expect(fileFromReply('Here is seo.md:\n\n' + file)).toBe(file);
+    // A sentence before a web search, glued to the file written after it.
+    expect(fileFromReply("I'll look for sources." + file)).toBe(file);
   });
 
   it('is null when there is no front matter with a why', () => {

@@ -1,6 +1,6 @@
 // Why: Claude behind the one model contract. The project's "writer" provider is this adapter: it sends the
-// system message, the pictures and the question, carries a paused web search on, and returns the text with
-// what every round used, read from the usage Claude reports, so the ledger can cost it exactly.
+// system message, the pictures and the question, carries a paused web search on, and returns the text (a
+// new paragraph wherever a search came between two pieces of it) with what every round used, read from the usage Claude reports, so the ledger can cost it exactly.
 import Anthropic from '@anthropic-ai/sdk';
 import {
   ModelCallError,
@@ -93,11 +93,18 @@ export function claudeAdapter(name: string, provider: Provider): ModelAdapter {
             'the model declined this request; read the input before running again',
             { provider: name, model, usage },
           );
-        texts.push(
-          ...response.content
-            .filter((block): block is Anthropic.TextBlock => block.type === 'text')
-            .map((block) => block.text),
-        );
+        // Text that runs on (a cited sentence comes in pieces) is joined as it is; text after a search, or
+        // after a pause, starts a new paragraph, so a file written after "I'll look for sources." still
+        // opens on a line of its own.
+        let after = texts.length > 0;
+        for (const block of response.content) {
+          if (block.type !== 'text') {
+            after = true;
+            continue;
+          }
+          texts.push(after && texts.length > 0 ? `\n\n${block.text}` : block.text);
+          after = false;
+        }
         if ((response.stop_reason as string) !== 'pause_turn') break;
         messages.push({ role: 'assistant', content: response.content });
       }
