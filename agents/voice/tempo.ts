@@ -11,7 +11,15 @@ const run = promisify(execFile);
 
 export type Quicken = (audio: Uint8Array, speed: number) => Promise<Uint8Array>;
 
-/** The same speech at `speed` times the pace, as mp3. Needs ffmpeg on the PATH (GitHub's runners have it). */
+/** Whether ffmpeg can be run here, asked before anything is spent on a reading it would have to quicken. */
+export async function hasFfmpeg(): Promise<boolean> {
+  return run('ffmpeg', ['-version']).then(
+    () => true,
+    () => false,
+  );
+}
+
+/** The same speech at `speed` times the pace, as mp3. Needs ffmpeg on the PATH (agents.yml installs it). */
 export const quickenWithFfmpeg: Quicken = async (audio, speed) => {
   const dir = await mkdtemp(join(tmpdir(), 'voice-'));
   try {
