@@ -20,6 +20,8 @@ import { formatDate } from '../lib/content';
 import { usePoll } from './use-poll';
 
 const GOING_MS = 3_000;
+/** A run waiting on Victor, a gate say, changes when he answers; asking every few seconds would be waste. */
+const WAITING_MS = 30_000;
 const RETRY_MS = 10_000;
 
 interface Status {
@@ -91,6 +93,7 @@ export function RunTimeline({ titles, currency }: RunTimelineProps): React.JSX.E
         error: null,
       }));
       if (detail.more) return 0;
+      if (detail.run.state === 'needs-you') return WAITING_MS;
       return isGoing(detail.run.state) ? GOING_MS : null;
     } catch (error: unknown) {
       const message =

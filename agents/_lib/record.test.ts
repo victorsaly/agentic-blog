@@ -5,6 +5,7 @@ import { Ledger } from '@roadbook/core';
 import {
   assertNotLedger,
   endState,
+  gateOpening,
   lastState,
   originOf,
   startStates,
@@ -103,5 +104,17 @@ describe('assertNotLedger', () => {
     expect(() => {
       assertNotLedger([{ path: 'safety.md', content: '' }]);
     }).not.toThrow();
+  });
+});
+
+describe('gateOpening', () => {
+  it('records a gate as a run waiting on a person, with its question, and nothing else', async () => {
+    const ledger = new Ledger();
+    const gate = { id: 'answers', asks: 'answer', question: 'Answer the questions.' } as const;
+    for (const body of gateOpening(gate, 'thoughts/t/origin/text.md', 'local'))
+      await ledger.append(body);
+    expect(ledger.events.map((e) => e.type)).toEqual(['run.started', 'node.state', 'gate.opened']);
+    expect(lastState(ledger.events, 'answers')).toBe('needs-you');
+    expect(ledger.events.at(-1)).toMatchObject({ node: 'answers', asks: 'answer' });
   });
 });

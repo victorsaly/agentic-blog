@@ -94,8 +94,19 @@ export async function hashOf(value: unknown): Promise<string> {
 
 export class LedgerError extends Error {}
 
-/** The rules an event must meet before it is written; the accountability rules, at the moment of writing. */
-function refuse(body: EventBody): string | null {
+/**
+ * A person, as a decision names them: the owner, or an email address (the studio records the signed-in one).
+ * An agent's name, a workflow's, or nothing at all is not a person.
+ */
+export function isPerson(by: string): boolean {
+  return by === 'owner' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(by);
+}
+
+/**
+ * The rules an event must meet; the accountability rules, at the moment of writing and again on reading, so
+ * an event made by hand with a good hash is refused all the same. Null when the event may stand.
+ */
+export function refuse(body: EventBody): string | null {
   switch (body.type) {
     case 'node.output':
       if (body.why.trim().length < 20) return `the output of "${body.node}" has no proper why`;
@@ -104,6 +115,12 @@ function refuse(body: EventBody): string | null {
       return null;
     case 'override.given':
       if (body.reason.trim().length < 5) return `overriding "${body.node}" needs a reason`;
+      if (!isPerson(body.by))
+        return `RB080: only a person overrides "${body.node}", and "${body.by}" is not one. Fix: override from the studio, which records who is signed in`;
+      return null;
+    case 'gate.closed':
+      if (!isPerson(body.by))
+        return `RB080: the gate "${body.node}" is closed only by a person, and "${body.by}" is not one. Fix: close it from the studio, which records who is signed in`;
       return null;
     case 'correction':
       if (body.reason.trim().length < 5) return 'a correction needs a reason';

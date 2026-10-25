@@ -1,9 +1,9 @@
 // Why: the runner records every run in the thought's ledger. What each event says is decided here, in small
 // pure functions, so the rules can be tested without a model or a disk: which state a run starts from and
-// ends in, which why an output carries, which origin a run started from, and that an agent never writes the
-// ledger itself.
+// ends in, which why an output carries, which origin a run started from, that an agent never writes the
+// ledger itself, and how a gate that opens is recorded.
 import matter from 'gray-matter';
-import type { EventBody, LedgerEvent, NodeState } from '@roadbook/core';
+import type { EventBody, GateToOpen, LedgerEvent, NodeState } from '@roadbook/core';
 import { isLedgerPath } from '@roadbook/core/node';
 import type { AgentResult, OutputFile } from './types.js';
 
@@ -87,4 +87,16 @@ export function assertNotLedger(files: readonly OutputFile[]): void {
     if (isLedgerPath(file.path))
       throw new Error(`refusing to write ${file.path}: only the runner writes the ledger`);
   }
+}
+
+/**
+ * A gate's run, as it opens: started like any run, then waiting on a person with the gate's question. It
+ * stays in needs-you until someone closes it (Slice 8b); nothing in it is an agent's work.
+ */
+export function gateOpening(gate: GateToOpen, origin: string, by: string): EventBody[] {
+  return [
+    { type: 'run.started', workflow: 'blog-post', origin, by },
+    { type: 'node.state', node: gate.id, from: 'idle', to: 'needs-you' },
+    { type: 'gate.opened', node: gate.id, asks: gate.asks, question: gate.question },
+  ];
 }

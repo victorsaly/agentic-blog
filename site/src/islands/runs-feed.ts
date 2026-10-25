@@ -43,7 +43,9 @@ async function ask(): Promise<number> {
     set({ known: { ...answer, at: new Date().toISOString() }, error: null });
     const { holds, asking } = waitingOnVictor(answer);
     window.dispatchEvent(new CustomEvent(AGENTS_WAITING, { detail: holds.length + asking.length }));
-    return answer.runs.some((r) => isGoing(r.state)) ? BUSY_MS : QUIET_MS;
+    // A run waiting on Victor can wait for days; only work in progress is worth asking about often.
+    const working = answer.runs.some((r) => isGoing(r.state) && r.state !== 'needs-you');
+    return working ? BUSY_MS : QUIET_MS;
   } catch (error: unknown) {
     const message =
       error instanceof Error && error.message !== 'Failed to fetch'
