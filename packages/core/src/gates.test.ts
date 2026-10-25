@@ -1,7 +1,7 @@
 // Why: a gate that opens too early asks Victor about work that is not finished; one that opens twice asks
 // him the same question twice; one that never opens leaves the thought stuck with nobody told.
 import { describe, expect, it } from 'vitest';
-import { gatesToOpen } from './gates.js';
+import { closeGate, gatesToOpen } from './gates.js';
 import { Ledger, type EventBody } from './ledger.js';
 import type { WorkflowInput } from './schema.js';
 
@@ -77,5 +77,71 @@ describe('gatesToOpen', () => {
     expect(
       gatesToOpen(workflow, 'interview', [await ran('interview'), closed, await ran('interview')]),
     ).toHaveLength(1);
+  });
+});
+
+describe('closeGate', () => {
+  const waiting = (asks: 'answer' | 'approve') =>
+    run(
+      { type: 'run.started', workflow: 'w', origin: 'o', by: 'local' },
+      { type: 'node.state', node: 'g', from: 'idle', to: 'needs-you' },
+      { type: 'gate.opened', node: 'g', asks, question: 'Well?' },
+    );
+  const by = 'info@victorsaly.com';
+
+  it('closes an answer with who decided and done; the words land elsewhere, as a file', async () => {
+    const closing = closeGate((await waiting('answer')).events, {
+      decision: 'answered',
+      words: 'Here.',
+      by,
+    });
+    expect(closing).toEqual({
+      ok: true,
+      node: 'g',
+      bodies: [
+        { type: 'gate.closed', node: 'g', decision: 'answered', by },
+        { type: 'node.state', node: 'g', from: 'needs-you', to: 'done' },
+      ],
+    });
+  });
+
+  it('keeps the words of a send-back in the ledger, as feedback', async () => {
+    const closing = closeGate((await waiting('approve')).events, {
+      decision: 'redirected',
+      words: 'The message is the second idea, not the first.',
+      by,
+    });
+    expect(closing.ok && closing.bodies[0]).toMatchObject({
+      type: 'feedback.given',
+      kind: 'redirect',
+    });
+  });
+
+  it('refuses what cannot stand, each with a plain reason', async () => {
+    const answer = (await waiting('answer')).events;
+    expect(closeGate(answer, { decision: 'approved', words: '', by })).toMatchObject({
+      ok: false,
+      error: expect.stringMatching(/asks to answer/),
+    });
+    expect(closeGate(answer, { decision: 'answered', words: '  ', by })).toMatchObject({
+      error: expect.stringMatching(/needs words/),
+    });
+    expect(closeGate(answer, { decision: 'answered', words: 'x', by: 'structure' })).toMatchObject({
+      error: expect.stringMatching(/RB080/),
+    });
+    expect(
+      closeGate((await ran('interview')).events, { decision: 'answered', words: 'x', by }),
+    ).toMatchObject({
+      error: 'This run is not a gate.',
+    });
+    const closed = await run(
+      { type: 'node.state', node: 'g', from: 'idle', to: 'needs-you' },
+      { type: 'gate.opened', node: 'g', asks: 'answer', question: 'Well?' },
+      { type: 'gate.closed', node: 'g', decision: 'answered', by },
+      { type: 'node.state', node: 'g', from: 'needs-you', to: 'done' },
+    );
+    expect(closeGate(closed.events, { decision: 'answered', words: 'again', by })).toMatchObject({
+      error: expect.stringMatching(/already closed/),
+    });
   });
 });

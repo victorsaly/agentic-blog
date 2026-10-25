@@ -1,0 +1,219 @@
+// Why: a gate waits on Victor, and this is where he answers it: beside the question, what he is answering
+// about (the interview's questions, the structure he is approving) and the pull request it is on. An answer
+// is a text box; an approval is Approve, or Not this with his words. Sending only asks GitHub to record it,
+// which takes about a minute, so the page says it was sent and is waiting, never that it is done; the run
+// turns Done on its own when the workflow has written it. Every control has a label, and the status line is
+// announced once.
+import { useEffect, useId, useState } from 'react';
+import type { GateView } from '../lib/gates';
+
+interface Context {
+  pull: { number: number; url: string } | null;
+  context: { label: string; text: string } | null;
+}
+
+type Sending =
+  { state: 'idle' } | { state: 'sending' } | { state: 'sent' } | { state: 'failed'; error: string };
+
+function errorOf(data: unknown, fallback: string): string {
+  return typeof data === 'object' &&
+    data !== null &&
+    typeof (data as { error?: unknown }).error === 'string'
+    ? (data as { error: string }).error
+    : fallback;
+}
+
+function readContext(data: unknown): Context | null {
+  if (typeof data !== 'object' || data === null) return null;
+  const { pull, context } = data as { pull?: unknown; context?: unknown };
+  const isPull =
+    typeof pull === 'object' &&
+    pull !== null &&
+    typeof (pull as { number?: unknown }).number === 'number' &&
+    typeof (pull as { url?: unknown }).url === 'string';
+  const isContext =
+    typeof context === 'object' &&
+    context !== null &&
+    typeof (context as { label?: unknown }).label === 'string' &&
+    typeof (context as { text?: unknown }).text === 'string';
+  return {
+    pull: isPull ? (pull as Context['pull']) : null,
+    context: isContext ? (context as Context['context']) : null,
+  };
+}
+
+export interface GateAnswerProps {
+  run: string;
+  gate: GateView;
+  /** Told when the decision has been sent, so the page asks for news more often. */
+  onSent: () => void;
+}
+
+export function GateAnswer({ run, gate, onSent }: GateAnswerProps): React.JSX.Element {
+  const id = useId();
+  const [about, setAbout] = useState<Context | null>(null);
+  const [aboutError, setAboutError] = useState<string | null>(null);
+  const [words, setWords] = useState('');
+  const [notThis, setNotThis] = useState(false);
+  const [sending, setSending] = useState<Sending>({ state: 'idle' });
+
+  useEffect(() => {
+    const leaving = new AbortController();
+    void (async () => {
+      try {
+        const response = await fetch(`/api/gates/${encodeURIComponent(run)}`, {
+          signal: leaving.signal,
+        });
+        const data: unknown = await response.json().catch(() => null);
+        if (!response.ok) throw new Error(errorOf(data, 'The studio could not read the gate.'));
+        setAbout(readContext(data));
+      } catch (error: unknown) {
+        if (leaving.signal.aborted) return;
+        setAboutError(error instanceof Error ? error.message : 'The studio could not be reached.');
+      }
+    })();
+    return () => {
+      leaving.abort();
+    };
+  }, [run]);
+
+  const send = async (decision: 'answered' | 'approved' | 'redirected'): Promise<void> => {
+    setSending({ state: 'sending' });
+    try {
+      const response = await fetch(`/api/gates/${encodeURIComponent(run)}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ decision, words }),
+      });
+      const data: unknown = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(errorOf(data, 'The studio could not send it.'));
+      setSending({ state: 'sent' });
+      onSent();
+    } catch (error: unknown) {
+      setSending({
+        state: 'failed',
+        error:
+          error instanceof Error && error.message !== 'Failed to fetch'
+            ? error.message
+            : 'The studio could not be reached. Nothing was sent; try again.',
+      });
+    }
+  };
+
+  const busy = sending.state === 'sending' || sending.state === 'sent';
+  const status =
+    sending.state === 'sending'
+      ? 'Sending…'
+      : sending.state === 'sent'
+        ? 'Sent. Waiting for GitHub to record it; this page shows the gate closed when it has.'
+        : '';
+
+  return (
+    <section className="gate-answer" aria-labelledby={`${id}-label`}>
+      <h2 className="label" id={`${id}-label`}>
+        {gate.asks === 'answer' ? 'Your answer' : 'Your decision'}
+      </h2>
+      <p className="question">{gate.question}</p>
+      {about?.pull && (
+        <p className="small">
+          On <a href={about.pull.url}>pull request #{about.pull.number}</a>
+        </p>
+      )}
+      {aboutError !== null && <p className="small">{aboutError} You can still answer.</p>}
+      {about?.context && (
+        <details className="context" open>
+          <summary>{about.context.label}</summary>
+          <div className="context-text">{about.context.text}</div>
+        </details>
+      )}
+
+      {gate.asks === 'answer' && (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void send('answered');
+          }}
+        >
+          <label htmlFor={`${id}-words`} className="field">
+            Your answers, in your own words
+            <textarea
+              id={`${id}-words`}
+              rows={10}
+              value={words}
+              disabled={busy}
+              onChange={(event) => {
+                setWords(event.target.value);
+              }}
+            />
+          </label>
+          <button type="submit" className="control filled" disabled={busy || words.trim() === ''}>
+            Send answers
+          </button>
+        </form>
+      )}
+
+      {gate.asks === 'approve' && (
+        <div className="decide">
+          <div className="row">
+            <button
+              type="button"
+              className="control filled"
+              disabled={busy}
+              onClick={() => void send('approved')}
+            >
+              Approve
+            </button>
+            <button
+              type="button"
+              className="control"
+              aria-expanded={notThis}
+              aria-controls={`${id}-why`}
+              disabled={busy}
+              onClick={() => {
+                setNotThis((now) => !now);
+              }}
+            >
+              Not this
+            </button>
+          </div>
+          {notThis && (
+            <form
+              id={`${id}-why`}
+              onSubmit={(event) => {
+                event.preventDefault();
+                void send('redirected');
+              }}
+            >
+              <label htmlFor={`${id}-words`} className="field">
+                What is wrong, and what you want instead
+                <textarea
+                  id={`${id}-words`}
+                  rows={5}
+                  value={words}
+                  disabled={busy}
+                  onChange={(event) => {
+                    setWords(event.target.value);
+                  }}
+                />
+              </label>
+              <button type="submit" className="control" disabled={busy || words.trim() === ''}>
+                Send it back
+              </button>
+            </form>
+          )}
+        </div>
+      )}
+
+      {gate.asks === 'pick' && (
+        <p className="small quiet">
+          Picking from the studio comes later; open the pull request to choose.
+        </p>
+      )}
+
+      <p className="small" role="status">
+        {status}
+      </p>
+      {sending.state === 'failed' && <p role="alert">{sending.error}</p>}
+    </section>
+  );
+}

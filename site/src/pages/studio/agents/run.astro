@@ -71,4 +71,39 @@ const { show, per_usd: perUsd } = settings.publishing.currency;
   .timeline .streamed {
     white-space: pre-wrap;
   }
+  /* A waiting gate's answer sits under the summary, opened by a strong rule like every section. */
+  .gate-answer {
+    margin: 0 0 var(--space-5);
+  }
+  .gate-answer .question {
+    font-size: var(--size-message);
+    font-weight: 700;
+    max-width: var(--measure);
+  }
+  .gate-answer .context {
+    margin: var(--space-3) 0;
+    max-width: var(--measure);
+    border-left: var(--rule-strong) solid var(--ink);
+    padding-left: var(--space-3);
+  }
+  .gate-answer .context > summary {
+    cursor: pointer;
+    font-weight: 700;
+  }
+  .gate-answer .context-text {
+    margin-top: var(--space-2);
+    white-space: pre-wrap;
+  }
+  .gate-answer form,
+  .gate-answer .decide {
+    display: grid;
+    gap: var(--space-3);
+    justify-items: start;
+    margin-top: var(--space-3);
+  }
+  .gate-answer .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
 </style>

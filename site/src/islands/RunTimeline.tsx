@@ -2,7 +2,8 @@
 // with it (a reason, a question, what was written and why). It reads the live copy the runner fills, which
 // is checked against the chain as it is kept, so the timeline matches the run's ledger file line for line.
 // While the run is going it asks for what is new every few seconds and the clock ticks as numbers; once the
-// run has finished it stops asking. A run gone silent is said to be so. Only the state is announced.
+// run has finished it stops asking. A run gone silent is said to be so. Only the state is announced. A
+// gate's run that is still waiting carries the control to answer it (GateAnswer).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { agentName } from '../lib/agent-runs';
 import {
@@ -18,10 +19,14 @@ import type { LiveRunRow } from '../lib/live-runs';
 import { moneyOf, type Currency } from '../lib/money';
 import { formatDate } from '../lib/content';
 import { usePoll } from './use-poll';
+import { GateAnswer } from './GateAnswer';
+import { gateOf } from '../lib/gates';
 
 const GOING_MS = 3_000;
 /** A run waiting on Victor, a gate say, changes when he answers; asking every few seconds would be waste. */
 const WAITING_MS = 30_000;
+/** Once Victor has sent a decision, the gate closes within a minute or so; worth asking about often. */
+const SENT_MS = 5_000;
 const RETRY_MS = 10_000;
 
 interface Status {
@@ -66,6 +71,8 @@ export function RunTimeline({ titles, currency }: RunTimelineProps): React.JSX.E
   const [now, setNow] = useState(() => new Date().toISOString());
   /** The last position shown, so each ask carries only what is new. */
   const last = useRef(-1);
+  /** Whether a decision on this gate has been sent and not yet recorded. */
+  const sent = useRef(false);
 
   const ask = useCallback(async (): Promise<number | null> => {
     const id = new URL(window.location.href).searchParams.get('id');
@@ -93,7 +100,7 @@ export function RunTimeline({ titles, currency }: RunTimelineProps): React.JSX.E
         error: null,
       }));
       if (detail.more) return 0;
-      if (detail.run.state === 'needs-you') return WAITING_MS;
+      if (detail.run.state === 'needs-you') return sent.current ? SENT_MS : WAITING_MS;
       return isGoing(detail.run.state) ? GOING_MS : null;
     } catch (error: unknown) {
       const message =
@@ -108,6 +115,7 @@ export function RunTimeline({ titles, currency }: RunTimelineProps): React.JSX.E
 
   const { run, events, missing, error } = status;
   const going = run !== null && isGoing(run.state);
+  const gate = run === null ? null : gateOf(events, run.state);
 
   // The clock ticks only while the run is going; a finished run shows how long it took.
   useEffect(() => {
@@ -192,6 +200,16 @@ export function RunTimeline({ titles, currency }: RunTimelineProps): React.JSX.E
           </dd>
         </div>
       </dl>
+
+      {gate?.open === true && (
+        <GateAnswer
+          run={run.id}
+          gate={gate}
+          onSent={() => {
+            sent.current = true;
+          }}
+        />
+      )}
 
       <section aria-labelledby="timeline-label">
         <h2 className="label" id="timeline-label">
