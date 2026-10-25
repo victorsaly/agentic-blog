@@ -182,8 +182,15 @@ function tipOf(text: string, title: string, o: LayoutOptions): Tip {
   };
 }
 
-/** Places every node of the graph around the centre (0, 0) and returns the box that holds it all. */
-export function layoutGraph(graph: Graph, o: LayoutOptions): GraphLayout {
+/**
+ * Places every node of the graph around the centre (0, 0) and returns the box that holds it all. `names`
+ * are the topics' reader names from settings.yml, for the tags that cannot say it alone.
+ */
+export function layoutGraph(
+  graph: Graph,
+  o: LayoutOptions,
+  names: Readonly<Record<string, string>> = {},
+): GraphLayout {
   const order = ringOrder(graph);
   const n = order.length;
   const index = new Map(order.map((t, k) => [t, k]));
@@ -267,7 +274,7 @@ export function layoutGraph(graph: Graph, o: LayoutOptions): GraphLayout {
     const cos = Math.cos(mid);
     const sin = Math.sin(mid);
     const anchor = cos > 0.3 ? 'start' : cos < -0.3 ? 'end' : 'middle';
-    const lines = wrapLabel(themeLabel(topic), o.lineChars);
+    const lines = wrapLabel(themeLabel(topic, names), o.lineChars);
     const width = Math.max(...lines.map((l) => l.length)) * charWidth * o.fontSize;
     const height = lines.length * lineHeight;
     const [x, y] = polar(o.ideaRadius + o.labelGap, mid);

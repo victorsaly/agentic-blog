@@ -13,7 +13,8 @@ import { thoughtSlugOf } from '../lib/content';
 import { graphOf, type GraphPost } from '../lib/graph';
 import { deskLayout, layoutGraph, phoneLayout } from '../lib/graph-layout';
 import { settings } from '../lib/settings';
-import { themeLabel, thoughtsLabel } from '../lib/themes';
+import { thoughtsLabel } from '../lib/themes';
+import { topicName } from '../lib/topic-name';
 
 // Typed at the boundary: on a fresh checkout Astro has not generated its content types yet when lint runs.
 interface ThoughtEntry {
@@ -30,8 +31,8 @@ const posts: GraphPost[] = entries.map((e) => ({
   body: e.body ?? '',
 }));
 const graph = graphOf(posts, settings.themes);
-const desk = layoutGraph(graph, deskLayout);
-const phone = layoutGraph(graph, phoneLayout);
+const desk = layoutGraph(graph, deskLayout, settings.topic_names);
+const phone = layoutGraph(graph, phoneLayout, settings.topic_names);
 
 // A topic has its own page only when a whole post carries it (see topics/[topic].astro).
 const topicPages = new Set(entries.filter((e) => !e.data.draft).flatMap((e) => e.data.themes));
@@ -126,7 +127,7 @@ const css = `${rules(false)}@media (hover:hover) and (pointer:fine){${rules(true
             <section id={`t-${t.topic}`} aria-labelledby={`t-${t.topic}-name`}>
               <h2 id={`t-${t.topic}-name`}>
                 <a href={`#t-${t.topic}`}>
-                  <span class="name">{themeLabel(t.topic)}</span>
+                  <span class="name">{topicName(t.topic)}</span>
                 </a>
               </h2>
               <p class="small quiet count">
@@ -157,7 +158,7 @@ const css = `${rules(false)}@media (hover:hover) and (pointer:fine){${rules(true
                         <p class="small quiet">
                           From {i.title}.
                           {others.length > 0 &&
-                            ` Also under ${others.map(themeLabel).join(' and ')}.`}
+                            ` Also under ${others.map((o) => topicName(o)).join(' and ')}.`}
                         </p>
                       </li>
                     );
