@@ -67,6 +67,8 @@ const MAX_ANSWER = 2000;
 /** How many whole posts one question may carry, and how much text in all (about 30,000 tokens). */
 export const MAX_POSTS = 4;
 export const MAX_CHARS = 120_000;
+/** A post cut to fit: the road and then the origin lose their end, marked so the model knows. */
+const CUT = '\n[… cut to fit; ask about this post for the rest]';
 
 export interface Turn {
   question: string;
@@ -137,6 +139,23 @@ const briefOf = (p: CorpusPost): CorpusPost => {
   return brief;
 };
 
+/** The post within `chars`, by cutting the end of its road and then its origin; the rest stays whole. */
+export function fitTo(post: CorpusPost, chars: number): CorpusPost {
+  let fitted = post;
+  for (const field of ['road', 'origin'] as const) {
+    // Measured as JSON after each pass, since that is how it travels and a newline grows on the way.
+    for (let pass = 0; pass < 4 && JSON.stringify(fitted).length > chars; pass++) {
+      const text = fitted[field];
+      if (text.length === 0) break;
+      const over = JSON.stringify(fitted).length - chars;
+      const base = text.endsWith(CUT) ? text.slice(0, -CUT.length) : text;
+      const keep = Math.max(0, base.length - over - CUT.length);
+      fitted = { ...fitted, [field]: keep === 0 ? '' : base.slice(0, keep) + CUT };
+    }
+  }
+  return fitted;
+}
+
 /**
  * How well a text answers to the question's words: a word in the title, message or small ideas counts
  * three, one in the body up to three times, and a word few texts use counts more than one they all use.
@@ -155,9 +174,11 @@ function scoreOf(
 
 /**
  * What one question is answered from. The post the reader is on, whole, when they chose it. Otherwise the
- * posts and pages whose words match the question (and the last question before it, for a follow-up), the
- * best first, at most MAX_POSTS and MAX_CHARS; pages marked always come whatever the question. When nothing
- * matches, every post comes in its short form, so "which post should I read first?" still has an answer.
+ * posts and pages whose words match the question (with the passage the reader picked, and the last question
+ * before it, for a follow-up), the best first, at most MAX_POSTS and MAX_CHARS; pages marked always come
+ * whatever the question. When nothing matches, every post comes in its short form, so "which post should I
+ * read first?" still has an answer. A question these words cannot read (one written in Chinese, say) is
+ * answered from the newest posts whole, within the same budget, since nothing can be said about which fit.
  */
 export function relevantCorpus(corpus: Corpus, asked: Extract<Question, { ok: true }>): Corpus {
   const pages = corpus.pages ?? [];
@@ -166,7 +187,15 @@ export function relevantCorpus(corpus: Corpus, asked: Extract<Question, { ok: tr
     if (only.posts.length === 1) return { ...only, pages: pages.filter((p) => p.always === true) };
   }
   const lastQuestion = asked.history.at(-1)?.question ?? '';
-  const words = [...new Set(wordsOf(`${asked.question} ${lastQuestion}`))];
+  const words = [...new Set(wordsOf(`${asked.question} ${asked.quote ?? ''} ${lastQuestion}`))];
+  if (words.length === 0) {
+    const newest = [...corpus.posts].sort((a, b) => b.slug.localeCompare(a.slug));
+    return {
+      ...corpus,
+      posts: withinBudget(newest),
+      pages: pages.filter((p) => p.always === true),
+    };
+  }
 
   const texts = [
     ...corpus.posts.map((p) => ({
@@ -201,16 +230,28 @@ export function relevantCorpus(corpus: Corpus, asked: Extract<Question, { ok: tr
   if (best === 0)
     return { ...corpus, posts: corpus.posts.map(briefOf), pages: chosenPages, brief: true };
 
+  const matching = scored.flatMap((t) => (t.post && t.score >= best * 0.25 ? [t.post] : []));
+  return { ...corpus, posts: withinBudget(matching), pages: chosenPages };
+}
+
+/** The first MAX_POSTS of these that fit MAX_CHARS together; the first is cut to fit if it must. */
+function withinBudget(candidates: readonly CorpusPost[]): CorpusPost[] {
   const posts: CorpusPost[] = [];
   let chars = 0;
-  for (const t of scored) {
-    if (!t.post || t.score < best * 0.25 || posts.length >= MAX_POSTS) continue;
-    const size = JSON.stringify(t.post).length;
-    if (chars + size > MAX_CHARS && posts.length > 0) continue;
-    posts.push(t.post);
+  for (const post of candidates) {
+    if (posts.length >= MAX_POSTS) break;
+    const size = JSON.stringify(post).length;
+    if (chars + size > MAX_CHARS) {
+      if (posts.length > 0) continue;
+      const cut = fitTo(post, MAX_CHARS);
+      posts.push(cut);
+      chars += JSON.stringify(cut).length;
+      continue;
+    }
+    posts.push(post);
     chars += size;
   }
-  return { ...corpus, posts, pages: chosenPages };
+  return posts;
 }
 
 /** The conversation as Claude reads it: earlier turns, then the question, with its passage if any. */

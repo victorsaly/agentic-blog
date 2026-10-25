@@ -54,3 +54,31 @@ describe('plainText', () => {
     ).toBe('Yes. Read the road (https://blog.example.com/thoughts/a#road).');
   });
 });
+
+describe("isPlace, the site's own pages", () => {
+  it('accepts how it works, the topics, the graph and a wiki file in the repository', () => {
+    for (const href of [
+      '/how-it-works',
+      '/how-it-works#route',
+      '/topics',
+      '/topics/credibility',
+      '/graph#t-credibility',
+      'https://github.com/victorsaly/agentic-blog/blob/main/wiki/kurzweil.md',
+    ])
+      expect(isPlace(href), href).toBe(true);
+    for (const href of [
+      '/studio',
+      '/topics/../studio',
+      'https://github.com/victorsaly/agentic-blog/blob/main/.env',
+      'https://github.com/someone-else/agentic-blog/blob/main/wiki/x.md',
+    ])
+      expect(isPlace(href), href).toBe(false);
+  });
+
+  it('keeps a wiki address whole when the answer is copied', () => {
+    const wiki = 'https://github.com/victorsaly/agentic-blog/blob/main/wiki/kurzweil.md';
+    expect(plainText(`See [the wiki](${wiki}).`, 'https://blog.example.com')).toBe(
+      `See the wiki (${wiki}).`,
+    );
+  });
+});

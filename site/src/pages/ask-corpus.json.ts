@@ -191,15 +191,20 @@ export const GET: APIRoute = async () => {
         sourcesEntry !== undefined && (sourcesEntry.data.reviewed || import.meta.env.DEV);
       const sourcesList = showSources ? sourcesText(sourcesEntry.body ?? '') : '';
 
+      // The questions, when the interview agent asked any; the answers whenever the blogger gave some (the
+      // agent asks nothing when answers already exist, so the answers can stand alone).
       const interviewRaw = interviews[`../../../thoughts/${slug}/interview.md`];
-      let interview = '';
+      const parts: string[] = [];
       if (interviewRaw) {
         const { front, body } = split(interviewRaw);
         const answered = front.answered === true;
-        interview = `Questions the interview agent asked (${answered ? 'answered' : 'not answered yet'}):\n${body}`;
-        const said = answers?.body?.trim();
-        if (said) interview += `\n\nThe blogger's answers, in their own words:\n${said}`;
+        parts.push(
+          `Questions the interview agent asked (${answered ? 'answered' : 'not answered yet'}):\n${body}`,
+        );
       }
+      const said = answers?.body?.trim();
+      if (said) parts.push(`The blogger's answers, in their own words:\n${said}`);
+      const interview = parts.join('\n\n');
 
       const made = await madeText(slug);
       const ideas = smallIdeasOf(

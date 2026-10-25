@@ -9,13 +9,18 @@ export type Inline =
 
 export type Block = { kind: 'para'; parts: Inline[] } | { kind: 'list'; items: Inline[][] };
 
-/** A post, its origin page, or a place inside either; nothing outside the blog. */
-const PLACE = /^\/thoughts\/[a-z0-9-]+(\/origin)?(#[\p{L}\p{N}_-]+)?$/u;
+/**
+ * A post, its origin page, a place inside either, the site's own pages (how it works, the topics, the graph),
+ * or a wiki file in the blog's own repository; nothing else.
+ */
+const PLACE =
+  /^(\/thoughts\/[a-z0-9-]+(\/origin)?|\/how-it-works|\/topics(\/[a-z0-9-]+)?|\/graph)(#[\p{L}\p{N}_-]+)?$/u;
+const WIKI = /^https:\/\/github\.com\/victorsaly\/agentic-blog\/blob\/main\/wiki\/[a-z0-9-]+\.md$/;
 const INLINE = /\*\*([^*\n]+)\*\*|\[([^\]\n]+)\]\(([^)\s]+)\)/g;
 const ITEM = /^\s*(?:[-*•]|\d+[.)])\s+/;
 
 export function isPlace(href: string): boolean {
-  return PLACE.test(href);
+  return PLACE.test(href) || WIKI.test(href);
 }
 
 export function inlineOf(line: string): Inline[] {
@@ -65,7 +70,8 @@ export function blocksOf(answer: string): Block[] {
 export function plainText(answer: string, origin: string): string {
   return answer.replace(INLINE, (whole, bold?: string, words?: string, href?: string) => {
     if (bold) return bold;
-    if (words && href && isPlace(href)) return `${words} (${origin}${href})`;
+    if (words && href && isPlace(href))
+      return `${words} (${href.startsWith('/') ? `${origin}${href}` : href})`;
     return words ?? whole;
   });
 }
