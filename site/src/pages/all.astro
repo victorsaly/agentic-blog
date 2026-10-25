@@ -1,18 +1,113 @@
 ---
 // Why: the home page shows the newest ten; this page lists every published thought, newest first, so
-// nothing older is ever out of reach.
+// nothing older is ever out of reach. It is the place to scan everything, so it uses the compact numbered
+// index (not the prints), grouped by year with a link to each year once there is more than one, and the
+// topics beside it to narrow the list.
 import { getCollection } from 'astro:content';
 import Page from '../layouts/Page.astro';
-import ThoughtList from '../components/ThoughtList.astro';
-import ThemeNav from '../components/ThemeNav.astro';
+import ListHead from '../components/ListHead.astro';
+import ThoughtIndex from '../components/ThoughtIndex.astro';
+import TopicsAside from '../components/TopicsAside.astro';
+import { settings } from '../lib/settings';
+import { thoughtsLabel } from '../lib/themes';
 
 const thoughts = (await getCollection('thoughts', ({ data }) => !data.draft)).sort(
-  (a, b) => b.data.date.getTime() - a.data.date.getTime(),
+  (a, b) => b.data.date.getTime() - a.data.date.getTime() || b.id.localeCompare(a.id),
 );
+const yearOf = (date: Date): string =>
+  new Intl.DateTimeFormat('en-GB', { year: 'numeric', timeZone: settings.site.timezone }).format(
+    date,
+  );
+// Each year with its thoughts and the number its first row carries, so the count runs on across years.
+const years: { year: string; list: typeof thoughts; start: number }[] = [];
+for (const t of thoughts) {
+  const year = yearOf(t.data.date);
+  const last = years.at(-1);
+  if (last?.year === year) last.list.push(t);
+  else years.push({ year, list: [t], start: thoughts.indexOf(t) + 1 });
+}
 ---
 
-<Page title="All thoughts" description="Every published thought, newest first.">
-  <h1>All thoughts</h1>
-  <ThemeNav thoughts={thoughts} />
-  <ThoughtList thoughts={thoughts} />
+<Page title="Archive" description="Every published thought, newest first." width="wide">
+  <ListHead
+    label="Archive"
+    title="Every thought"
+    note={`${thoughtsLabel(thoughts.length)}, newest first.`}
+  />
+  <div class="frame body">
+    <div class="main">
+      {thoughts.length === 0 && <p class="quiet">Nothing published yet.</p>}
+      {
+        years.length > 1 && (
+          <nav class="years" aria-label="Jump to a year">
+            <ul>
+              {years.map(({ year }) => (
+                <li>
+                  <a href={`#year-${year}`}>{year}</a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )
+      }
+      {
+        years.map(({ year, list, start }) => (
+          <section aria-labelledby={`year-${year}`}>
+            <h2 class="label" id={`year-${year}`}>
+              {year} <span class="quiet">{thoughtsLabel(list.length)}</span>
+            </h2>
+            <ThoughtIndex thoughts={list} start={start} />
+          </section>
+        ))
+      }
+    </div>
+    <TopicsAside thoughts={thoughts} />
+  </div>
 </Page>
+
+<style>
+  .body {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-6);
+    padding-top: var(--space-5);
+  }
+  .main {
+    flex: 999 1 36rem;
+    min-width: 0;
+  }
+  .years ul {
+    display: flex;
+    flex-wrap: wrap;
+    list-style: none;
+    margin: 0 0 var(--space-5);
+    padding: 0;
+    max-width: none;
+    border-right: var(--rule-width) solid var(--ink);
+    width: fit-content;
+  }
+  .years a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+    padding: 0 0.75rem;
+    border-left: var(--rule-width) solid var(--ink);
+    font-variant-numeric: tabular-nums;
+    text-decoration: none;
+  }
+  .years a:hover {
+    text-decoration: underline;
+  }
+  section {
+    scroll-margin-top: 5rem;
+  }
+  section + section {
+    margin-top: var(--space-6);
+  }
+  .label .quiet {
+    margin-left: var(--space-2);
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+</style>

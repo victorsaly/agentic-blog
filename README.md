@@ -10,7 +10,7 @@ reads every change and merges it. Every post has a switch back to its original.
 &nbsp;·&nbsp; [Start here: the first post](https://blog.victorsaly.com/thoughts/2026-10-23-talked-out-loud-tidied-by-ai)
 &nbsp;·&nbsp; [Newest post](https://blog.victorsaly.com/thoughts/2026-10-23-productive-friction-counts-evidence)
 &nbsp;·&nbsp; [Its original](https://blog.victorsaly.com/thoughts/2026-10-23-productive-friction-counts-evidence/origin)
-&nbsp;·&nbsp; [Themes](https://blog.victorsaly.com/themes)
+&nbsp;·&nbsp; [Topics](https://blog.victorsaly.com/topics)
 &nbsp;·&nbsp; [Archive](https://blog.victorsaly.com/all)
 &nbsp;·&nbsp; [RSS](https://blog.victorsaly.com/rss.xml)
 

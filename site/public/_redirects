@@ -5,3 +5,9 @@
 /thoughts/2026-10-23-converted-with-ai /thoughts/2026-10-23-talked-out-loud-tidied-by-ai 301
 /thoughts/2026-10-23-converted-with-ai.html /thoughts/2026-10-23-talked-out-loud-tidied-by-ai 301
 /thoughts/2026-10-23-converted-with-ai/* /thoughts/2026-10-23-talked-out-loud-tidied-by-ai/:splat 301
+
+# "Themes" became "Topics" (October 2026): the usual word on a blog, and it no longer reads like the
+# light and dark theme switch.
+/themes /topics 301
+/themes.html /topics 301
+/themes/* /topics/:splat 301

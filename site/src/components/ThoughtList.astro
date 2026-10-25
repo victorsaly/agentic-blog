@@ -1,7 +1,8 @@
 ---
-// Why: the home page, theme pages and the archive list thoughts the same way: the post's linocut cover as a
-// small print, the title as the one marigold mark, then the message in plain ink, the date and its
-// themes. Spacing and rules only, no cards, so the list reads like a wall of prints with captions.
+// Why: a topic page lists its thoughts with their prints: the post's linocut cover as a small print, the
+// title as the one marigold mark, then the message in plain ink, the date, and its other topics as links,
+// so a reader can step sideways. Spacing and ink rules only, no cards: a wall of prints with captions.
+// On a phone the print sits above its caption, so the message keeps a readable line.
 import type { CollectionEntry } from 'astro:content';
 import { Image } from 'astro:assets';
 import { formatDate, thoughtSlugOf } from '../lib/content';
@@ -10,9 +11,11 @@ import { themeLabel } from '../lib/themes';
 
 interface Props {
   thoughts: CollectionEntry<'thoughts'>[];
+  /** The topic page this list is on: left out of each post's topic links, since you are there. */
+  current?: string;
 }
 
-const { thoughts } = Astro.props;
+const { thoughts, current } = Astro.props;
 const covers = await coversBySlug();
 ---
 
@@ -21,6 +24,7 @@ const covers = await coversBySlug();
     thoughts.map((t) => {
       const slug = thoughtSlugOf(t.id);
       const cover = covers.get(slug);
+      const others = t.data.themes.filter((topic) => topic !== current);
       return (
         <li class:list={{ 'has-cover': cover }}>
           {cover && (
@@ -36,15 +40,25 @@ const covers = await coversBySlug();
             </a>
           )}
           <div class="text">
-            <h2 class="title">
+            <h3 class="title">
               <a href={`/thoughts/${slug}`}>
                 <mark>{t.data.title}</mark>
               </a>
-            </h2>
+            </h3>
             <p class="summary">{t.data.message}</p>
             <p class="small quiet meta">
               <time datetime={t.data.date.toISOString()}>{formatDate(t.data.date)}</time>
-              <span>{t.data.themes.map(themeLabel).join(', ')}</span>
+              {others.length > 0 && (
+                <span>
+                  {current ? 'Also in ' : 'In '}
+                  {others.map((topic, i) => (
+                    <>
+                      {i > 0 && ', '}
+                      <a href={`/topics/${topic}`}>{themeLabel(topic)}</a>
+                    </>
+                  ))}
+                </span>
+              )}
             </p>
           </div>
         </li>
@@ -54,16 +68,18 @@ const covers = await coversBySlug();
 </ol>
 
 <style>
+  /* The list fills its column on a wide page; the message under each title keeps the reading measure. */
   .thoughts {
     list-style: none;
     padding: 0;
     margin: 0;
+    max-width: none;
   }
   li {
     padding: var(--space-4) 0;
   }
   li + li {
-    border-top: var(--rule-width) solid var(--rule);
+    border-top: var(--rule-width) solid var(--ink);
   }
   li.has-cover {
     display: grid;
@@ -112,10 +128,25 @@ const covers = await coversBySlug();
     gap: var(--space-1) var(--space-3);
     margin: 0;
   }
+  @media (min-width: 60rem) {
+    li {
+      padding-block: var(--space-5);
+    }
+    li.has-cover {
+      grid-template-columns: 13rem 1fr;
+      gap: var(--space-5);
+    }
+    .title {
+      font-size: 1.75rem;
+    }
+  }
   @media (max-width: 30rem) {
     li.has-cover {
-      grid-template-columns: 5rem 1fr;
-      gap: var(--space-2);
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-3);
+    }
+    .print {
+      width: 10rem;
     }
   }
 </style>

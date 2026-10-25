@@ -1,0 +1,47 @@
+---
+// Why: the archive, the topics page and each topic page open the way the home page does, at full width: a
+// heavy rule, a small label saying where you are, the name set large, and one quiet line of what is below,
+// closed by a hairline (like the home page's band) so the labels underneath own the strong rules.
+interface Props {
+  label: string;
+  title: string;
+  note: string;
+}
+
+const { label, title, note } = Astro.props;
+---
+
+<header class="frame head">
+  <p class="label-plain">{label}</p>
+  <h1>{title}</h1>
+  <p class="note">{note}</p>
+</header>
+
+<style>
+  .head {
+    padding-top: var(--space-6);
+  }
+  .label-plain {
+    margin: 0;
+    padding-top: var(--space-4);
+    border-top: var(--rule-heavy) solid var(--ink);
+    max-width: none;
+    font-size: var(--size-label);
+    font-weight: 700;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+  }
+  h1 {
+    margin: var(--space-3) 0 0;
+    font-size: clamp(2.75rem, 1.4rem + 4.6vw, 5.5rem);
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+  }
+  .note {
+    margin: var(--space-4) 0 0;
+    padding-bottom: var(--space-3);
+    border-bottom: var(--rule-width) solid var(--ink);
+    max-width: none;
+    font-size: 1.3125rem;
+  }
+</style>
