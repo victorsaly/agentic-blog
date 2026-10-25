@@ -38,10 +38,15 @@ export const studioAreas: readonly StudioArea[] = [
   { id: 'runs', href: '/studio/runs', name: 'Runs', hint: 'every run and what it cost' },
 ];
 
-/** The area a page belongs to, from its address; anything unknown under /studio is the overview. */
+/**
+ * The area a page belongs to, from its address; a page inside an area (a run's own page under Agents)
+ * belongs to it. Anything unknown under /studio is the overview.
+ */
 export function areaFor(pathname: string): StudioAreaId {
   const path = pathname.replace(/\.html$/, '').replace(/\/+$/, '');
-  const found = studioAreas.find((a) => a.id !== 'today' && path === a.href);
+  const found = studioAreas.find(
+    (a) => a.id !== 'today' && (path === a.href || path.startsWith(`${a.href}/`)),
+  );
   return found ? found.id : 'today';
 }
 

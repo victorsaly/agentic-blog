@@ -154,7 +154,7 @@ export function AgentsLive({ titles }: AgentsLiveProps): React.JSX.Element {
 
       <section aria-labelledby="going-label">
         <h2 className="label" id="going-label">
-          Working now
+          Queued and running on GitHub
         </h2>
         {going.length === 0 ? (
           <p className="quiet">
