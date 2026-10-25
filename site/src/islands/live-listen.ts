@@ -27,8 +27,10 @@ const HELD = RATE * 10;
 export interface LiveListening {
   pause: () => void;
   resume: () => void;
-  /** Says the audio has ended, keeps the last words that arrive, then closes. */
+  /** Says the audio has ended (sending what is still waiting first), keeps the last words, then closes. */
   stop: () => void;
+  /** Ends it at once and says nothing more: the take was thrown away, or the page part was left. */
+  cancel: () => void;
 }
 
 export function listenLive(
@@ -38,24 +40,20 @@ export function listenLive(
 ): LiveListening {
   let words = noWords;
   let paused = false;
-  let stopped = false;
-  // Read through a function: stop() can be called while the worklet is still loading.
-  const ended = (): boolean => stopped;
+  // Stopping: no more audio, but the last words are still kept. Over: nothing more is sent or said.
+  let stopping = false;
+  let over = false;
+  // Read through functions: stop() and cancel() can be called while the worklet is still loading.
+  const done = (): boolean => stopping || over;
+  const cancelled = (): boolean => over;
   let socket: WebSocket | null = null;
   let context: AudioContext | null = null;
   let keepAlive: ReturnType<typeof setInterval> | undefined;
   let pending = new Float32Array(0);
 
-  const send = (samples: Float32Array): void => {
-    if (paused) return;
-    // Until the connection opens, the first words wait here (up to ten seconds), so none are lost.
-    const joined = new Float32Array(
-      Math.min(pending.length, HELD - samples.length) + samples.length,
-    );
-    joined.set(pending.subarray(Math.max(0, pending.length - (HELD - samples.length))));
-    joined.set(samples, joined.length - samples.length);
-    pending = joined;
-    if (socket?.readyState !== WebSocket.OPEN || pending.length < BATCH) return;
+  /** Sends everything waiting, however little, when the connection is open. */
+  const flush = (): void => {
+    if (pending.length === 0 || socket?.readyState !== WebSocket.OPEN) return;
     const pcm = new Int16Array(pending.length);
     for (let i = 0; i < pending.length; i += 1) {
       const s = Math.max(-1, Math.min(1, pending[i] ?? 0));
@@ -65,12 +63,50 @@ export function listenLive(
     pending = new Float32Array(0);
   };
 
+  /** Ends the audio side: the worklet, the keep-alive and what was waiting. The microphone stays on for the
+   * recording, which owns it. */
+  const quiet = (): void => {
+    clearInterval(keepAlive);
+    pending = new Float32Array(0);
+    void context?.close().catch(() => undefined);
+    context = null;
+  };
+
+  /** No more audio: what is waiting goes first, then Nova-3 is told the audio has ended. */
+  const finish = (): void => {
+    const open = socket;
+    if (open?.readyState !== WebSocket.OPEN) return;
+    flush();
+    open.send(JSON.stringify({ type: 'CloseStream' }));
+    setTimeout(() => {
+      open.close();
+    }, 3_000);
+  };
+
+  const send = (samples: Float32Array): void => {
+    if (paused || done()) return;
+    // Until the connection opens, the first words wait here (up to ten seconds), so none are lost.
+    const joined = new Float32Array(
+      Math.min(pending.length, HELD - samples.length) + samples.length,
+    );
+    joined.set(pending.subarray(Math.max(0, pending.length - (HELD - samples.length))));
+    joined.set(samples, joined.length - samples.length);
+    pending = joined;
+    if (pending.length >= BATCH) flush();
+  };
+
   void (async () => {
     try {
       const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
       socket = new WebSocket(`${scheme}://${window.location.host}/api/listen`);
+      // Stopped while it was still connecting: what was held is sent now, then it ends as usual.
+      socket.onopen = () => {
+        if (over) return;
+        if (stopping) finish();
+        else flush();
+      };
       socket.onmessage = (event) => {
-        if (typeof event.data !== 'string') return;
+        if (over || typeof event.data !== 'string') return;
         try {
           words = heard(words, JSON.parse(event.data));
           onWords(words);
@@ -78,14 +114,21 @@ export function listenLive(
           // A message that is not JSON adds no words.
         }
       };
-      socket.onerror = () => {
-        if (!stopped) onUnavailable('the live words could not connect');
+      // A connection that fails or closes early cannot come back: the audio side ends with it.
+      const lost = (): void => {
+        quiet();
+        if (!done()) onUnavailable('the live words were cut off');
+        over = true;
+      };
+      socket.onerror = lost;
+      socket.onclose = () => {
+        if (!done()) lost();
       };
       context = new AudioContext({ sampleRate: RATE });
       const url = URL.createObjectURL(new Blob([WORKLET], { type: 'text/javascript' }));
       await context.audioWorklet.addModule(url);
       URL.revokeObjectURL(url);
-      if (ended()) return;
+      if (done()) return;
       const source = context.createMediaStreamSource(stream);
       const node = new AudioWorkletNode(context, 'samples');
       node.port.onmessage = (event: MessageEvent<Float32Array>) => {
@@ -96,13 +139,15 @@ export function listenLive(
       silent.gain.value = 0;
       source.connect(node).connect(silent).connect(context.destination);
     } catch {
-      onUnavailable('this browser cannot stream the microphone for live words');
+      quiet();
+      if (!cancelled()) onUnavailable('this browser cannot stream the microphone for live words');
     }
   })();
 
   return {
     pause() {
       paused = true;
+      clearInterval(keepAlive);
       keepAlive = setInterval(() => {
         if (socket?.readyState === WebSocket.OPEN)
           socket.send(JSON.stringify({ type: 'KeepAlive' }));
@@ -113,16 +158,18 @@ export function listenLive(
       clearInterval(keepAlive);
     },
     stop() {
-      stopped = true;
+      if (done()) return;
+      stopping = true;
       clearInterval(keepAlive);
-      void context?.close();
-      const open = socket;
-      if (open?.readyState === WebSocket.OPEN) {
-        open.send(JSON.stringify({ type: 'CloseStream' }));
-        setTimeout(() => {
-          open.close();
-        }, 3_000);
-      } else open?.close();
+      void context?.close().catch(() => undefined);
+      context = null;
+      // Still connecting: onopen finishes it. Open: finish now.
+      finish();
+    },
+    cancel() {
+      over = true;
+      quiet();
+      socket?.close();
     },
   };
 }

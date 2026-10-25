@@ -269,19 +269,21 @@ export function Recorder({
   // Start over loses the take, so it waits for a second press, like Discard.
   const [confirmingRestart, setConfirmingRestart] = useState(false);
   // The take, kept in the page so it can be played back beside the written words.
+  // Its address is released when it is replaced and when the recorder goes, so no take outlives its page part.
   const [take, setTake] = useState<string | null>(null);
+  const takeUrl = useRef<string | null>(null);
   const keep = useCallback((url: string | null) => {
-    setTake((before) => {
-      if (before !== null) URL.revokeObjectURL(before);
-      return url;
-    });
+    if (takeUrl.current !== null) URL.revokeObjectURL(takeUrl.current);
+    takeUrl.current = url;
+    setTake(url);
   }, []);
   // Leaving the page part (another thought chosen, the island removed) never leaves the microphone on:
   // the recording stops without being sent, and its tracks are released.
   useEffect(
     () => () => {
       stopListening.current?.();
-      listening.current?.stop();
+      listening.current?.cancel();
+      if (takeUrl.current !== null) URL.revokeObjectURL(takeUrl.current);
       const media = recorder.current;
       if (media) {
         media.onstop = null;
@@ -440,7 +442,7 @@ export function Recorder({
     setConfirmingRestart(false);
     stopListening.current?.();
     stopListening.current = null;
-    listening.current?.stop();
+    listening.current?.cancel();
     listening.current = null;
     const media = recorder.current;
     if (media) {
@@ -687,15 +689,19 @@ export function Recorder({
             whole recording when you stop.
           </p>
           {live.kept === '' && live.guess === '' ? (
-            <p className="quiet">
-              {liveNote === null
-                ? 'Listening…'
-                : `No live words: ${liveNote}. The recording goes on.`}
-            </p>
+            liveNote === null && <p className="quiet">Listening…</p>
           ) : (
             <p>
               {live.kept}
               {live.guess !== '' && <span className="guess"> {live.guess}</span>}
+            </p>
+          )}
+          {/* A failure is said whether or not words came first, so a frozen preview never reads as live. */}
+          {liveNote !== null && (
+            <p className="quiet">
+              {live.kept === '' && live.guess === ''
+                ? `No live words: ${liveNote}. The recording goes on.`
+                : `Live words stopped here: ${liveNote}. The recording goes on.`}
             </p>
           )}
         </div>
