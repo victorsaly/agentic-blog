@@ -4,40 +4,43 @@
 // tab mid-ask cannot start a second loop, and an older answer can never land after a newer one.
 import { useEffect } from 'react';
 
-export function usePoll(ask: () => Promise<number | null>): void {
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let stopped = false;
-    let done = false;
-    let asking = false;
-    const tick = async (): Promise<void> => {
-      if (done || asking || document.visibilityState === 'hidden') return;
-      asking = true;
-      clearTimeout(timer);
-      let wait: number | null;
-      try {
-        wait = await ask();
-      } finally {
-        asking = false;
-      }
-      if (stopped) return;
-      if (wait === null) {
-        done = true;
-        return;
-      }
-      timer = setTimeout(() => void tick(), wait);
-    };
-    const onVisible = (): void => {
-      if (document.visibilityState !== 'visible') return;
-      clearTimeout(timer);
-      void tick();
-    };
+/** Starts asking; returns what stops it. Usable outside React, for a feed several islands share. */
+export function poll(ask: () => Promise<number | null>): () => void {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let stopped = false;
+  let done = false;
+  let asking = false;
+  const tick = async (): Promise<void> => {
+    if (done || asking || document.visibilityState === 'hidden') return;
+    asking = true;
+    clearTimeout(timer);
+    let wait: number | null;
+    try {
+      wait = await ask();
+    } finally {
+      asking = false;
+    }
+    if (stopped) return;
+    if (wait === null) {
+      done = true;
+      return;
+    }
+    timer = setTimeout(() => void tick(), wait);
+  };
+  const onVisible = (): void => {
+    if (document.visibilityState !== 'visible') return;
+    clearTimeout(timer);
     void tick();
-    document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      stopped = true;
-      clearTimeout(timer);
-      document.removeEventListener('visibilitychange', onVisible);
-    };
-  }, [ask]);
+  };
+  void tick();
+  document.addEventListener('visibilitychange', onVisible);
+  return () => {
+    stopped = true;
+    clearTimeout(timer);
+    document.removeEventListener('visibilitychange', onVisible);
+  };
+}
+
+export function usePoll(ask: () => Promise<number | null>): void {
+  useEffect(() => poll(ask), [ask]);
 }

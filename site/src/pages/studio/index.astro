@@ -3,13 +3,15 @@
 // and one press starts the recording; beside it, what is waiting for Victor, each as a number that opens its
 // area: the agents' writing to read, readers' comments to decide, and what this month has cost against the
 // budget. Review and money are as of the last deploy; comments are counted when the page opens, since
-// readers write at any time, and when they cannot be counted the page says so rather than guess.
+// readers write at any time, and when they cannot be counted the page says so rather than guess. Below them,
+// what the agents are waiting on (holds that stand, questions), read live like the Agents board.
 import Studio from '../../layouts/Studio.astro';
 import { loadCosted, loadWaiting } from '../../lib/studio-data';
 import { moneyOf, shareOfCap, spendIn } from '../../lib/how-made';
 import { formatDate } from '../../lib/content';
 import { settings } from '../../lib/settings';
 import { MicIcon } from '../../islands/MicIcon';
+import { AgentsWaiting } from '../../islands/AgentsWaiting';
 import project from '../../../../roadbook.config';
 
 const waiting = await loadWaiting();
@@ -19,8 +21,10 @@ const thoughts = waiting.filter((t) => t.waiting.length > 0).length;
 const builtAt = new Date();
 const { show, per_usd: perUsd } = settings.publishing.currency;
 const money = (usd: number): string => moneyOf(usd, { show, perUsd });
+const costed = await loadCosted();
+const titles = Object.fromEntries(costed.map((t) => [t.slug, t.title]));
 const month = spendIn(
-  (await loadCosted()).flatMap((t) => t.rows),
+  costed.flatMap((t) => t.rows),
   builtAt.toISOString().slice(0, 7),
 );
 const cap = project.budget.monthlyCapUsd;
@@ -82,6 +86,7 @@ const plural = (n: number, one: string, many: string): string => (n === 1 ? one 
           </a>
         </li>
       </ul>
+      <AgentsWaiting client:load titles={titles} />
     </section>
   </div>
 </Studio>
@@ -179,5 +184,11 @@ const plural = (n: number, one: string, many: string): string => (n === 1 ? one 
   .what .quiet {
     font-weight: 400;
     font-size: var(--size-small);
+  }
+  section :global(.agents-waiting) {
+    margin-top: var(--space-4);
+  }
+  section :global(.agents-waiting p) {
+    margin: 0 0 var(--space-2);
   }
 </style>

@@ -52,3 +52,6 @@ export function areaFor(pathname: string): StudioAreaId {
 
 /** Sent on the window when Victor decides a comment, so anything counting them counts again. */
 export const COMMENTS_CHANGED = 'studio:comments-changed';
+
+/** Sent on the window with how many agents wait on Victor (holds and questions), each time the runs are read. */
+export const AGENTS_WAITING = 'studio:agents-waiting';

@@ -6,7 +6,9 @@
 // when an area opens; this row is used many times a day. On a desk the areas sit in one row; on a phone they
 // fold into two rows of four (the last cell widening to close the row), so every area stays in sight.
 // An area with something waiting shows how many: the review count is known at build time; the comments are
-// counted when the page opens, and again whenever a decision on one is made, since readers write any time.
+// counted when the page opens, and again whenever a decision on one is made, since readers write any time;
+// the agents' holds and questions are counted when the page opens, and again whenever a page's live runs
+// are read.
 import { studioAreas, type StudioAreaId } from '../lib/studio-areas';
 
 interface Props {
@@ -16,8 +18,9 @@ interface Props {
 }
 
 const { current, counts = {} } = Astro.props;
-// Only these areas count what waits; comments arrive after the build, so theirs is filled in by the script.
-const counted: readonly StudioAreaId[] = ['review', 'comments'];
+// Only these areas count what waits; comments and the agents' holds and questions arrive after the build, so
+// theirs are filled in by the script.
+const counted: readonly StudioAreaId[] = ['review', 'comments', 'agents'];
 
 // Line icons in the text colour, so they invert with it on the open cell.
 const icons: Record<StudioAreaId, string> = {
@@ -67,7 +70,8 @@ const icons: Record<StudioAreaId, string> = {
 </nav>
 
 <script>
-  import { COMMENTS_CHANGED } from '../lib/studio-areas';
+  import { AGENTS_WAITING, COMMENTS_CHANGED } from '../lib/studio-areas';
+  import { readRunsAnswer, waitingOnVictor } from '../lib/run-board';
 
   const badge = document.querySelector<HTMLElement>('.studio-tabs [data-count="comments"]');
   const number = badge?.querySelector('.n');
@@ -89,6 +93,32 @@ const icons: Record<StudioAreaId, string> = {
 
   void countComments();
   window.addEventListener(COMMENTS_CHANGED, () => void countComments());
+
+  const agentsBadge = document.querySelector<HTMLElement>('.studio-tabs [data-count="agents"]');
+  const agentsNumber = agentsBadge?.querySelector('.n');
+
+  function showAgents(waiting: number): void {
+    if (!agentsBadge || !agentsNumber) return;
+    agentsNumber.textContent = String(waiting);
+    agentsBadge.hidden = waiting === 0;
+  }
+
+  async function countAgents(): Promise<void> {
+    try {
+      const response = await fetch('/api/runs');
+      const answer = response.ok ? readRunsAnswer(await response.json()) : null;
+      if (answer === null) return;
+      const { holds, asking } = waitingOnVictor(answer);
+      showAgents(holds.length + asking.length);
+    } catch {
+      /* no count is better than a wrong one: the Agents area itself says what failed */
+    }
+  }
+
+  void countAgents();
+  window.addEventListener(AGENTS_WAITING, (event) => {
+    if (event instanceof CustomEvent && typeof event.detail === 'number') showAgents(event.detail);
+  });
 </script>
 
 <style>

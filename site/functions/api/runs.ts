@@ -3,8 +3,9 @@
 // seconds instead of after its pull request is merged and deployed. It reads only. Recent history is
 // limited; outstanding work is not: the latest run of each agent on each thought that is still going, needs
 // Victor or holds the post is always sent, however many runs came after it. Each run says whether it is that
-// latest one (by when it started), so the board can tell a standing hold from an old one. Behind Cloudflare
-// Access like the rest of /api/*.
+// latest one (by when it started), so the board can tell a standing hold from an old one. Beside them, where
+// every thought stands: each agent's latest run on each thought and how many it has made, which is the
+// pipeline, read live instead of as of the last deploy. Behind Cloudflare Access like the rest of /api/*.
 import { rowOf, type RunRecord } from '../../src/lib/live-runs';
 import { json, problem, type Handler } from '../_lib';
 
@@ -31,7 +32,31 @@ export const onRequestGet: Handler = async ({ env }) => {
       )
       .bind(RUNS, ...OUTSTANDING)
       .all<RunRecord & { latest: number }>();
-    return json({ runs: results.map((r) => ({ ...rowOf(r), latest: r.latest === 1 })) });
+    const standing = await db
+      .prepare(
+        `SELECT runs.id, runs.thought, runs.agent, runs.state, runs.started_at, counted.runs FROM runs
+         JOIN (SELECT thought, agent, MAX(started_at) AS started, COUNT(*) AS runs FROM runs GROUP BY thought, agent) counted
+           ON runs.thought = counted.thought AND runs.agent = counted.agent AND runs.started_at = counted.started`,
+      )
+      .all<{
+        id: string;
+        thought: string;
+        agent: string;
+        state: string;
+        started_at: string;
+        runs: number;
+      }>();
+    return json({
+      runs: results.map((r) => ({ ...rowOf(r), latest: r.latest === 1 })),
+      standing: standing.results.map((r) => ({
+        id: r.id,
+        thought: r.thought,
+        agent: r.agent,
+        state: r.state,
+        startedAt: r.started_at,
+        runs: r.runs,
+      })),
+    });
   } catch {
     return problem('The runs table is missing. Apply the migrations (see the README).', 503);
   }
