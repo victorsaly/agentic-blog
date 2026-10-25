@@ -11,6 +11,10 @@ import Page from '../../layouts/Page.astro';
 import VersionSwitch from '../../components/VersionSwitch.astro';
 import PostTabs, { type Tab } from '../../components/PostTabs.astro';
 import UnreviewedTag from '../../components/UnreviewedTag.astro';
+import HowMade from '../../components/HowMade.astro';
+import { join } from 'node:path';
+import { readRuns } from '@roadbook/core/node';
+import { howMade } from '../../lib/how-made';
 import ReadAlong from '../../components/ReadAlong.astro';
 import { z } from 'astro/zod';
 import ideaIcon from '../../assets/icons/idea.png';
@@ -82,6 +86,17 @@ const sourcesEntry = (await getCollection('sources', ({ id }) => thoughtSlugOf(i
 const showSources = sourcesEntry && (sourcesEntry.data.reviewed || import.meta.env.DEV);
 // They close the text as a numbered list; the same numbers sit in the text beside each claim.
 const sourceList = showSources ? parseSources(sourcesEntry.body ?? '') : null;
+// How this was made: read from the thought's ledger at build time, every run checked against its head. A
+// ledger that does not verify stops the build rather than publishing a record that may have been changed.
+const ledger = await readRuns(join(process.cwd(), '..', 'thoughts', slug), `thoughts/${slug}`);
+if (ledger.issues.length > 0) throw new Error(ledger.issues.join('\n'));
+const made = howMade(ledger.runs);
+const cards = import.meta.glob<{ name: string; purpose: string }>('../../../../agents/*/card.ts', {
+  eager: true,
+  import: 'card',
+});
+const jobs = Object.fromEntries(Object.values(cards).map((c) => [c.name, c.purpose]));
+
 const sources =
   sourceList && (sourceList.claims.length > 0 || sourceList.unsourced.length > 0)
     ? sourceList
@@ -389,6 +404,8 @@ const pad = (n: number): string => String(n).padStart(2, '0');
           </section>
         )
       }
+
+      {made && <HowMade made={made} jobs={jobs} />}
 
       <aside class="rail thought" aria-label="This thought" data-pagefind-ignore>
         <div class="sticky">
@@ -893,6 +910,9 @@ const pad = (n: number): string => String(n).padStart(2, '0');
     .source-list {
       order: 3;
     }
+    .layout :global(.made) {
+      order: 3;
+    }
     .thought {
       order: 4;
       margin-top: var(--space-5);
@@ -1055,7 +1075,8 @@ const pad = (n: number): string => String(n).padStart(2, '0');
     margin-top: var(--space-6);
   }
   @media (min-width: 64.0625rem) {
-    .source-list {
+    .source-list,
+    .layout :global(.made) {
       grid-column: 2;
     }
   }

@@ -1,0 +1,151 @@
+---
+// Why: the blog's promise, shown on the post itself: which agents worked on it, how each run ended, what it
+// cost, and where a person stepped in. Every line is read from the post's ledger at build time; nothing
+// here is typed by hand, and a post with no recorded runs shows no box at all. A guard's reason for holding
+// is never shown, only that it held. Ruled rows in the house style, monochrome, no badges of colour.
+import { moneyOf, type Ending, type HowMade } from '../lib/how-made';
+import { formatDate } from '../lib/content';
+import { settings } from '../lib/settings';
+
+interface Props {
+  made: HowMade;
+  /** Each agent's purpose, from its card. */
+  jobs: Record<string, string>;
+}
+
+const { made, jobs } = Astro.props;
+const author = settings.site.author.split(' ')[0] ?? settings.site.author;
+const endings: Record<Ending, string> = {
+  done: 'Done',
+  held: `Held for ${author}`,
+  failed: 'Did not finish',
+  running: 'Still running',
+  'not-run': 'Not run',
+};
+const name = (agent: string): string => agent.charAt(0).toUpperCase() + agent.slice(1);
+const runs = made.steps.reduce((n, s) => n + s.runs, 0);
+const day = (iso: string): string => formatDate(new Date(`${iso}T12:00:00Z`));
+---
+
+<section class="made" id="how-made" aria-labelledby="made-label" data-pagefind-ignore>
+  <h2 class="label" id="made-label">How this was made</h2>
+  <p class="small quiet intro">
+    Read from this post's ledger, where every agent run is recorded as it happens and cannot be
+    changed afterwards. Recorded since {day(made.since)}.
+  </p>
+  <ol class="steps">
+    {
+      made.steps.map((step) => (
+        <li>
+          <div class="what">
+            <span class="agent">{name(step.agent)}</span>
+            {jobs[step.agent] && <span class="job small quiet">{jobs[step.agent]}</span>}
+          </div>
+          <div class="how small">
+            <span class:list={['ended', { held: step.ended === 'held' }]}>
+              {endings[step.ended]}
+            </span>
+            <span class="quiet">
+              {step.costed ? moneyOf(step.usd) : 'cost not recorded'}
+              {step.runs > 1 && ` · ran ${String(step.runs)} times`}
+            </span>
+          </div>
+        </li>
+      ))
+    }
+  </ol>
+  {
+    (made.editedByPerson.length > 0 || made.byPerson.length > 0) && (
+      <p class="small people">
+        {made.editedByPerson.length > 0 &&
+          `${author} edited what ${made.editedByPerson.map(name).join(', ')} wrote. `}
+        {made.byPerson.length > 0 &&
+          `${author} wrote ${made.byPerson.map(name).join(', ')}, in place of an agent.`}
+      </p>
+    )
+  }
+  {
+    made.overrides.length > 0 && (
+      <ul class="overrides small">
+        {made.overrides.map((o) => (
+          <li>
+            {author} overrode {name(o.node)}: “{o.reason}”
+          </li>
+        ))}
+      </ul>
+    )
+  }
+  <p class="small total">
+    {made.totalIsFloor ? 'At least ' : ''}{moneyOf(made.totalUsd)} of AI across {runs}
+    {runs === 1 ? ' run' : ' runs'}. <a href="/how-it-works">How the agents work</a>
+  </p>
+</section>
+
+<style>
+  .made {
+    margin-top: var(--space-6);
+  }
+  .intro {
+    margin: var(--space-3) 0 0;
+  }
+  .steps {
+    list-style: none;
+    margin: var(--space-3) 0 0;
+    padding: 0;
+    max-width: none;
+    border-top: var(--rule-width) solid var(--ink);
+  }
+  .steps li {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-1) var(--space-4);
+    padding-block: var(--space-3);
+    border-bottom: var(--rule-width) solid var(--ink);
+  }
+  .what {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 18rem;
+    min-width: 0;
+  }
+  .agent {
+    font-weight: 700;
+  }
+  .how {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    text-align: right;
+  }
+  .ended {
+    font-weight: 700;
+  }
+  /* A hold is the one state a reader should notice: boxed like a tag, still in ink, no colour. */
+  .ended.held {
+    padding: 0 var(--space-1);
+    border: var(--rule-width) solid var(--ink);
+  }
+  .people,
+  .overrides {
+    margin: var(--space-3) 0 0;
+    max-width: none;
+  }
+  .overrides {
+    padding-left: var(--space-4);
+  }
+  .total {
+    margin: var(--space-3) 0 0;
+    max-width: none;
+  }
+  /* On a phone each row is one column, so every outcome sits in the same place under its agent. */
+  @media (max-width: 40rem) {
+    .steps li {
+      flex-direction: column;
+    }
+    .how {
+      align-items: flex-start;
+      text-align: left;
+    }
+  }
+</style>

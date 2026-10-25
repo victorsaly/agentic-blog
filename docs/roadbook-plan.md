@@ -29,6 +29,11 @@ where each lives). This file says what to build next and in what order.
   before anything is spent. Image calls are now costed too. Left for Slice 5: a card listing the writer it
   uses for review (the image agent reviews with `writer`, which its card does not name), and adapters for
   the other provider kinds.
+- **Slice 4 is built** (`feat/disclosure-box`): a post with recorded runs shows "How this was made" after
+  its sources, read at build time from `ledger/` (a run that does not verify stops the build): each agent's
+  latest run, how it ended, its cost, and any edit or override from `disclosure()`. A guard's hold reason is
+  never shown, only that it held; a run that made something without a recorded cost makes the total "at
+  least". A post with no runs shows nothing.
 - **Nothing runs through Roadbook yet.** The agents still run through `agents/run.ts` and their
   `PROMPT.md`; the cards describe them alongside. That is deliberate: the existing logic keeps working
   while the framework grows under it.
