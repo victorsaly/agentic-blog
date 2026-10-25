@@ -10,6 +10,7 @@ import { markdownFile } from '../_lib/files.js';
 import { kebab, readIfPresent, readOrThrow, userMessage } from '../_lib/generic.js';
 import { unfence } from '../_lib/claude.js';
 import type { AgentContext, AgentRun, OutputFile } from '../_lib/types.js';
+import { hasFfmpeg } from '../_lib/workers-ai.js';
 import { reviewDrawing } from './review.js';
 
 export const MANIFEST = 'image/prompts.md';
@@ -113,6 +114,12 @@ export const run: AgentRun = async (ctx) => {
       files: [],
     };
   }
+
+  // Every drawing is made black on white with ffmpeg after it is paid for, so it must be there first.
+  if (!(await hasFfmpeg()))
+    throw new Error(
+      'ffmpeg is not installed here, and every drawing is made black on white with it; nothing was spent',
+    );
 
   // The reference photo lives on the blogger's machine only; in CI it is absent and the text describes him.
   const referencePath = ctx.settings.media.image_reference;
