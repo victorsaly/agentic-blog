@@ -133,13 +133,14 @@ vendor and no heavier database: the volume is a few dozen runs a day, and D1 alr
 sends each event to `POST /api/runs/:id/events`, which checks every event's hash, its place and the chain
 before keeping it (`site/src/lib/live-runs.ts`), and keeps the run's row in the same transaction;
 `migrations/0002_runs.sql` adds the tables; `npm run live:rebuild` refills them from the ledgers. Setup for
-the live site is in `site/README.md`, step 8. **7b, first half, is built**
-(`feat/live-board`): `GET /api/runs` and `GET /api/runs/:id?after=` read the tables; the Agents page leads
-with the board (needs you, running now, held, recently finished; a run silent for ten minutes shows as
-quiet, not running) and each run opens on `/studio/agents/run?id=`, its timeline event for event, asking
-for what is new every three seconds while it runs. **Next, the second half**: the pipeline read live instead
-of at deploy, and one "needs you" list on Today. The runner does not stream text yet (`node.delta`); the
-timeline already joins it into one line when it does.
+the live site is in `site/README.md`, step 8. **7b is built.** First half (#96): `GET /api/runs` and `GET /api/runs/:id?after=` read the tables; the
+Agents page leads with the board (needs you, running now, held, recently finished; a run silent for ten
+minutes shows as quiet, not running) and each run opens on `/studio/agents/run?id=`, its timeline event for
+event. Second half (`feat/live-pipeline`): `/api/runs` also sends each agent's latest run on each thought, so
+"Where each thought stands" and the full grid start from the deploy's ledgers and are brought up to date live
+(`withLive` in `site/src/lib/pipeline.ts`); Today lists the holds that stand and the runs that asked
+something, and the Agents tab counts them. One feed per page (`site/src/islands/runs-feed.ts`) does all the
+asking. The runner does not stream text yet (`node.delta`); the timeline joins it into one line when it does.
 
 - `agents/run.ts` sends each ledger event, as it appends it, to `POST /api/runs/:id/events`. The Worker
   checks the hash chain before storing (an event whose `prev` does not match the last one is refused).

@@ -4,6 +4,7 @@
 // says it is going but has gone quiet is marked quiet, not shown as working: the runner can be stopped
 // without a last word. Pure, and free of the ledger's own code, so it runs in the browser and is tested here.
 import type { LiveRunRow } from './live-runs';
+import type { LiveCell } from './pipeline';
 import { agentName } from './agent-runs';
 import { moneyOf, type Currency } from './money';
 
@@ -61,6 +62,42 @@ export function readRunRows(data: unknown): ListedRun[] | null {
   return data.runs.filter(isListed);
 }
 
+const isCell = (value: unknown): value is LiveCell =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  typeof value.thought === 'string' &&
+  typeof value.agent === 'string' &&
+  typeof value.state === 'string' &&
+  typeof value.startedAt === 'string' &&
+  typeof value.runs === 'number';
+
+/** GET /api/runs in full: the runs to list, and each agent's latest run on each thought. */
+export interface RunsAnswer {
+  runs: ListedRun[];
+  standing: LiveCell[];
+}
+
+export function readRunsAnswer(data: unknown): RunsAnswer | null {
+  const runs = readRunRows(data);
+  if (runs === null || !isRecord(data) || !Array.isArray(data.standing)) return null;
+  return { runs, standing: data.standing.filter(isCell) };
+}
+
+/** What waits on Victor from the agents: holds that still stand, and runs that asked him something. */
+export interface WaitingOnVictor {
+  holds: LiveCell[];
+  asking: ListedRun[];
+}
+
+export function waitingOnVictor(answer: RunsAnswer): WaitingOnVictor {
+  return {
+    holds: answer.standing
+      .filter((c) => c.state === 'held')
+      .sort((a, b) => b.startedAt.localeCompare(a.startedAt)),
+    asking: answer.runs.filter((r) => r.state === 'needs-you' && r.latest),
+  };
+}
+
 /** One ledger event as the page shows it: its place, its time, its type, and the rest as sent. */
 export interface ShownEvent {
   seq: number;
@@ -108,7 +145,8 @@ export function boardOf(rows: readonly ListedRun[], now: string): Board {
   const sorted = [...rows].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const marked = sorted.map((r) => ({ ...r, quiet: isQuiet(r, now) }));
   return {
-    needsYou: marked.filter((r) => r.state === 'needs-you'),
+    // A question stands until the same agent starts again on the same thought, like a hold.
+    needsYou: marked.filter((r) => r.state === 'needs-you' && r.latest),
     going: marked.filter((r) => isGoing(r.state) && r.state !== 'needs-you'),
     // A hold stands until the same agent starts again on the same thought; an older hold is history, even
     // when it reported after the newer run had finished.

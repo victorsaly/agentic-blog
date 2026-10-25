@@ -3,19 +3,17 @@
 // live copy the runner fills event by event; each opens on its timeline. Then what GitHub has queued and
 // running, with logs and pull requests. Below, where every thought stands, one line each: what stops it (a
 // guard's hold, or an agent that did not finish), its latest run, and how many agents have worked on it. That
-// line is the decision; the full grid of every agent against every thought is behind one press. Both are read
-// from the ledgers as of the last deploy; reading them live is the next step (Slice 7b in
-// docs/roadbook-plan.md).
+// line is the decision; the full grid of every agent against every thought is behind one press. Both start
+// from the ledgers as of the last deploy and are brought up to date from the live copy (PipelineLive). One
+// feed on the page reads the live runs for the board and the pipeline alike.
 import Studio from '../../layouts/Studio.astro';
 import { AgentsLive } from '../../islands/AgentsLive';
 import { RunsBoard } from '../../islands/RunsBoard';
 import { settings } from '../../lib/settings';
 import { loadCosted } from '../../lib/studio-data';
-import { inOrder, pipelineOf, standingOf, type Standing } from '../../lib/pipeline';
-import { agentName } from '../../lib/agent-runs';
+import { PipelineLive } from '../../islands/PipelineLive';
+import { inOrder, pipelineOf } from '../../lib/pipeline';
 import { phases, type AgentCardFacts } from '../../lib/agents';
-import { formatDate } from '../../lib/content';
-import type { Ending } from '../../lib/how-made';
 
 const cards = import.meta.glob<AgentCardFacts>('../../../../agents/*/card.ts', {
   import: 'card',
@@ -26,30 +24,6 @@ const costed = await loadCosted();
 const rows = pipelineOf(costed, agents);
 const titles = Object.fromEntries(costed.map((t) => [t.slug, t.title]));
 
-// The phase heads span their agents' columns; the first agent of each phase opens it with a rule.
-const groups = [...new Set(agents.map((a) => a.phase))].map((phase) => ({
-  phase,
-  name: phases[phase] ?? `Phase ${String(phase)}`,
-  span: agents.filter((a) => a.phase === phase).length,
-}));
-const opensPhase = agents.map((a, i) => i === 0 || agents[i - 1]?.phase !== a.phase);
-const words: Record<Ending, string> = {
-  done: 'Done',
-  held: 'Held',
-  failed: 'Did not finish',
-  running: 'Running',
-  'not-run': 'Not run',
-};
-const standingWords: Record<Standing['state'], string> = {
-  held: 'Held',
-  stopped: 'Did not finish',
-  moving: 'Moving',
-  untouched: 'Not started',
-};
-const day = (iso: string): string => formatDate(new Date(`${iso}T12:00:00Z`));
-const short = (iso: string): string =>
-  new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-const builtAt = formatDate(new Date());
 const { show, per_usd: perUsd } = settings.publishing.currency;
 ---
 
@@ -60,92 +34,13 @@ const { show, per_usd: perUsd } = settings.publishing.currency;
     <AgentsLive client:load titles={titles} />
   </div>
 
-  <section class="pipeline" aria-labelledby="pipeline-label">
-    <h2 class="label" id="pipeline-label">Where each thought stands</h2>
-    <p class="small quiet">
-      From the ledgers as of {builtAt}, the last deploy. A run made on your computer shows above as
-      it happens, and here once its pull request is merged.
-    </p>
-    <ul class="runs-list standings">
-      {
-        rows.map((r) => {
-          const s = standingOf(r, agents);
-          return (
-            <li>
-              <span class={`state state-${s.state === 'stopped' ? 'failed' : s.state}`}>
-                {standingWords[s.state]}
-              </span>
-              <span class="what">
-                <a href={`/thoughts/${r.slug}`}>{r.title}</a>
-                <span class="small quiet">
-                  {s.at !== null && `at ${agentName(s.at)} · `}
-                  {s.last !== null && `last: ${agentName(s.last.agent)}, ${day(s.last.on)} · `}
-                  {`${String(s.ran)} of ${String(s.of)} agents have run`}
-                </span>
-              </span>
-            </li>
-          );
-        })
-      }
-    </ul>
-
-    <details class="every-agent">
-      <summary class="control">Show every agent</summary>
-      {
-        (
-          // A table wider than the screen scrolls, and the keyboard can only scroll what takes focus.
-          // eslint-disable-next-line astro/jsx-a11y/no-noninteractive-tabindex
-          <div class="scroll" role="region" aria-label="Every agent on every thought" tabindex="0">
-            <table class="small">
-              <thead>
-                <tr>
-                  <td class="corner" />
-                  {groups.map((g) => (
-                    <th scope="colgroup" colspan={g.span} class="phase opens">
-                      {g.name}
-                    </th>
-                  ))}
-                </tr>
-                <tr>
-                  <th scope="col">Thought</th>
-                  {agents.map((a, i) => (
-                    <th scope="col" class:list={{ opens: opensPhase[i] }}>
-                      {agentName(a.name)}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr>
-                    <th scope="row">
-                      <a href={`/thoughts/${r.slug}`}>{r.title}</a>
-                    </th>
-                    {r.cells.map((cell, i) =>
-                      cell === null ? (
-                        <td class:list={['none', { opens: opensPhase[i] }]}>
-                          <span aria-hidden="true">·</span>
-                          <span class="visually-hidden">Not run</span>
-                        </td>
-                      ) : (
-                        <td class:list={{ opens: opensPhase[i] }}>
-                          <span class={`state state-${cell.ended}`}>{words[cell.ended]}</span>
-                          <span class="when quiet">
-                            {short(cell.on)}
-                            {cell.runs > 1 && ` · ${String(cell.runs)} runs`}
-                          </span>
-                        </td>
-                      ),
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )
-      }
-    </details>
-  </section>
+  <PipelineLive
+    client:load
+    rows={rows}
+    agents={agents}
+    phaseNames={phases}
+    builtAt={new Date().toISOString()}
+  />
 </Studio>
 
 <style>
@@ -156,71 +51,75 @@ const { show, per_usd: perUsd } = settings.publishing.currency;
   .on-github :global(.summary) {
     font-size: var(--size-body);
   }
-  .standings {
+</style>
+
+<style is:global>
+  /* The pipeline is drawn by an island, so its look is global, kept under .pipeline. */
+  .pipeline .standings {
     margin-top: var(--space-3);
   }
-  .every-agent {
+  .pipeline .every-agent {
     margin-top: var(--space-4);
   }
-  .every-agent > summary {
+  .pipeline .every-agent > summary {
     display: inline-flex;
     list-style: none;
     cursor: pointer;
   }
-  .every-agent > summary::-webkit-details-marker {
+  .pipeline .every-agent > summary::-webkit-details-marker {
     display: none;
   }
-  .every-agent[open] > summary {
+  .pipeline .every-agent[open] > summary {
     background: var(--ink);
     color: var(--paper);
   }
   /* Positioned, so the hidden "Not run" words inside it are measured against it and not the page. */
-  .scroll {
+  .pipeline .scroll {
     position: relative;
     overflow-x: auto;
     margin-top: var(--space-3);
   }
-  .scroll:focus-visible {
+  .pipeline .scroll:focus-visible {
     outline: var(--focus);
     outline-offset: var(--focus-offset);
   }
-  table {
+  .pipeline table {
     width: 100%;
     max-width: none;
     border-collapse: collapse;
   }
-  th,
-  td {
+  .pipeline th,
+  .pipeline td {
     padding: var(--space-2);
     border-bottom: var(--rule-width) solid var(--rule);
     text-align: left;
     vertical-align: top;
     white-space: nowrap;
   }
-  thead th {
+  .pipeline thead th {
     font-weight: 700;
   }
   /* The phase row stands on one strong rule, the corner included, so the head reads as one line. */
-  thead tr:first-child > * {
+  .pipeline thead tr:first-child > * {
     border-bottom: var(--rule-strong) solid var(--ink);
   }
-  .phase {
+  .pipeline .phase {
     font-size: var(--size-label);
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
   }
-  .opens {
+  .pipeline .opens {
     border-left: var(--rule-width) solid var(--ink);
   }
-  tbody th {
+  .pipeline tbody th {
     font-weight: 400;
     white-space: normal;
     min-width: 12rem;
   }
-  .none {
+  .pipeline .none {
     color: var(--quiet);
   }
-  .when {
+  .pipeline .when {
     display: block;
     margin-top: var(--space-1);
   }

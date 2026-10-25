@@ -1,7 +1,7 @@
 // Why: the pipeline is where Victor sees what is left to do on a thought; a cell showing an old run as the
 // latest, or a gap where an agent did run, would point him at the wrong work.
 import { describe, expect, it } from 'vitest';
-import { inOrder, pipelineOf, standingOf } from './pipeline.js';
+import { inOrder, pipelineOf, standingOf, withLive, type LiveCell } from './pipeline.js';
 import type { RunRow } from './how-made.js';
 
 const row = (id: string, agent: string, ended: RunRow['ended']): RunRow => ({
@@ -132,5 +132,69 @@ describe('standingOf', () => {
       ran: 0,
       of: 4,
     });
+  });
+});
+
+describe('withLive', () => {
+  const agents = inOrder([
+    { name: 'structure', phase: 2 },
+    { name: 'safety', phase: 3 },
+  ]);
+  const built = pipelineOf(
+    [
+      {
+        slug: '2026-10-23-a',
+        title: 'A',
+        rows: [row('20261025T090000Z-structure-0001', 'structure', 'done')],
+      },
+    ],
+    agents,
+  );
+  const live = (over: Partial<LiveCell>): LiveCell => ({
+    id: '20261025T120000Z-safety-0002',
+    thought: '2026-10-23-a',
+    agent: 'safety',
+    state: 'running',
+    startedAt: '2026-10-25T12:00:00Z',
+    runs: 1,
+    ...over,
+  });
+
+  it('fills a cell the deploy has not seen, and the thought reads as running there', () => {
+    const [a] = withLive(built, [live({})], agents);
+    expect(a?.cells[1]).toEqual({
+      id: '20261025T120000Z-safety-0002',
+      ended: 'running',
+      on: '2026-10-25',
+      runs: 1,
+    });
+    expect(a && standingOf(a, agents)).toMatchObject({ state: 'running', at: 'safety' });
+  });
+
+  it('keeps the ledger cell when the live copy only knows an older run', () => {
+    const [a] = withLive(
+      built,
+      [live({ id: '20261024T090000Z-structure-0000', agent: 'structure', state: 'held' })],
+      agents,
+    );
+    expect(a?.cells[0]?.ended).toBe('done');
+  });
+
+  it('takes the newer live run and counts every run either side knows', () => {
+    const [a] = withLive(
+      built,
+      [live({ id: '20261025T130000Z-structure-0003', agent: 'structure', state: 'held', runs: 2 })],
+      agents,
+    );
+    expect(a?.cells[0]).toMatchObject({ ended: 'held', runs: 2 });
+    expect(a && standingOf(a, agents).state).toBe('held');
+  });
+
+  it('adds a thought the deploy has not seen yet, under its folder name, newest first', () => {
+    const rows = withLive(built, [live({ thought: '2026-10-25-new' })], agents);
+    expect(rows.map((r) => [r.slug, r.title])).toEqual([
+      ['2026-10-25-new', '2026-10-25-new'],
+      ['2026-10-23-a', 'A'],
+    ]);
   });
 });

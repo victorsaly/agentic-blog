@@ -166,12 +166,16 @@ export function readLiveRuns(data: unknown): LiveRun[] | null {
   );
 }
 
-/** "4 min", "1 h 5 min": how long from one moment to another, in whole minutes, seconds under one. */
+/**
+ * "4 min", "1 h 5 min", "3 days": how long from one moment to another, in whole minutes, seconds under one,
+ * whole days from two days on.
+ */
 export function durationOf(fromIso: string, toIso: string): string {
   const seconds = Math.max(0, Math.round((Date.parse(toIso) - Date.parse(fromIso)) / 1000));
   if (seconds < 60) return `${String(seconds)} s`;
   const minutes = Math.round(seconds / 60);
   if (minutes < 60) return `${String(minutes)} min`;
+  if (minutes >= 48 * 60) return `${String(Math.floor(minutes / (24 * 60)))} days`;
   const rest = minutes % 60;
   return `${String(Math.floor(minutes / 60))} h${rest ? ` ${String(rest)} min` : ''}`;
 }

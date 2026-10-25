@@ -115,6 +115,11 @@ describe('durationOf', () => {
     expect(durationOf('2026-10-25T09:00:00Z', '2026-10-25T09:04:10Z')).toBe('4 min');
     expect(durationOf('2026-10-25T09:00:00Z', '2026-10-25T10:05:00Z')).toBe('1 h 5 min');
   });
+
+  it('says whole days from two days on', () => {
+    expect(durationOf('2026-10-23T09:00:00Z', '2026-10-25T08:00:00Z')).toBe('47 h');
+    expect(durationOf('2026-10-01T09:00:00Z', '2026-10-25T10:00:00Z')).toBe('24 days');
+  });
 });
 
 describe('agentName', () => {

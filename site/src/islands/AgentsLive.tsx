@@ -4,7 +4,7 @@
 // and never while the page is hidden. When GitHub cannot be asked it says so, and what it showed before is
 // marked with the time it was true: a failure never reads as all quiet. Only the summary line is announced, so a screen reader is not
 // talked over by every refresh.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   agentName,
   durationOf,
@@ -12,6 +12,7 @@ import {
   type LiveRun,
   type LiveState,
 } from '../lib/agent-runs';
+import { usePoll } from './use-poll';
 
 const BUSY_MS = 15_000;
 const QUIET_MS = 60_000;
@@ -66,29 +67,12 @@ export function AgentsLive({ titles }: AgentsLiveProps): React.JSX.Element {
     }
   }, []);
 
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let stopped = false;
-    const tick = async (): Promise<void> => {
-      if (document.visibilityState === 'hidden') return;
-      const runs = await load();
-      if (stopped) return;
-      const busy = runs.some((r) => r.state === 'running' || r.state === 'queued');
-      timer = setTimeout(() => void tick(), busy ? BUSY_MS : QUIET_MS);
-    };
-    const onVisible = (): void => {
-      if (document.visibilityState !== 'visible') return;
-      clearTimeout(timer);
-      void tick();
-    };
-    void tick();
-    document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      stopped = true;
-      clearTimeout(timer);
-      document.removeEventListener('visibilitychange', onVisible);
-    };
+  const ask = useCallback(async (): Promise<number> => {
+    const runs = await load();
+    const busy = runs.some((r) => r.state === 'running' || r.state === 'queued');
+    return busy ? BUSY_MS : QUIET_MS;
   }, [load]);
+  usePoll(ask);
 
   const { known, error } = status;
   if (known === null && error === null)

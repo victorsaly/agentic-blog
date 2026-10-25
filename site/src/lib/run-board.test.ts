@@ -8,6 +8,8 @@ import {
   isQuiet,
   readRunDetail,
   readRunRows,
+  readRunsAnswer,
+  waitingOnVictor,
   timelineOf,
   type ListedRun,
   type ShownEvent,
@@ -55,6 +57,37 @@ describe('reading the answers back', () => {
     expect(detail?.events).toHaveLength(1);
     expect(detail?.more).toBe(true);
     expect(readRunDetail({ run: { id: 'x' }, events: [] })).toBeNull();
+  });
+});
+
+describe('what waits on Victor', () => {
+  const cell = (id: string, state: string) => ({
+    id,
+    thought: '2026-10-23-a-thought',
+    agent: 'safety',
+    state,
+    startedAt: ago(60_000),
+    runs: 1,
+  });
+
+  it('reads the whole answer, and refuses one without where each thought stands', () => {
+    expect(readRunsAnswer({ runs: [aRow()], standing: [cell('a', 'held'), { id: 1 }] })).toEqual({
+      runs: [aRow()],
+      standing: [cell('a', 'held')],
+    });
+    expect(readRunsAnswer({ runs: [aRow()] })).toBeNull();
+  });
+
+  it('counts holds that stand and questions not yet overtaken by a newer run', () => {
+    const waiting = waitingOnVictor({
+      runs: [
+        aRow({ id: 'asks', state: 'needs-you' }),
+        aRow({ id: 'old-ask', state: 'needs-you', latest: false }),
+      ],
+      standing: [cell('h', 'held'), cell('d', 'done')],
+    });
+    expect(waiting.asking.map((r) => r.id)).toEqual(['asks']);
+    expect(waiting.holds.map((c) => c.id)).toEqual(['h']);
   });
 });
 

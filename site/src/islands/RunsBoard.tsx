@@ -1,37 +1,13 @@
 // Why: every agent run as it happens, wherever it runs (GitHub or Victor's computer), read from the live copy
 // the runner fills event by event. What needs Victor comes first, then what is running, what is held, and
-// how the latest runs ended; each opens on its timeline. It asks again every few seconds while something is
-// going and the page is in view. A run that says it is going but has sent nothing for a while is shown as
+// how the latest runs ended; each opens on its timeline. The page's one feed (runs-feed.ts) asks again every
+// few seconds while something is going and the page is in view. A run that says it is going but has sent nothing for a while is shown as
 // quiet, never as working. When the studio cannot be asked it says so, and what it showed before keeps the
 // time it was true. Only the summary line is announced, so a screen reader is not talked over by each refresh.
-import { useCallback, useState } from 'react';
 import { agentName, durationOf } from '../lib/agent-runs';
-import {
-  boardOf,
-  isGoing,
-  readRunRows,
-  stateWord,
-  type BoardRun,
-  type ListedRun,
-} from '../lib/run-board';
+import { boardOf, isGoing, stateWord, type BoardRun } from '../lib/run-board';
 import { moneyOf, type Currency } from '../lib/money';
-import { usePoll } from './use-poll';
-
-const BUSY_MS = 5_000;
-const QUIET_MS = 30_000;
-
-interface Status {
-  known: { rows: ListedRun[]; at: string } | null;
-  error: string | null;
-}
-
-function errorOf(data: unknown): string {
-  return typeof data === 'object' &&
-    data !== null &&
-    typeof (data as { error?: unknown }).error === 'string'
-    ? (data as { error: string }).error
-    : 'The studio could not read the runs.';
-}
+import { useRunsFeed } from './runs-feed';
 
 export interface RunsBoardProps {
   /** Thought titles by folder name, so a run names its thought the way the site does. */
@@ -40,28 +16,7 @@ export interface RunsBoardProps {
 }
 
 export function RunsBoard({ titles, currency }: RunsBoardProps): React.JSX.Element {
-  const [status, setStatus] = useState<Status>({ known: null, error: null });
-
-  const ask = useCallback(async (): Promise<number> => {
-    try {
-      const response = await fetch('/api/runs');
-      const data: unknown = await response.json().catch(() => null);
-      const rows = response.ok ? readRunRows(data) : null;
-      if (rows === null) throw new Error(errorOf(data));
-      setStatus({ known: { rows, at: new Date().toISOString() }, error: null });
-      return rows.some((r) => isGoing(r.state)) ? BUSY_MS : QUIET_MS;
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error && error.message !== 'Failed to fetch'
-          ? error.message
-          : 'The studio could not be reached. Check the connection.';
-      setStatus((now) => ({ known: now.known, error: message }));
-      return QUIET_MS;
-    }
-  }, []);
-  usePoll(ask);
-
-  const { known, error } = status;
+  const { known, error } = useRunsFeed();
   if (known === null && error === null) return <p className="quiet">Reading the runs…</p>;
   if (known === null)
     return (
@@ -74,7 +29,7 @@ export function RunsBoard({ titles, currency }: RunsBoardProps): React.JSX.Eleme
     );
 
   const now = new Date().toISOString();
-  const board = boardOf(known.rows, now);
+  const board = boardOf(known.runs, now);
   const quiet = board.going.filter((r) => r.quiet).length;
   const running = board.going.length - quiet;
   const parts = [

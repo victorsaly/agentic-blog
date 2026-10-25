@@ -1,6 +1,7 @@
 // Why: one look at where every thought stands: which agents have worked on it, how each one's last run
-// ended, and which have not run yet. Read from the ledgers (so as of the last deploy), in the agents' own
-// order, phase by phase. Pure, so what a cell says is tested without a build.
+// ended, and which have not run yet, in the agents' own order, phase by phase. Built from the ledgers (as of
+// the last deploy), then brought up to date from the runner's live copy, so a run on Victor's computer moves
+// its thought's line while it happens. Pure, so what a cell says is tested without a build.
 import type { Ending, RunRow } from './how-made';
 
 export interface PipelineAgent {
@@ -51,9 +52,12 @@ export function inOrder(agents: readonly PipelineAgent[]): PipelineAgent[] {
 }
 
 export interface Standing {
-  /** Held: a guard stopped it. Stopped: an agent did not finish. Moving: agents ran, none stopped. */
-  state: 'held' | 'stopped' | 'moving' | 'untouched';
-  /** The agent that held or did not finish, first in working order. */
+  /**
+   * Held: a guard stopped it. Stopped: an agent did not finish. Running: an agent is at work on it now.
+   * Moving: agents ran, none stopped.
+   */
+  state: 'held' | 'stopped' | 'running' | 'moving' | 'untouched';
+  /** The agent that held, did not finish, or is running, first in working order. */
   at: string | null;
   /** The latest run on the thought. */
   last: { agent: string; on: string } | null;
@@ -67,16 +71,70 @@ export function standingOf(row: PipelineRow, agents: readonly PipelineAgent[]): 
   const ran = cells.filter((c) => c.cell !== null);
   const held = ran.find((c) => c.cell?.ended === 'held');
   const stopped = ran.find((c) => c.cell?.ended === 'failed');
+  const running = ran.find((c) => c.cell?.ended === 'running');
   // The latest run is the one that began last: run ids start with their start time, to the second.
   const latest = ran.reduce<(typeof ran)[number] | null>(
     (best, c) => (best === null || (c.cell?.id ?? '') > (best.cell?.id ?? '') ? c : best),
     null,
   );
   return {
-    state: held ? 'held' : stopped ? 'stopped' : ran.length > 0 ? 'moving' : 'untouched',
-    at: held?.agent ?? stopped?.agent ?? null,
+    state: held
+      ? 'held'
+      : stopped
+        ? 'stopped'
+        : running
+          ? 'running'
+          : ran.length > 0
+            ? 'moving'
+            : 'untouched',
+    at: held?.agent ?? stopped?.agent ?? running?.agent ?? null,
     last: latest?.cell ? { agent: latest.agent, on: latest.cell.on } : null,
     ran: ran.length,
     of: agents.length,
   };
+}
+
+/** Each agent's latest run on a thought, from the live copy, with how many runs it has made there. */
+export interface LiveCell {
+  id: string;
+  thought: string;
+  agent: string;
+  /** The state its run last moved to: running, needs-you, done, held or failed. */
+  state: string;
+  startedAt: string;
+  runs: number;
+}
+
+const endingOfState = (state: string): Ending =>
+  state === 'done' || state === 'held' || state === 'failed' ? state : 'running';
+
+/**
+ * The pipeline brought up to date: where the live copy knows a run as new as the ledgers' latest, or newer,
+ * its cell says what that run says. A thought the deploy has not seen yet gets a row under its folder name.
+ */
+export function withLive(
+  rows: readonly PipelineRow[],
+  live: readonly LiveCell[],
+  agents: readonly PipelineAgent[],
+): PipelineRow[] {
+  const known = new Set(rows.map((r) => r.slug));
+  const added = [...new Set(live.map((l) => l.thought))]
+    .filter((slug) => !known.has(slug))
+    .map((slug) => ({ slug, title: slug, cells: agents.map(() => null) }));
+  return [...rows, ...added]
+    .sort((a, b) => b.slug.localeCompare(a.slug))
+    .map((row) => ({
+      ...row,
+      cells: row.cells.map((cell, i) => {
+        const now = live.find((l) => l.thought === row.slug && l.agent === agents[i]?.name);
+        // Run ids begin with when the run started, so the later id is the later run.
+        if (!now || (cell !== null && now.id < cell.id)) return cell;
+        return {
+          id: now.id,
+          ended: endingOfState(now.state),
+          on: now.startedAt.slice(0, 10),
+          runs: Math.max(now.runs, cell?.runs ?? 0),
+        };
+      }),
+    }));
 }
