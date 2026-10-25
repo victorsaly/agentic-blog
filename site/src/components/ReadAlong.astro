@@ -1,0 +1,361 @@
+---
+// Why: some readers would rather listen, and a post that talks is closer to how it began, as a voice note.
+// The idea opens with one row: Listen, where the reading is, how long it runs. While it plays, the word
+// being said is underlined in the text itself, so a reader can follow along or look away and just listen;
+// a word can be clicked to hear from there (or reached word by word with the arrow keys on the scrub), and
+// the chat can start it too ("play it"). It is said plainly that the voice is an AI one. Before the row
+// shows, the script checks that the voice says exactly the words on the page; if one letter or one word
+// break differs the row stays hidden, so a stale recording is never played.
+import type { TimedWord } from '../lib/read-along';
+import { clock } from '../lib/read-along';
+
+interface Props {
+  /** The recording. */
+  src: string;
+  /** Every spoken word with its start and end. */
+  words: readonly TimedWord[];
+  seconds: number;
+  /** The voice's name, said beside the row. */
+  voice: string;
+  /** The id of the element whose text is spoken. */
+  text: string;
+  /** The site's domain: a line carrying it is not spoken (the voice agent skips it too). */
+  domain: string;
+}
+
+const { src, words, seconds, voice, text, domain } = Astro.props;
+const timings = JSON.stringify(words).replace(/</g, '\\u003c');
+---
+
+<div class="read-along" data-read-along data-src={src} data-text={text} data-domain={domain} hidden>
+  <div class="bar">
+    <button type="button" class="control play" aria-pressed="false" data-play>
+      <svg class="when-off" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16">
+        <path d="M4 2.5v11l9.5-5.5z" fill="currentColor"></path>
+      </svg>
+      <svg class="when-on" aria-hidden="true" width="16" height="16" viewBox="0 0 16 16">
+        <path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z" fill="currentColor"></path>
+      </svg>
+      Listen
+    </button>
+    <input
+      type="range"
+      class="scrub"
+      min="0"
+      max={seconds}
+      step="any"
+      value="0"
+      aria-label="Where in the reading"
+      aria-valuetext={`0:00 of ${clock(seconds)}`}
+      data-scrub
+    />
+    <span class="time small" aria-hidden="true">
+      <span data-elapsed>0:00</span> / {clock(seconds)}
+    </span>
+  </div>
+  <p class="small quiet note" data-note>
+    Read aloud word for word by an AI voice, {voice}. The word being said is underlined; the arrow
+    keys on the line step word by word.
+  </p>
+  <script type="application/json" data-timings set:html={timings} />
+</div>
+
+<style>
+  .read-along {
+    margin: 0 0 var(--space-4);
+    padding-bottom: var(--space-3);
+    border-bottom: var(--rule-width) solid var(--ink);
+    scroll-margin-top: 6rem; /* below the sticky header, like the rails */
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  .play {
+    flex: none;
+    min-width: 7.5rem;
+    font-weight: 700;
+  }
+  .play .when-on,
+  .play[aria-pressed='true'] .when-off {
+    display: none;
+  }
+  .play[aria-pressed='true'] .when-on {
+    display: block;
+  }
+  /* The scrub: a hairline track and a square ink thumb, like a rule with a mark on it. */
+  .scrub {
+    flex: 1;
+    min-width: 0;
+    height: var(--tap);
+    margin: 0;
+    background: transparent;
+    appearance: none;
+    cursor: pointer;
+  }
+  .scrub::-webkit-slider-runnable-track {
+    height: var(--rule-width);
+    background: var(--ink);
+  }
+  .scrub::-moz-range-track {
+    height: var(--rule-width);
+    background: var(--ink);
+  }
+  .scrub::-webkit-slider-thumb {
+    appearance: none;
+    width: 0.875rem;
+    height: 1.25rem;
+    margin-top: -0.59rem;
+    border: 0;
+    border-radius: 0;
+    background: var(--ink);
+  }
+  .scrub::-moz-range-thumb {
+    width: 0.875rem;
+    height: 1.25rem;
+    border: 0;
+    border-radius: 0;
+    background: var(--ink);
+  }
+  .scrub:focus-visible {
+    outline: var(--focus);
+    outline-offset: var(--focus-offset);
+  }
+  .time {
+    flex: none;
+    font-variant-numeric: tabular-nums;
+  }
+  .note {
+    margin: var(--space-2) 0 0;
+    max-width: none;
+  }
+
+  /* The word being said: a strong ink rule under it, the same weight that sits under a label. */
+  :global([data-reading] [data-w]) {
+    cursor: pointer;
+  }
+  :global([data-reading] [data-said]) {
+    text-decoration-line: underline;
+    text-decoration-thickness: var(--rule-strong);
+    text-underline-offset: 0.24em;
+    text-decoration-skip-ink: none;
+  }
+</style>
+
+<script>
+  // Why: the row works only when the voice and the page agree word for word; see the component's why.
+  import { alignWords, clock, stepWord, wordAt, type TimedWord } from '../lib/read-along';
+
+  const isTimed = (value: unknown): value is TimedWord[] =>
+    Array.isArray(value) &&
+    value.every(
+      (w: unknown) =>
+        Array.isArray(w) &&
+        typeof w[0] === 'string' &&
+        typeof w[1] === 'number' &&
+        typeof w[2] === 'number',
+    );
+
+  /** The text nodes a reader sees and the voice says, in order. */
+  function spokenNodes(root: HTMLElement, domain: string): Text[] {
+    const nodes: Text[] = [];
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        const parent = node.parentElement;
+        if (!parent) return NodeFilter.FILTER_REJECT;
+        if (parent.closest('[data-read-along], .unreviewed, .cite, script, style'))
+          return NodeFilter.FILTER_REJECT;
+        const line = parent.closest('p, li, h1, h2, h3, h4, h5, h6, blockquote');
+        if (domain !== '' && line?.textContent.includes(domain)) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+    while (walker.nextNode())
+      if (walker.currentNode instanceof Text) nodes.push(walker.currentNode);
+    return nodes;
+  }
+
+  /** Wraps each run of a word's characters in a span carrying the word's number. */
+  function wrap(nodes: Text[], owners: (number | null)[][]): HTMLElement[][] {
+    const spans: HTMLElement[][] = [];
+    nodes.forEach((node, n) => {
+      const owner = owners[n] ?? [];
+      const text = node.data;
+      const parts = document.createDocumentFragment();
+      let i = 0;
+      while (i < text.length) {
+        const word = owner[i] ?? null;
+        let j = i + 1;
+        while (j < text.length && (owner[j] ?? null) === word) j++;
+        const run = text.slice(i, j);
+        if (word === null) parts.append(run);
+        else {
+          const span = document.createElement('span');
+          span.dataset['w'] = String(word);
+          span.textContent = run;
+          (spans[word] ??= []).push(span);
+          parts.append(span);
+        }
+        i = j;
+      }
+      node.replaceWith(parts);
+    });
+    return spans;
+  }
+
+  const inView = (el: HTMLElement): boolean => {
+    const box = el.getBoundingClientRect();
+    return box.top >= 80 && box.bottom <= innerHeight - 24;
+  };
+
+  for (const root of document.querySelectorAll<HTMLElement>('[data-read-along]')) {
+    const textEl = document.getElementById(root.dataset['text'] ?? '');
+    const play = root.querySelector<HTMLButtonElement>('[data-play]');
+    const scrub = root.querySelector<HTMLInputElement>('[data-scrub]');
+    const elapsed = root.querySelector<HTMLElement>('[data-elapsed]');
+    const note = root.querySelector<HTMLElement>('[data-note]');
+    let parsed: unknown = null;
+    try {
+      parsed = JSON.parse(root.querySelector('[data-timings]')?.textContent ?? 'null');
+    } catch {
+      parsed = null;
+    }
+    if (!textEl || !root.dataset['src'] || !play || !scrub || !elapsed || !isTimed(parsed))
+      continue;
+    const words = parsed;
+    const total = Number(scrub.max);
+
+    const nodes = spokenNodes(textEl, root.dataset['domain'] ?? '');
+    const owners = alignWords(
+      nodes.map((n) => n.data),
+      words.map((w) => w[0]),
+    );
+    // The voice says something the page does not, or the other way round: offer no voice.
+    if (!owners) continue;
+    root.hidden = false;
+    // The text beside the row is the caption, word for word, so the audio needs no player of its own.
+    const audio = new Audio();
+    audio.preload = 'none';
+    audio.src = root.dataset['src'];
+    dispatchEvent(new CustomEvent('listen:ready'));
+
+    let spans: HTMLElement[][] | null = null;
+    let lit = -1;
+    let frame = 0;
+    let dragging = false;
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+
+    const light = (index: number): void => {
+      if (!spans || index === lit) return;
+      const before = spans[lit]?.[0];
+      const wasFollowing = !before || inView(before);
+      for (const span of spans[lit] ?? []) delete span.dataset['said'];
+      lit = index;
+      for (const span of spans[lit] ?? []) span.dataset['said'] = '';
+      // Keep the word in sight, but only for a reader who was following it, not one who scrolled away.
+      const now = spans[lit]?.[0];
+      if (now && wasFollowing && !inView(now) && !textEl.hidden && !textEl.closest('[hidden]'))
+        now.scrollIntoView({ block: 'center', behavior: reduced.matches ? 'auto' : 'smooth' });
+    };
+
+    const show = (seconds: number): void => {
+      elapsed.textContent = clock(seconds);
+      const word = words[wordAt(words, seconds)]?.[0];
+      scrub.setAttribute(
+        'aria-valuetext',
+        `${clock(seconds)} of ${clock(total)}${word ? `, “${word}”` : ''}`,
+      );
+      scrub.value = String(seconds);
+    };
+
+    // One loop at a time: a seek while playing replaces the queued frame rather than adding a second loop.
+    const tick = (): void => {
+      cancelAnimationFrame(frame);
+      // While the reader drags, the scrub shows where they are going, not where the voice still is.
+      if (!dragging) show(audio.currentTime);
+      light(wordAt(words, audio.currentTime));
+      frame = audio.paused ? 0 : requestAnimationFrame(tick);
+    };
+
+    const seek = (seconds: number): void => {
+      audio.currentTime = seconds;
+      if (!spans) start();
+      tick();
+    };
+
+    const start = (): void => {
+      if (!spans) {
+        spans = wrap(nodes, owners);
+        textEl.dataset['reading'] = '';
+      }
+      audio.play().catch(() => {
+        if (note) note.textContent = 'The recording could not be played just now.';
+      });
+    };
+
+    play.addEventListener('click', () => {
+      if (audio.paused) start();
+      else audio.pause();
+    });
+    audio.addEventListener('play', () => {
+      play.setAttribute('aria-pressed', 'true');
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(tick);
+    });
+    audio.addEventListener('pause', () => {
+      play.setAttribute('aria-pressed', 'false');
+      tick();
+    });
+    audio.addEventListener('ended', () => {
+      audio.currentTime = 0;
+      show(0);
+      light(-1);
+    });
+    audio.addEventListener('error', () => {
+      play.setAttribute('aria-pressed', 'false');
+      if (note) note.textContent = 'The recording could not be loaded just now.';
+    });
+
+    // Dragging the scrub moves the clock at once and the audio when it is let go.
+    scrub.addEventListener('input', () => {
+      dragging = true;
+      show(Number(scrub.value));
+    });
+    scrub.addEventListener('change', () => {
+      dragging = false;
+      seek(Number(scrub.value));
+    });
+    // The arrow keys step from word to word, the same starts a click on a word goes to.
+    scrub.addEventListener('keydown', (event) => {
+      const direction =
+        event.key === 'ArrowRight' || event.key === 'ArrowUp'
+          ? 1
+          : event.key === 'ArrowLeft' || event.key === 'ArrowDown'
+            ? -1
+            : 0;
+      if (direction === 0 || event.altKey || event.ctrlKey || event.metaKey) return;
+      event.preventDefault();
+      seek(stepWord(words, audio.currentTime, direction));
+    });
+
+    // A word in the text, once the reading has begun, plays from that word.
+    textEl.addEventListener('click', (event) => {
+      if (!spans || !(event.target instanceof HTMLElement)) return;
+      const span = event.target.closest<HTMLElement>('[data-w]');
+      if (!span || span.closest('a') || !getSelection()?.isCollapsed) return;
+      const word = words[Number(span.dataset['w'])];
+      if (!word) return;
+      if (audio.paused) start();
+      seek(word[1]);
+    });
+
+    // The chat heard "play it": open the idea, bring the row into view, and play.
+    addEventListener('listen:play', () => {
+      const tab = document.getElementById(`tab-${textEl.closest('[role="tabpanel"]')?.id ?? ''}`);
+      if (tab?.getAttribute('aria-selected') === 'false') tab.click();
+      root.scrollIntoView({ block: 'start', behavior: reduced.matches ? 'auto' : 'smooth' });
+      if (audio.paused) start();
+    });
+  }
+</script>

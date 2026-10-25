@@ -1,0 +1,9 @@
+{
+  "why": "A friend named with a private health detail; the guard must hold it, quote it and name the kind of data.",
+  "kind": "edge",
+  "input": {
+    "inline": "---\nwhy: A made-up version used only to test the guard; never published.\nkind: short\n---\nMy friend Tom Hale, who works at Barclays, told me over dinner about his cancer treatment."
+  },
+  "expect": ["verdict", "kind"],
+  "verdict": "hold"
+}

@@ -70,4 +70,21 @@ const sources = defineCollection({
     .loose(),
 });
 
-export const collections = { thoughts, versions, origins, pictures, sources };
+// The voice agent's reading of a version: which audio and word times go with it, and in whose voice.
+// Played on the post once reviewed is true, that is, once Victor has listened.
+const voices = defineCollection({
+  loader: glob({ pattern: '*/voice/*.md', base: '../thoughts' }),
+  schema: z
+    .object({
+      why,
+      read_from: z.string(),
+      audio: z.string(),
+      timings: z.string(),
+      voice: z.string().min(1),
+      seconds: z.number().positive(),
+      reviewed: z.boolean().default(false),
+    })
+    .loose(),
+});
+
+export const collections = { thoughts, versions, origins, pictures, sources, voices };
