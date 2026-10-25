@@ -112,6 +112,35 @@ const title = current === 'today' || !area ? 'Studio' : `${area.name} · Studio`
   .recorder .transcript {
     white-space: pre-wrap;
   }
+  .recorder .elapsed .paused {
+    font-size: var(--size-body);
+    color: var(--quiet);
+  }
+  .recorder .controls {
+    margin-top: var(--space-2);
+  }
+  /* The words as they are heard: what Nova-3 is sure of in ink, its guess at what is being said now quieter. */
+  .recorder .live-words {
+    margin-top: var(--space-4);
+    padding-top: var(--space-2);
+    border-top: var(--rule-width) solid var(--rule);
+  }
+  .recorder .live-words p {
+    margin: 0 0 var(--space-2);
+  }
+  .recorder .live-words .guess {
+    color: var(--quiet);
+  }
+  .recorder .take {
+    margin: var(--space-3) 0;
+  }
+  .recorder .take p {
+    margin: 0 0 var(--space-1);
+  }
+  .recorder .take audio {
+    width: 100%;
+    max-width: var(--measure);
+  }
   .recorder .row {
     display: flex;
     flex-wrap: wrap;

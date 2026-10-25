@@ -4,7 +4,13 @@
 
 export interface Env {
   AUDIO: R2Bucket;
-  AI: { run: (model: string, inputs: Record<string, unknown>) => Promise<unknown> };
+  AI: {
+    run: (
+      model: string,
+      inputs: Record<string, unknown>,
+      options?: Record<string, unknown>,
+    ) => Promise<unknown>;
+  };
   GITHUB_REPO: string;
   GITHUB_TOKEN?: string;
   /** The chat's key; a secret on the Worker, with a spend limit set on the key in the Anthropic console. */
