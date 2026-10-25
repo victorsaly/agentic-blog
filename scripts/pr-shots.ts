@@ -19,6 +19,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { chromium, type Page } from 'playwright';
 
 const BRANCH = 'pr-screenshots';
@@ -54,7 +55,8 @@ if (!/^\d+$/.test(pr) || parts.length === 0) {
   process.exit(1);
 }
 
-const root = new URL('../', import.meta.url).pathname;
+// A real path, not a URL's: a folder name with a space or an accent must not stay percent-encoded.
+const root = fileURLToPath(new URL('../', import.meta.url));
 const out = join(root, '.pr-shots', pr);
 mkdirSync(out, { recursive: true });
 
@@ -116,6 +118,8 @@ for (const device of chosen) {
       await p.evaluate('window.scrollTo(0, 0)');
       await p.waitForTimeout(300);
       const file = join(out, `${part.name}-${device}-${when}.png`);
+      // An older picture of a part that is no longer there must not pass for the current one.
+      rmSync(file, { force: true });
       if (!(await picture(p, part.selector, file)))
         missing.push(`${part.name} ${when} on ${device}`);
       await p.close();
@@ -150,6 +154,8 @@ if (known) {
   );
 }
 try {
+  // The pull request's folder is replaced, not added to, so a picture taken out locally goes from there too.
+  rmSync(join(place, pr), { recursive: true, force: true });
   mkdirSync(join(place, pr), { recursive: true });
   cpSync(out, join(place, pr), { recursive: true });
   git(['add', '-A'], place);
