@@ -107,6 +107,16 @@ describe('the real posts', () => {
     'Mine first, maybe yours later': 'Mine first, maybe yours later',
     'Everything here has a why': 'Everything here has a why',
     'Be yourself first': 'Be yourself first, route it after',
+    'The game idea came from my son': 'The idea',
+    'In September last year I used only Copilot': 'Where it stopped',
+    'After three to four weeks': 'Where it stopped',
+    'The coding standard from Claude': 'What I think today',
+    'Knowing how much leverage': 'What I think today',
+    'Organising your questions': 'What I think today',
+    'This blog started two days ago': 'This blog is the proof of the feeling',
+    '115 pull requests so far': 'This blog is the proof of the feeling',
+    'Everything in this studio and blog': 'This blog is the proof of the feeling',
+    'I will prove the transformation': 'What comes next',
   };
 
   it('sends every small idea where a person checked it should go', () => {
