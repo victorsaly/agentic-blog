@@ -3,7 +3,8 @@
 // have to scroll past all of it first. This strip puts the topics under the page heading instead, one ruled
 // row like the home page's band, and only on narrow screens; on a desk the side column does the same job.
 import type { CollectionEntry } from 'astro:content';
-import { themeCounts, themeLabel } from '../lib/themes';
+import { themeCounts } from '../lib/themes';
+import { topicName } from '../lib/topic-name';
 
 interface Props {
   thoughts: CollectionEntry<'thoughts'>[];
@@ -21,7 +22,7 @@ const counts = themeCounts(thoughts.map((t) => t.data.themes));
         {counts.map(([topic, count]) => (
           <li>
             <a href={`/topics/${topic}`} aria-current={current === topic ? 'page' : undefined}>
-              {themeLabel(topic)}
+              {topicName(topic)}
               <span class="quiet">
                 {count}
                 <span class="visually-hidden">{count === 1 ? ' thought' : ' thoughts'}</span>

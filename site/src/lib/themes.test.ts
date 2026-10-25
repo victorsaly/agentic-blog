@@ -7,6 +7,17 @@ describe('themeLabel', () => {
     expect(themeLabel('ai-changing-work')).toBe('AI changing work');
     expect(themeLabel('scalable-secure')).toBe('Scalable secure');
   });
+
+  it('uses a name from settings when the tag cannot say it alone', () => {
+    const names = { 'scalable-secure': 'Scalable and secure' };
+    expect(themeLabel('scalable-secure', names)).toBe('Scalable and secure');
+    expect(themeLabel('ai-changing-work', names)).toBe('AI changing work');
+  });
+
+  it('never takes a name from the object prototype', () => {
+    expect(themeLabel('constructor', {})).toBe('Constructor');
+    expect(themeLabel('to-string', { 'scalable-secure': 'Scalable and secure' })).toBe('To string');
+  });
 });
 
 describe('themeCounts', () => {

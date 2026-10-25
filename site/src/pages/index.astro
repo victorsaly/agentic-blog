@@ -18,7 +18,8 @@ import {
   thoughtSlugOf,
 } from '../lib/content';
 import { picturesFrom } from '../lib/pictures';
-import { themeCounts, themeLabel } from '../lib/themes';
+import { themeCounts } from '../lib/themes';
+import { topicName } from '../lib/topic-name';
 import ideaIcon from '../assets/icons/idea.png';
 import originIcon from '../assets/icons/origin.png';
 import roadIcon from '../assets/icons/road.png';
@@ -105,7 +106,7 @@ const ways = [
               {themes.map(([theme, count]) => (
                 <li>
                   <a href={`/topics/${theme}`}>
-                    {themeLabel(theme)}{' '}
+                    {topicName(theme)}{' '}
                     <span class="quiet">
                       {count}
                       <span class="visually-hidden">{count === 1 ? ' thought' : ' thoughts'}</span>
@@ -238,7 +239,7 @@ const ways = [
               {themes.map(([theme, count]) => (
                 <li>
                   <a href={`/topics/${theme}`}>
-                    {themeLabel(theme)}
+                    {topicName(theme)}
                     <span class="quiet">
                       {count}
                       <span class="visually-hidden">{count === 1 ? ' thought' : ' thoughts'}</span>

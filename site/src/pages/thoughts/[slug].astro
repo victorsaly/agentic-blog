@@ -34,7 +34,7 @@ import {
   thoughtSlugOf,
 } from '../../lib/content';
 import { coverOf, picturesFrom } from '../../lib/pictures';
-import { themeLabel } from '../../lib/themes';
+import { topicName } from '../../lib/topic-name';
 import { parseSources } from '../../lib/sources';
 
 // Every drawing in the repo, so the cover can be looked up by its path in the thought folder.
@@ -235,7 +235,7 @@ const pad = (n: number): string => String(n).padStart(2, '0');
             thought.data.themes.map((theme, i) => (
               <>
                 {i > 0 && ', '}
-                <a href={`/themes/${theme}`}>{themeLabel(theme)}</a>
+                <a href={`/themes/${theme}`}>{topicName(theme)}</a>
               </>
             ))
           }
@@ -520,7 +520,9 @@ const pad = (n: number): string => String(n).padStart(2, '0');
               {related.map((t) => (
                 <li>
                   <a href={`/thoughts/${thoughtSlugOf(t.id)}`}>{t.data.title}</a>
-                  <span class="small quiet">{t.data.themes.map(themeLabel).join(', ')}</span>
+                  <span class="small quiet">
+                    {t.data.themes.map((theme) => topicName(theme)).join(', ')}
+                  </span>
                 </li>
               ))}
             </ul>

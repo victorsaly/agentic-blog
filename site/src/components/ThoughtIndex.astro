@@ -9,7 +9,7 @@ import { Image } from 'astro:assets';
 import { formatDate, thoughtSlugOf } from '../lib/content';
 import { coversBySlug } from '../lib/covers';
 import { settings } from '../lib/settings';
-import { themeLabel } from '../lib/themes';
+import { topicName } from '../lib/topic-name';
 
 interface Props {
   thoughts: CollectionEntry<'thoughts'>[];
@@ -58,7 +58,7 @@ const covers = await coversBySlug();
                   {others.map((topic, i) => (
                     <>
                       {i > 0 && ', '}
-                      <a href={`/topics/${topic}`}>{themeLabel(topic)}</a>
+                      <a href={`/topics/${topic}`}>{topicName(topic)}</a>
                     </>
                   ))}
                 </span>
