@@ -8,7 +8,7 @@
 import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { Ledger, eventLines, readEvents, readHead, type LedgerEvent } from '../ledger.js';
+import { Ledger, eventLines, readEvents, readHead, refuse, type LedgerEvent } from '../ledger.js';
 
 export const LEDGER_DIR = 'ledger';
 const EVENTS = '.jsonl';
@@ -45,12 +45,20 @@ export async function verifyRunText(
   if (head === null)
     return [`${where}${EVENTS} has no ${where}${HEAD}. Fix: restore the head from git.`];
   try {
-    const broken = await Ledger.verify(readEvents(events), readHead(head));
-    return broken === null
-      ? []
-      : [
-          `${where}: the run does not verify from event ${String(broken)}. A past event was changed, removed or cut off. Fix: restore ${where}${EVENTS} and ${where}${HEAD} from git; to correct an event, append a correction in a new run instead.`,
-        ];
+    const read = readEvents(events);
+    const broken = await Ledger.verify(read, readHead(head));
+    if (broken === null) {
+      // A good chain proves nothing was changed, not that what was written was allowed.
+      return read.flatMap((event) => {
+        const reason = refuse(event);
+        return reason === null
+          ? []
+          : [`${where}: event ${String(event.seq)} is refused: ${reason}.`];
+      });
+    }
+    return [
+      `${where}: the run does not verify from event ${String(broken)}. A past event was changed, removed or cut off. Fix: restore ${where}${EVENTS} and ${where}${HEAD} from git; to correct an event, append a correction in a new run instead.`,
+    ];
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     return [`${where}: the run cannot be read (${message}).`];

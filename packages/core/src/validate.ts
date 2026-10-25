@@ -51,6 +51,8 @@ export const rules = {
   RB050: 'Capacity is declared on gates that exist.',
   RB060: 'Every agent has a test set.',
   RB070: 'The owner can reach the studio.',
+  /** Enforced by the ledger (`refuse` in ledger.ts), on writing and on reading, not by validate. */
+  RB080: 'A gate is closed only by a person.',
 } as const;
 
 export type RuleId = keyof typeof rules;

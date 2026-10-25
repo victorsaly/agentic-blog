@@ -75,6 +75,11 @@ One slice per pull request, in this order. A slice is not done until CI is green
 
 ### Slice 8a: gates open in the ledger (runner only)
 
+**Built** (`feat/questions-8a`): `gatesToOpen` in `packages/core/src/gates.ts`, `gateOpening` in
+`agents/_lib/record.ts`, the runner opening ready gates after a run that did work (a "nothing to do" run
+opens none), RB080 in the ledger's `refuse()` on writing and reading. Gate runs are left out of "How this
+was made" and the runs list (`isGateRun`).
+
 - After an agent run ends `done`, the runner looks up `blog-post` in `roadbook.config.ts`. Each gate whose
   `after` lists that agent, and whose other `after` steps are also done on this thought, opens as a run:
   - its id is `<stamp>-<gate id>-<hex>`;
@@ -105,6 +110,8 @@ One slice per pull request, in this order. A slice is not done until CI is green
   - it resumes the gate run (`Ledger.resume`) and appends `feedback.given` (the words), `gate.closed`
     (decision, by), and `node.state` from `needs-you` to `done`;
   - it saves and commits, reporting live as it goes.
+- `saveRun` writes a run once and never replaces it; closing a gate extends a saved run, so it needs a way
+  to save a run whose file on disk is a verified prefix of the new events (and nothing else).
 - While the dispatch is on its way, the studio says "Sent. Waiting for GitHub to record it", never
   "done".
 - Done: answering the `answers` gate on the studio's run page turns that run Done on the board within about

@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { Ledger } from '../ledger.js';
+import { Ledger, hashOf } from '../ledger.js';
 import { isLedgerPath, readRuns, runId, saveRun, verifyRunText } from './ledger-files.js';
 
 async function finishedRun(): Promise<Ledger> {
@@ -79,6 +79,27 @@ describe('verifyRunText', () => {
       't/ledger/a.jsonl has no t/ledger/a.head. Fix: restore the head from git.',
     ]);
     expect(await verifyRunText('t/ledger/a', null, JSON.stringify(ledger.head))).toHaveLength(1);
+  });
+});
+
+describe('RB080 on reading', () => {
+  it('refuses a gate closed by an agent even when its hash is good, as if written by hand', async () => {
+    const head = {
+      type: 'gate.closed',
+      node: 'message',
+      decision: 'approved',
+      by: 'structure',
+      seq: 0,
+      at: '2026-10-25T12:00:00.000Z',
+      prev: '0'.repeat(64),
+    };
+    const hash = await hashOf(head);
+    const issues = await verifyRunText(
+      'thoughts/t/ledger/20261025T120000Z-message-abcd',
+      `${JSON.stringify({ ...head, hash })}\n`,
+      JSON.stringify({ count: 1, hash }),
+    );
+    expect(issues).toEqual([expect.stringMatching(/event 0 is refused: RB080/)]);
   });
 });
 

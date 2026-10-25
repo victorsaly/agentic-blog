@@ -6,7 +6,9 @@
 // head in <run>.head): that it started, the state it moved through, what it cost as each provider reported
 // it, and each file it wrote with a receipt. With STUDIO_URL set, each event is also sent to the studio as it
 // is recorded, so the run shows there while it happens (see _lib/live.ts). A run that fails at any point after it starts is recorded as
-// failed, and saved, before the error goes on.
+// failed, and saved, before the error goes on. A run that ends done opens the gates after it in the workflow
+// (roadbook.config.ts) that are now ready, each as its own run waiting on Victor with the gate's question;
+// opening one can fail without undoing the agent's work, and says so.
 // Agents never call a provider themselves: ask() and draw() go to the providers the agent's card allows,
 // declared once in roadbook.config.ts, and every call's usage is logged and priced the same way.
 import { resolve } from 'node:path';
@@ -16,6 +18,7 @@ import {
   UsageLog,
   costOf,
   describeUsage,
+  gatesToOpen,
   hashOf,
   type AgentCardInput,
 } from '@roadbook/core';
@@ -25,6 +28,7 @@ import { prices, shares } from './_lib/prices.js';
 import {
   assertNotLedger,
   endState,
+  gateOpening,
   lastState,
   originOf,
   startStates,
@@ -219,6 +223,31 @@ async function main(): Promise<void> {
     await live.flush();
   }
 
+  // The gates after this step that are now ready open as runs of their own, after this run is saved.
+  const opened: string[] = [];
+  // Only a run that did work opens them: with nothing to do (the answers are already in, say), nothing changed
+  // for a gate to ask about.
+  const workflow = project.default.workflows.find((w) => w.id === 'blog-post');
+  if (workflow && result.status === 'done') {
+    const runs = [...past.runs, { id: run, events: ledger.events }];
+    for (const gate of gatesToOpen(workflow, node, runs)) {
+      try {
+        const id = runId(new Date(), gate.id);
+        const reporter = liveFromEnv(id, slug, process.env);
+        const waiting = new Ledger({ onAppend: reporter.hear });
+        for (const body of gateOpening(gate, origin, startedBy(process.env)))
+          await waiting.append(body);
+        await saveRun(thought.dir, id, waiting);
+        await reporter.flush();
+        opened.push(gate.id);
+      } catch (error: unknown) {
+        // The agent's work stands; the gate can be opened by running it again.
+        const reason = error instanceof Error ? error.message : String(error);
+        console.error(`the ${gate.id} gate did not open: ${reason}`);
+      }
+    }
+  }
+
   console.info(
     JSON.stringify({
       agent,
@@ -228,6 +257,7 @@ async function main(): Promise<void> {
       written,
       holdReason: result.holdReason ?? null,
       usd,
+      gatesOpened: opened,
     }),
   );
   if (result.status === 'held') process.exitCode = 3;

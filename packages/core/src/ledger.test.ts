@@ -95,6 +95,35 @@ describe('Ledger', () => {
     ).rejects.toThrow(/needs a reason/);
   });
 
+  it('RB080: lets only a person close a gate or override, the owner or an email', async () => {
+    const ledger = new Ledger();
+    for (const by of ['structure', 'local', 'github:victorsaly', ''])
+      await expect(
+        ledger.append({ type: 'gate.closed', node: 'message', decision: 'approved', by }),
+      ).rejects.toThrow(/RB080/);
+    await expect(
+      ledger.append({
+        type: 'override.given',
+        node: 'safety',
+        reason: 'it is my own quote',
+        by: 'safety',
+      }),
+    ).rejects.toThrow(/RB080/);
+    await ledger.append({
+      type: 'gate.closed',
+      node: 'message',
+      decision: 'approved',
+      by: 'owner',
+    });
+    await ledger.append({
+      type: 'gate.closed',
+      node: 'answers',
+      decision: 'answered',
+      by: 'info@victorsaly.com',
+    });
+    expect(ledger.events).toHaveLength(2);
+  });
+
   it('only corrects, never rewrites: a correction must point backwards', async () => {
     const ledger = await sampleRun();
     await expect(

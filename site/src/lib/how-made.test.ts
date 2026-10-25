@@ -119,6 +119,24 @@ describe('howMade', () => {
   });
 });
 
+describe('gate runs', () => {
+  it('are a decision, not a step: neither the post nor the runs list counts them', async () => {
+    const work = await run('2026-10-25-a', [
+      started,
+      state('interview', 'idle', 'running'),
+      output('interview'),
+      state('interview', 'running', 'done'),
+    ]);
+    const gate = await run('2026-10-25-b', [
+      started,
+      state('answers', 'idle', 'needs-you'),
+      { type: 'gate.opened', node: 'answers', asks: 'answer', question: 'Answer them.' },
+    ]);
+    expect(howMade([work, gate])?.steps.map((s) => s.agent)).toEqual(['interview']);
+    expect(runRows([work, gate]).map((r) => r.agent)).toEqual(['interview']);
+  });
+});
+
 describe('moneyOf', () => {
   it('says cents below a dollar and dollars above', () => {
     expect(moneyOf(0.049224)).toBe('4.9¢');

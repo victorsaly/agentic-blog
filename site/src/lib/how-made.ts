@@ -50,6 +50,13 @@ const costUnknown = (events: readonly LedgerEvent[]): boolean =>
   (events.some((e) => e.type === 'node.output') ||
     events.some((e) => e.type === 'node.state' && e.to === 'failed'));
 
+/**
+ * A gate's run: it waits on a person's decision, and records no agent's work. Neither "How this was made"
+ * nor the list of runs and costs counts it as a step.
+ */
+export const isGateRun = (events: readonly LedgerEvent[]): boolean =>
+  events.some((e) => e.type === 'gate.opened');
+
 /** What a post may say about how it was made; null when nothing is recorded, so no empty box is drawn. */
 export function howMade(
   runs: readonly { id: string; events: readonly LedgerEvent[] }[],
@@ -60,6 +67,7 @@ export function howMade(
   const latest = new Map<string, MadeStep>();
   const count = new Map<string, number>();
   for (const run of runs) {
+    if (isGateRun(run.events)) continue;
     const states = run.events.filter((e) => e.type === 'node.state');
     const agent = states[0]?.node;
     if (agent === undefined) continue;
@@ -106,9 +114,10 @@ export interface RunRow {
   costed: boolean;
 }
 
-/** Every run of a thought, newest first. */
+/** Every agent run of a thought, newest first; a gate's run is a decision, not a run to cost. */
 export function runRows(runs: readonly { id: string; events: readonly LedgerEvent[] }[]): RunRow[] {
   return runs
+    .filter((run) => !isGateRun(run.events))
     .map((run) => {
       const states = run.events.filter((e) => e.type === 'node.state');
       return {
