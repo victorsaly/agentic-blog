@@ -21,9 +21,8 @@ import { formatDate } from '../lib/content';
 import { usePoll } from './use-poll';
 import { useRunsFeed } from './runs-feed';
 import { RouteDrawing } from './RouteDrawing';
-import { liveRoute } from '../lib/route-live';
+import { liveRoute, type BuiltStep } from '../lib/route-live';
 import type { RouteLayout } from '@roadbook/core/route';
-import type { NodeState } from '@roadbook/core';
 import { GateAnswer } from './GateAnswer';
 import { Markdown } from './Markdown';
 import { gateOf } from '../lib/gates';
@@ -68,7 +67,7 @@ export interface RunTimelineProps {
   /** The workflow's route, laid out at build time, so the run is shown where it sits on it. */
   layout: RouteLayout;
   /** Each thought's steps as the ledgers left them at build time, by folder name. */
-  builtStates: Record<string, Record<string, NodeState>>;
+  builtStates: Record<string, Record<string, BuiltStep>>;
 }
 
 export function RunTimeline({

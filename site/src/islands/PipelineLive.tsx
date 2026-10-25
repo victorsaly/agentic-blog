@@ -17,9 +17,8 @@ import {
 import { formatDate } from '../lib/content';
 import { useRunsFeed } from './runs-feed';
 import { RouteDrawing } from './RouteDrawing';
-import { liveRoute } from '../lib/route-live';
+import { liveRoute, type BuiltStep } from '../lib/route-live';
 import type { RouteLayout } from '@roadbook/core/route';
-import type { NodeState } from '@roadbook/core';
 
 const words: Record<CellEnding, string> = {
   done: 'Done',
@@ -56,7 +55,7 @@ export interface PipelineLiveProps {
   /** The workflow's route, laid out once at build time. */
   layout: RouteLayout;
   /** Each thought's steps as the ledgers left them at build time, gates included, by folder name. */
-  builtStates: Record<string, Record<string, NodeState>>;
+  builtStates: Record<string, Record<string, BuiltStep>>;
 }
 
 export function PipelineLive({

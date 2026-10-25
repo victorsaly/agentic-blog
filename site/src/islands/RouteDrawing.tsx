@@ -5,7 +5,7 @@
 // under it. Each step opens its latest run. Drawn by hand from the layout core gives (no graph library: the
 // picture is the same every time, and a screen reader reads each step as a link with its state). On a phone
 // the same route is a numbered list. A route wider than the frame opens scrolled to where the work is: the
-// step this page is about, or else the furthest step that has run.
+// step this page is about, or else the furthest step that has run, once the frame is shown.
 import { useEffect, useRef } from 'react';
 import type { RouteLayout, RouteStep, StepState } from '@roadbook/core/route';
 import { agentName } from '../lib/agent-runs';
@@ -65,7 +65,21 @@ export function RouteDrawing({
   const scroller = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const el = scroller.current;
-    if (el && focusX > el.clientWidth / 2) el.scrollLeft = focusX - el.clientWidth / 3;
+    if (!el) return;
+    const place = (): boolean => {
+      if (el.clientWidth === 0) return false;
+      if (focusX > el.clientWidth / 2) el.scrollLeft = focusX - el.clientWidth / 3;
+      return true;
+    };
+    if (place()) return;
+    // Inside a closed disclosure the frame has no width yet: it is placed the first time it gets one.
+    const watch = new ResizeObserver(() => {
+      if (place()) watch.disconnect();
+    });
+    watch.observe(el);
+    return () => {
+      watch.disconnect();
+    };
   }, [focusX]);
 
   return (
@@ -141,7 +155,11 @@ export function RouteDrawing({
           const state = states[s.id] ?? 'not-run';
           const href = links[s.id];
           return (
-            <li key={s.id} className={current === s.id ? 'here' : undefined}>
+            <li
+              key={s.id}
+              className={current === s.id ? 'here' : undefined}
+              aria-current={current === s.id ? 'step' : undefined}
+            >
               {href ? <a href={href}>{stepName(s)}</a> : <span>{stepName(s)}</span>}
               {s.kind === 'gate' && <span className="small quiet"> · your call</span>}
               <span className={`state state-${state}`}>{stateWords[state]}</span>
