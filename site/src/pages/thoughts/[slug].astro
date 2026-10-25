@@ -554,10 +554,34 @@ const pad = (n: number): string => String(n).padStart(2, '0');
   .sticky {
     padding-top: var(--space-5);
   }
-  .fold .sticky {
-    position: static;
+  /* The contents: only the list scrolls, so the label above it and the way back to the top below it are
+     always whole, never cut by the column's edge. Its links keep room for their focus ring. */
+  .fold {
     max-height: none;
     overflow: visible;
+  }
+  .fold .sticky {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100dvh - 7rem);
+    overflow: visible;
+  }
+  .fold .ways {
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    margin-inline: calc(-1 * var(--space-2));
+    padding-inline: var(--space-2);
+  }
+  @media (min-width: 64.0625rem) {
+    .fold .ways {
+      padding-block: var(--space-2);
+      scroll-padding-block: var(--space-2);
+    }
+  }
+  .fold .up {
+    flex: none;
   }
   .fold > summary {
     display: none;
@@ -854,7 +878,12 @@ const pad = (n: number): string => String(n).padStart(2, '0');
       display: none;
     }
     .fold .sticky {
+      display: block;
+      max-height: none;
       padding-top: var(--space-2);
+    }
+    .fold .ways {
+      overflow: visible;
     }
   }
 
