@@ -206,7 +206,7 @@ describe('layoutGraph', () => {
       const last = tip.fromBaselines[tip.fromBaselines.length - 1] ?? 0;
       expect(Math.abs(tip.baselines[0] ?? 0)).toBeLessThan(deskLayout.topicRadius);
       expect(Math.abs(last)).toBeLessThan(deskLayout.topicRadius);
-      expect(tip.from.join(' ')).toBe(`From ${idea.post}`);
+      expect(tip.from.join(' ')).toBe(`From the thought “${idea.post}”`);
     }
     expect(layoutGraph(graph, phoneLayout).ideas.every((i) => i.tip === undefined)).toBe(true);
   });

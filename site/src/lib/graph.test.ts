@@ -36,6 +36,18 @@ describe('smallIdeasOf', () => {
     expect(smallIdeasOf(body, known, 'f')).toHaveLength(1);
   });
 
+  it('stops at the end of the table: a later table or a line with a pipe is not an idea', () => {
+    const body = `${table('| One | credibility |')}\n### Notes\n\n| a | b |\n| --- | --- |\n| x | y |\n`;
+    expect(smallIdeasOf(body, known, 'f')).toHaveLength(1);
+    const after = `${table('| One | credibility |')}\nThis or that | either way.\n`;
+    expect(smallIdeasOf(after, known, 'f')).toHaveLength(1);
+  });
+
+  it('skips a sentence with a pipe above the table', () => {
+    const body = `## Small ideas\n\nThis | that, said plainly.\n\n| Idea | Themes |\n| --- | --- |\n| One | credibility |\n`;
+    expect(smallIdeasOf(body, known, 'f').map((r) => r.text)).toEqual(['One']);
+  });
+
   it('gives nothing for a post without the section', () => {
     expect(smallIdeasOf('## The idea\n\nText.\n', known, 'f')).toEqual([]);
   });
@@ -88,6 +100,12 @@ describe('graphOf', () => {
       { from: 'idea:2026-01-01-a:1', to: 'topic:credibility' },
       { from: 'idea:2026-01-01-a:1', to: 'topic:accountability' },
     ]);
+  });
+
+  it('refuses a thought folder that is not plain lowercase words joined by hyphens', () => {
+    expect(() => graphOf([post('2026-01-01-My_Post', '| One | credibility |')], known)).toThrow(
+      'thoughts/2026-01-01-My_Post: a thought',
+    );
   });
 
   it('leaves drafts out', () => {
