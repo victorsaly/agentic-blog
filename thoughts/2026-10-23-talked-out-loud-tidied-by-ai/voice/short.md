@@ -11,9 +11,10 @@ timings: short.json
 voice: Victor Saly
 voice_id: eHHUhFBxuo0yMYCOGHks
 model: eleven_v3
+speed: 1.1
 text_sha256: c3caef70292ab50db57afdb5480e50288c4effc5af984d9a6eba4625c5e6d1c3
 words: 215
-seconds: 104.08
+seconds: 79.127
 made: '2026-10-25'
 reviewed: true
 ---

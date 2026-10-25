@@ -6,7 +6,7 @@ import { optionalStep, standardMetrics } from '../_lib/card-presets.js';
 export const card = defineAgentCard({
   name: 'voice',
   phase: 5,
-  reads: ['versions/short.md', 'safety.md', 'security.md', 'settings.yml → media.voice_id'],
+  reads: ['versions/short.md', 'safety.md', 'security.md', 'settings.yml → media.voice_id, voice_speed'],
   writes: ['voice/short.mp3', 'voice/short.json', 'voice/short.md'],
   purpose:
     'Read the short version aloud in one steady voice and record when each word is spoken, so the page can follow along.',

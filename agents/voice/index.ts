@@ -13,10 +13,12 @@ import {
   clockMatches,
   durationOf,
   fingerprint,
+  quickenClock,
   spokenText,
   wordCount,
   wordsFromClock,
 } from './script.js';
+import { quickenWithFfmpeg, type Quicken } from './tempo.js';
 
 export const SOURCE = 'versions/short.md';
 export const MANIFEST = 'voice/short.md';
@@ -37,6 +39,11 @@ export function voiceFor(settings: Settings): Voice {
       };
 }
 
+/** How much quicker than the voice's own pace the reading is played; 1 leaves it as spoken. */
+export function speedFor(settings: Settings): number {
+  return settings.media.voice_speed ?? 1;
+}
+
 /** One word per line, so a changed word is one changed line in the pull request. */
 export function timingsFile(words: readonly (readonly [string, number, number])[]): Uint8Array {
   const lines = words.map((w) => `    ${JSON.stringify(w)}`).join(',\n');
@@ -44,14 +51,20 @@ export function timingsFile(words: readonly (readonly [string, number, number])[
 }
 
 /** What the last reading was made from: its text and its voice (a manifest without one predates the setting). */
-function previousReading(ctx: AgentContext): { hash: string | null; voiceId: string } {
+function previousReading(ctx: AgentContext): {
+  hash: string | null;
+  voiceId: string;
+  speed: number;
+} {
   const manifest = readIfPresent(ctx, MANIFEST);
   const data = manifest === undefined ? {} : matter(manifest).data;
   const hash: unknown = data['text_sha256'];
   const voiceId: unknown = data['voice_id'];
+  const speed: unknown = data['speed'];
   return {
     hash: typeof hash === 'string' ? hash : null,
     voiceId: typeof voiceId === 'string' ? voiceId : defaultVoice.id,
+    speed: typeof speed === 'number' ? speed : 1,
   };
 }
 
@@ -66,6 +79,8 @@ export interface VoiceDeps {
   synthesise?: Synthesise;
   /** Whether a file already exists in the thought folder (the mp3 and timings are not Markdown, so not in ctx). */
   exists: (ctx: AgentContext, path: string) => Promise<boolean>;
+  /** Plays the audio quicker when the settings ask for it; tests stand in so nothing runs ffmpeg. */
+  quicken?: Quicken;
 }
 
 export function makeRun(deps: VoiceDeps): AgentRun {
@@ -95,23 +110,32 @@ export function makeRun(deps: VoiceDeps): AgentRun {
 
     const hash = fingerprint(text);
     const voice = voiceFor(ctx.settings);
+    const speed = speedFor(ctx.settings);
     const previous = previousReading(ctx);
     if (
       previous.hash === hash &&
       previous.voiceId === voice.id &&
+      previous.speed === speed &&
       (await deps.exists(ctx, AUDIO)) &&
       (await deps.exists(ctx, TIMINGS))
     )
       return {
         status: 'nothing-to-do',
         summary:
-          'Neither the short version nor the voice has changed since it was last read; the audio stands.',
+          'Neither the short version nor the voice nor its pace has changed since it was last read; the audio stands.',
         files: [],
       };
 
-    const speech = deps.synthesise
+    const spoken = deps.synthesise
       ? await deps.synthesise(text, voice)
       : await ctx.speak(text, { id: voice.id, model: voice.model });
+    const speech =
+      speed === 1
+        ? spoken
+        : {
+            audio: await (deps.quicken ?? quickenWithFfmpeg)(spoken.audio, speed),
+            clock: quickenClock(spoken.clock, speed),
+          };
     const timed = wordsFromClock(speech.clock);
     if (!clockMatches(text, timed))
       throw new Error(
@@ -135,6 +159,7 @@ export function makeRun(deps: VoiceDeps): AgentRun {
             voice: voice.name,
             voice_id: voice.id,
             model: voice.model,
+            ...(speed === 1 ? {} : { speed }),
             text_sha256: hash,
             words: timed.length,
             seconds,
@@ -147,7 +172,7 @@ export function makeRun(deps: VoiceDeps): AgentRun {
     ];
     return {
       status: 'done',
-      summary: `Read the short version aloud in ${voice.name} (${voice.model}): ${String(timed.length)} words, ${seconds.toFixed(1)} seconds, a time for every word. Listen to it before merging; the audio and the text are approved together.`,
+      summary: `Read the short version aloud in ${voice.name} (${voice.model}${speed === 1 ? '' : `, ${String(speed)}× pace`}): ${String(timed.length)} words, ${seconds.toFixed(1)} seconds, a time for every word. Listen to it before merging; the audio and the text are approved together.`,
       files,
     };
   };

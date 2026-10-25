@@ -216,6 +216,53 @@ describe('voice agent', () => {
   });
 });
 
+describe('pace', () => {
+  it('plays the reading quicker when the settings ask, with every word time scaled to match', async () => {
+    const quickened: number[] = [];
+    const run = makeRun({
+      synthesise: fakeVoice().synthesise,
+      exists: nothingThere,
+      quicken: (audio, speed) => {
+        quickened.push(speed);
+        return Promise.resolve(audio);
+      },
+    });
+    const ctx = context({ [SOURCE]: shortVersion('Two words.') });
+    const result = await run({
+      ...ctx,
+      settings: { ...settings, media: { ...settings.media, voice_speed: 2 } },
+    });
+    expect(quickened).toEqual([2]);
+    const timings = result.files.find((f) => f.path === TIMINGS);
+    const words = (JSON.parse(new TextDecoder().decode(timings?.bytes)) as { words: unknown[] })
+      .words;
+    expect(words).toEqual([
+      ['Two', 0, 0.15],
+      ['words.', 0.2, 0.5],
+    ]);
+    expect(result.files.find((f) => f.path === MANIFEST)?.content).toMatch(/^speed: 2$/m);
+  });
+
+  it('reads again when the pace changes, and leaves the audio alone at the voice’s own pace', async () => {
+    const source = shortVersion('Same words.');
+    const hash = fingerprint(spokenText(source, 'blog.victorsaly.com'));
+    const voice = fakeVoice();
+    const run = makeRun({
+      synthesise: voice.synthesise,
+      exists: everythingThere,
+      quicken: () => Promise.reject(new Error('not asked to')),
+    });
+    const ctx = context({
+      [SOURCE]: source,
+      [MANIFEST]: `---\nwhy: Read aloud once.\ntext_sha256: ${hash}\n---\n`,
+    });
+    expect((await run(ctx)).status).toBe('nothing-to-do');
+    await expect(
+      run({ ...ctx, settings: { ...settings, media: { ...settings.media, voice_speed: 1.1 } } }),
+    ).rejects.toThrow('not asked to');
+  });
+});
+
 describe('voiceFor', () => {
   it('is Chris W unless the settings choose another voice', () => {
     expect(voiceFor(settings).name).toBe('Chris W');

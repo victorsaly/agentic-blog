@@ -73,6 +73,15 @@ export function fingerprint(text: string): string {
 
 const round = (seconds: number): number => Math.round(seconds * 1000) / 1000;
 
+/** The clock of the same speech played at `speed` times the pace: every time divided by the speed. */
+export function quickenClock(clock: CharacterClock, speed: number): CharacterClock {
+  return {
+    characters: clock.characters,
+    characterStartTimesSeconds: clock.characterStartTimesSeconds.map((t) => t / speed),
+    characterEndTimesSeconds: clock.characterEndTimesSeconds.map((t) => t / speed),
+  };
+}
+
 /**
  * Words with their start and end, from the character clock. A word runs from the start of its first
  * character to the end of its last; whitespace separates words and belongs to none.
