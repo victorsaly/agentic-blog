@@ -9,20 +9,21 @@ assembled: '2026-10-25'
 
 ## What is in this PR
 
-- `interview.md`: the questions asked and the answers given.
-- `origin/transcript.md`: the spoken origin, as recorded.
-- `origin/answers.md`: the written answers that fill the gaps in the transcript.
-- `structure.md`: the message, the idea, the road and the small-ideas table with themes.
-- `versions/long.md`: the full story in the order Victor told it, with the change log at the end.
+- `origin/transcript.md`: Victor's spoken origin, the source of everything below.
+- `origin/answers.md`: his written answers to the interview questions, used for the game name, the Copilot-only detail and the rerun plan.
+- `interview.md`: the questions asked after the transcript.
+- `structure.md`: the message, the themes and the ten small ideas, with the title "Same idea, a year later".
+- `versions/long.md`: the full story in the order he told it, with a "what changed from the origin" section.
 - `versions/short.md`: the short version.
-- `versions/linkedin.md`: the LinkedIn version, ending with the badge and the link back.
-- `voice/short.md`: the short version through the voice pass.
-- `image/prompts.md`: the image prompt. No picture file is attached.
-- `seo.md`: the SEO notes. No model call was made while the index switch is off.
-- `sources.md`: the citations ledger.
+- `versions/linkedin.md`: the LinkedIn version, ending with the badge and the thought's URL.
+- `voice/short.md`: the short version prepared for voice.
+- `image/prompts.md`: the picture prompt. There is no `image/picture.png`, so nothing was drawn.
+- `seo.md`: SEO notes. No model call was made, because the index switch is off.
+- `sources.md`: the citations ledger. citations failed twice before it succeeded.
 - `safety.md`: safety verdict, pass.
 - `security.md`: security verdict, pass.
-- `road.md`: the agents that ran, in order, with model and date. Citations failed twice and voice once before succeeding.
+- `pull-request.md`: this pull request body, kept in the thought.
+- `road.md`: which agents ran, in what order, on which model. 24 runs, with the failures and retries marked.
 
 ## What changed from the origin
 
@@ -43,6 +44,6 @@ assembled: '2026-10-25'
 
 ## Look at first
 
-1. "It did not have as many skills as today, and the model was not clever enough to complete the task." (`versions/long.md`, "Where it stopped"). It comes from answer 5 and could sound harsh about the tool, or read as a judgement on the attempt.
-2. "It builds the blog automatically, without any major issues." (`versions/long.md`, "This blog is the proof of the feeling"). It is a strong claim, and it is not among the small ideas in `structure.md`.
-3. The heading "This blog is the proof of the feeling" sits against "This is a feeling, and a feeling is not proof." (`versions/long.md`, "What comes next"). The two may read as contradicting each other.
+1. "It did not have as many skills as today, and the model was not clever enough to complete the task." (`versions/long.md`, "Where it stopped"). It is the blunt judgement on the AI, and the "not clever enough" wording may be harsher than Victor would say.
+2. "It builds the blog automatically, without any major issues." (`versions/long.md`, "This blog is the proof of the feeling"). It is the strongest claim in the piece. It does not appear in `structure.md`'s small ideas, so check that Victor said it.
+3. "It has a database, and a web interface to talk to." (`versions/long.md`, same section). The speech-recognition fragments were dropped here, so the wording may be less specific than what he meant.
