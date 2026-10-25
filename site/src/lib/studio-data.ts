@@ -14,25 +14,44 @@ export interface CostedThought {
   rows: RunRow[];
 }
 
+// Typed at the boundary: on a fresh checkout Astro has not generated its content types yet when lint runs.
+interface ThoughtEntry {
+  id: string;
+  data: { title: string; date: Date; draft: boolean };
+}
+interface VersionEntry {
+  id: string;
+  data: { kind: string; reviewed: boolean };
+}
+interface SourcesEntry {
+  id: string;
+  data: { reviewed: boolean };
+}
+
+async function thoughtEntries(): Promise<ThoughtEntry[]> {
+  const entries: unknown = await getCollection('thoughts');
+  return entries as ThoughtEntry[];
+}
+
 let waitingOnce: Promise<ThoughtWaiting[]> | undefined;
 let costedOnce: Promise<CostedThought[]> | undefined;
 
 /** What the agents wrote that Victor has not read, drafts included: their versions wait for review too. */
 export function loadWaiting(): Promise<ThoughtWaiting[]> {
   waitingOnce ??= (async () => {
-    const thoughts = (await getCollection('thoughts')).map((t) => ({
+    const thoughts = (await thoughtEntries()).map((t) => ({
       slug: thoughtSlugOf(t.id),
       title: t.data.title,
       date: t.data.date,
       draft: t.data.draft,
     }));
-    const versions = (await getCollection('versions')).map((v) => ({
+    const versions = ((await getCollection('versions')) as unknown as VersionEntry[]).map((v) => ({
       slug: thoughtSlugOf(v.id),
       leaf: leafOf(v.id),
       kind: v.data.kind,
       reviewed: v.data.reviewed,
     }));
-    const sources = (await getCollection('sources')).map((s) => ({
+    const sources = ((await getCollection('sources')) as unknown as SourcesEntry[]).map((s) => ({
       slug: thoughtSlugOf(s.id),
       reviewed: s.data.reviewed,
     }));
@@ -44,7 +63,7 @@ export function loadWaiting(): Promise<ThoughtWaiting[]> {
 /** Every thought's runs, drafts included (a draft's runs cost money too). A run that does not verify stops the build. */
 export function loadCosted(): Promise<CostedThought[]> {
   costedOnce ??= (async () => {
-    const thoughts = await getCollection('thoughts');
+    const thoughts = await thoughtEntries();
     return Promise.all(
       thoughts.map(async (t) => {
         const slug = thoughtSlugOf(t.id);
