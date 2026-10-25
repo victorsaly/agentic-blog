@@ -105,3 +105,42 @@ export function moneyOf(usd: number, currency: Currency = { show: 'USD', perUsd:
   }
   return `${major}${amount.toFixed(2)}`;
 }
+
+// ---------------------------------------------------------------------------------------------- the studio
+
+/** One run as Victor sees it in the studio: what ran, when, how it ended, what it cost. */
+export interface RunRow {
+  id: string;
+  agent: string;
+  /** When it started, as an ISO date. */
+  on: string;
+  ended: Ending;
+  usd: number;
+  costed: boolean;
+}
+
+/** Every run of a thought, newest first. */
+export function runRows(runs: readonly { id: string; events: readonly LedgerEvent[] }[]): RunRow[] {
+  return runs
+    .map((run) => {
+      const states = run.events.filter((e) => e.type === 'node.state');
+      return {
+        id: run.id,
+        agent: states[0]?.node ?? 'unknown',
+        on: (run.events[0]?.at ?? '').slice(0, 10),
+        ended: endingOf(states.at(-1)?.to ?? 'idle'),
+        usd: costs(run.events).totalUsd,
+        costed: !madeWithoutCost(run.events),
+      };
+    })
+    .sort((a, b) => b.id.localeCompare(a.id));
+}
+
+/** What the runs that started in a month (YYYY-MM) cost, and whether any of them left its cost unknown. */
+export function spendIn(rows: readonly RunRow[], month: string): { usd: number; isFloor: boolean } {
+  const inMonth = rows.filter((r) => r.on.startsWith(month));
+  return {
+    usd: Math.round(inMonth.reduce((sum, r) => sum + r.usd, 0) * 1_000_000) / 1_000_000,
+    isFloor: inMonth.some((r) => !r.costed),
+  };
+}

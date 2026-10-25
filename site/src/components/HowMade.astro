@@ -1,9 +1,10 @@
 ---
-// Why: the blog's promise, shown on the post itself: which agents worked on it, how each run ended, what it
-// cost, and where a person stepped in. Every line is read from the post's ledger at build time; nothing
-// here is typed by hand, and a post with no recorded runs shows no box at all. A guard's reason for holding
-// is never shown, only that it held. Ruled rows in the house style, monochrome, no badges of colour.
-import { moneyOf, type Ending, type HowMade } from '../lib/how-made';
+// Why: the blog's promise, shown on the post itself: which agents worked on it, what each one does, and where
+// a person stepped in (an edit, a part written by hand, an override and its reason). Every line is read from
+// the post's ledger at build time; nothing here is typed by hand, and a post with no recorded runs shows no
+// box at all. What runs cost and how each ended, holds included, is the blogger's business and lives in the
+// studio, not here. Ruled rows in the house style, monochrome.
+import type { HowMade } from '../lib/how-made';
 import { formatDate } from '../lib/content';
 import { settings } from '../lib/settings';
 
@@ -15,16 +16,6 @@ interface Props {
 
 const { made, jobs } = Astro.props;
 const author = settings.site.author.split(' ')[0] ?? settings.site.author;
-const { show, per_usd: perUsd, rate_date: rateDate } = settings.publishing.currency;
-const currency = { show, perUsd };
-const money = (usd: number): string => moneyOf(usd, currency);
-const endings: Record<Ending, string> = {
-  done: 'Done',
-  held: `Held for ${author}`,
-  failed: 'Did not finish',
-  running: 'Still running',
-  'not-run': 'Not run',
-};
 const name = (agent: string): string => agent.charAt(0).toUpperCase() + agent.slice(1);
 const runs = made.steps.reduce((n, s) => n + s.runs, 0);
 const day = (iso: string): string => formatDate(new Date(`${iso}T12:00:00Z`));
@@ -33,26 +24,15 @@ const day = (iso: string): string => formatDate(new Date(`${iso}T12:00:00Z`));
 <section class="made" id="how-made" aria-labelledby="made-label" data-pagefind-ignore>
   <h2 class="label" id="made-label">How this was made</h2>
   <p class="small quiet intro">
-    Read from this post's ledger, where every agent run is recorded as it happens and cannot be
-    changed afterwards. Recorded since {day(made.since)}.
+    The agents that worked on this post, read from its ledger, where every run is recorded as it
+    happens and cannot be changed afterwards. Recorded since {day(made.since)}.
   </p>
   <ol class="steps">
     {
       made.steps.map((step) => (
         <li>
-          <div class="what">
-            <span class="agent">{name(step.agent)}</span>
-            {jobs[step.agent] && <span class="job small quiet">{jobs[step.agent]}</span>}
-          </div>
-          <div class="how small">
-            <span class:list={['ended', { held: step.ended === 'held' }]}>
-              {endings[step.ended]}
-            </span>
-            <span class="quiet">
-              {step.costed ? money(step.usd) : 'cost not recorded'}
-              {step.runs > 1 && ` · ran ${String(step.runs)} times`}
-            </span>
-          </div>
+          <span class="agent">{name(step.agent)}</span>
+          {jobs[step.agent] && <span class="job small quiet">{jobs[step.agent]}</span>}
         </li>
       ))
     }
@@ -79,17 +59,11 @@ const day = (iso: string): string => formatDate(new Date(`${iso}T12:00:00Z`));
     )
   }
   <p class="small total">
-    {made.totalIsFloor ? 'At least ' : ''}{money(made.totalUsd)} of AI across {runs}
-    {runs === 1 ? ' run' : ' runs'}. <a href="/how-it-works">How the agents work</a>
+    {runs}
+    {runs === 1 ? ' agent run' : ' agent runs'} recorded. <a href="/how-it-works"
+      >How the agents work</a
+    >
   </p>
-  {
-    show !== 'USD' && (
-      <p class="small quiet rate">
-        The providers bill in US dollars, and the ledger records dollars. Shown here in pounds at £
-        {perUsd} to the dollar ({formatDate(rateDate)}).
-      </p>
-    )
-  }
 </section>
 
 <style>
@@ -108,59 +82,20 @@ const day = (iso: string): string => formatDate(new Date(`${iso}T12:00:00Z`));
   }
   .steps li {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: var(--space-1) var(--space-4);
+    flex-direction: column;
     padding-block: var(--space-3);
     border-bottom: var(--rule-width) solid var(--ink);
-  }
-  .what {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 18rem;
-    min-width: 0;
   }
   .agent {
     font-weight: 700;
   }
-  .how {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    text-align: right;
-  }
-  .ended {
-    font-weight: 700;
-  }
-  /* A hold is the one state a reader should notice: boxed like a tag, still in ink, no colour. */
-  .ended.held {
-    padding: 0 var(--space-1);
-    border: var(--rule-width) solid var(--ink);
-  }
   .people,
-  .overrides {
+  .overrides,
+  .total {
     margin: var(--space-3) 0 0;
     max-width: none;
   }
   .overrides {
     padding-left: var(--space-4);
-  }
-  .total {
-    margin: var(--space-3) 0 0;
-    max-width: none;
-  }
-  .rate {
-    margin: var(--space-1) 0 0;
-    max-width: none;
-  }
-  /* On a phone each row is one column, so every outcome sits in the same place under its agent. */
-  @media (max-width: 40rem) {
-    .steps li {
-      flex-direction: column;
-    }
-    .how {
-      align-items: flex-start;
-      text-align: left;
-    }
   }
 </style>

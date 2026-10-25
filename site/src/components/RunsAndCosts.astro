@@ -1,0 +1,124 @@
+---
+// Why: the money side of the ledger, for the blogger only. The studio sits behind Cloudflare Access, so here
+// every run of every post is listed with how it ended (a guard's hold included) and what it cost, each post
+// adds up, and the month is set against the project's budget. Read from the ledger at build time, so it is
+// as fresh as the last deploy. Costs are recorded in US dollars and shown in the site's currency.
+import { formatDate } from '../lib/content';
+import { moneyOf, spendIn, type Ending, type RunRow } from '../lib/how-made';
+import { settings } from '../lib/settings';
+
+interface Props {
+  posts: { slug: string; title: string; rows: RunRow[] }[];
+  /** The project's monthly cap in US dollars, from roadbook.config.ts. */
+  monthlyCapUsd: number;
+  /** When the site was built, so "this month" is honest about its date. */
+  builtAt: Date;
+}
+
+const { posts, monthlyCapUsd, builtAt } = Astro.props;
+const { show, per_usd: perUsd, rate_date: rateDate } = settings.publishing.currency;
+const money = (usd: number): string => moneyOf(usd, { show, perUsd });
+const name = (agent: string): string => agent.charAt(0).toUpperCase() + agent.slice(1);
+const endings: Record<Ending, string> = {
+  done: 'Done',
+  held: 'Held',
+  failed: 'Did not finish',
+  running: 'Still running',
+  'not-run': 'Not run',
+};
+const day = (iso: string): string => formatDate(new Date(`${iso}T12:00:00Z`));
+const month = builtAt.toISOString().slice(0, 7);
+const all = posts.flatMap((p) => p.rows);
+const thisMonth = spendIn(all, month);
+const percent = (thisMonth.usd / monthlyCapUsd) * 100;
+// A few pence is not nothing: below one per cent says so instead of rounding to 0%.
+const share = percent > 0 && percent < 1 ? 'under 1%' : `${String(Math.round(percent))}%`;
+const withRuns = posts.filter((p) => p.rows.length > 0);
+---
+
+<section class="runs" aria-labelledby="runs-label">
+  <h2 class="label" id="runs-label">Runs and costs</h2>
+  <p class="month">
+    <strong>{thisMonth.isFloor ? 'At least ' : ''}{money(thisMonth.usd)}</strong> spent on agents this
+    month, {share} of the {money(monthlyCapUsd)} monthly budget.
+  </p>
+  <p class="small quiet">
+    As of {formatDate(builtAt)}, the last deploy. Providers bill and the ledger records in US
+    dollars; shown at £{perUsd}{' '}to the dollar ({formatDate(rateDate)}), list prices, before any
+    free allowance.
+  </p>
+  {withRuns.length === 0 && <p class="quiet">No agent has run since the ledger began.</p>}
+  {
+    withRuns.map((post) => {
+      const total = spendIn(post.rows, '');
+      return (
+        <div class="post">
+          <h3>
+            <a href={`/thoughts/${post.slug}`}>{post.title}</a>
+            <span class="small quiet">
+              {total.isFloor ? 'at least ' : ''}
+              {money(total.usd)}
+            </span>
+          </h3>
+          <table class="small">
+            <thead>
+              <tr>
+                <th scope="col">Run</th>
+                <th scope="col">Agent</th>
+                <th scope="col">Ended</th>
+                <th scope="col" class="num">
+                  Cost
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {post.rows.map((r) => (
+                <tr>
+                  <td>{day(r.on)}</td>
+                  <td>{name(r.agent)}</td>
+                  <td class:list={{ held: r.ended === 'held' }}>{endings[r.ended]}</td>
+                  <td class="num">{r.costed ? money(r.usd) : 'not recorded'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    })
+  }
+</section>
+
+<style>
+  .runs {
+    margin-top: var(--space-6);
+  }
+  .month {
+    margin: var(--space-3) 0 var(--space-1);
+  }
+  .post h3 {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-1) var(--space-3);
+    margin: var(--space-4) 0 var(--space-2);
+    font-size: var(--size-body);
+  }
+  .post h3 span {
+    font-weight: 400;
+  }
+  table {
+    max-width: none;
+  }
+  th {
+    color: var(--quiet);
+    font-weight: 700;
+  }
+  .num {
+    text-align: right;
+    padding-right: 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .held {
+    font-weight: 700;
+  }
+</style>

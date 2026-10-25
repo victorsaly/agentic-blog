@@ -2,7 +2,7 @@
 // publish a guard's reason, and never show an unknown cost as free.
 import { describe, expect, it } from 'vitest';
 import { Ledger, type EventBody, type Receipt } from '@roadbook/core';
-import { howMade, moneyOf } from './how-made.js';
+import { howMade, moneyOf, runRows, spendIn } from './how-made.js';
 
 const receipt = (agent: string): Receipt => ({
   origin: 'thoughts/t/origin/text.md',
@@ -120,5 +120,39 @@ describe('moneyOf', () => {
     expect(moneyOf(0.049224, gbp)).toBe('3.7p');
     expect(moneyOf(0.074, gbp)).toBe('5.5p');
     expect(moneyOf(2, gbp)).toBe('£1.50');
+  });
+});
+
+describe('runRows and spendIn', () => {
+  it('lists every run newest first, held ones included, and adds up a month', async () => {
+    const rows = runRows([
+      await run('2026-09-30-a', [
+        started,
+        state('seo', 'idle', 'running'),
+        cost('seo', 0.5),
+        output('seo'),
+        state('seo', 'running', 'done'),
+      ]),
+      await run('2026-10-25-b', [
+        started,
+        state('security', 'idle', 'running'),
+        cost('security', 0.05),
+        output('security'),
+        state('security', 'running', 'held', 'a reason'),
+      ]),
+      await run('2026-10-25-c', [
+        started,
+        state('voice', 'idle', 'running'),
+        output('voice'),
+        state('voice', 'running', 'done'),
+      ]),
+    ]);
+    expect(rows.map((r) => [r.agent, r.ended, r.costed])).toEqual([
+      ['voice', 'done', false],
+      ['security', 'held', true],
+      ['seo', 'done', true],
+    ]);
+    expect(spendIn(rows, '2026-10')).toEqual({ usd: 0.05, isFloor: true });
+    expect(spendIn(rows, '2026-09')).toEqual({ usd: 0.5, isFloor: false });
   });
 });
