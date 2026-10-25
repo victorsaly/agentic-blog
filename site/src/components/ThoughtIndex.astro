@@ -1,0 +1,114 @@
+---
+// Why: the home page and the archive list thoughts as one numbered, ruled index: the number, the title as
+// the one marigold mark, the message under it, the date at the end of the row. It is the compact list, so a
+// reader can scan many posts at once; the topic pages keep the prints (ThoughtList) for a shorter list.
+import type { CollectionEntry } from 'astro:content';
+import { thoughtSlugOf } from '../lib/content';
+import { settings } from '../lib/settings';
+
+interface Props {
+  thoughts: CollectionEntry<'thoughts'>[];
+  /** The number of the first row, so a list split by year keeps counting. */
+  start?: number;
+}
+
+const { thoughts, start = 1 } = Astro.props;
+const pad = (n: number): string => String(n).padStart(2, '0');
+const short = (date: Date): string =>
+  new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: settings.site.timezone,
+  }).format(date);
+---
+
+<ol class="index" start={start}>
+  {
+    thoughts.map((t, i) => (
+      <li>
+        <span class="n" aria-hidden="true">
+          {pad(start + i)}
+        </span>
+        <div>
+          <h3>
+            <a href={`/thoughts/${thoughtSlugOf(t.id)}`}>
+              <mark>{t.data.title}</mark>
+            </a>
+          </h3>
+          <p class="summary">{t.data.message}</p>
+        </div>
+        <time class="small quiet" datetime={t.data.date.toISOString()}>
+          {short(t.data.date)}
+        </time>
+      </li>
+    ))
+  }
+</ol>
+
+<style>
+  .index {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-width: none;
+  }
+  li {
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1fr) 8rem;
+    gap: var(--space-4);
+    align-items: baseline;
+    padding-block: var(--space-4);
+    border-bottom: var(--rule-width) solid var(--ink);
+  }
+  .n {
+    font-size: 2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  h3 {
+    margin: 0;
+    font-size: 1.75rem;
+    line-height: 1.2;
+  }
+  h3 a {
+    text-decoration: none;
+  }
+  mark {
+    background: var(--mark);
+    color: var(--mark-ink);
+    padding: 0.05em 0.2em;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+  h3 a:hover mark,
+  h3 a:focus-visible mark {
+    text-decoration: underline;
+    text-decoration-thickness: 0.1em;
+  }
+  .summary {
+    margin: var(--space-2) 0 0;
+    font-size: 1.0625rem;
+    line-height: 1.55;
+  }
+  time {
+    text-align: right;
+  }
+
+  @media (max-width: 40rem) {
+    li {
+      grid-template-columns: 2.75rem minmax(0, 1fr);
+      gap: var(--space-1) var(--space-3);
+    }
+    .n {
+      font-size: 1.5rem;
+    }
+    h3 {
+      font-size: 1.375rem;
+    }
+    time {
+      grid-column: 2;
+      text-align: left;
+    }
+  }
+</style>

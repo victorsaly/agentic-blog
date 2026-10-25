@@ -1,0 +1,141 @@
+---
+// Why: the header and footer offer Topics as a way to read, so there is one page that lists them all. It is
+// an index of topics, not of posts: one ruled row per topic, most written about first, with its name, how
+// many thoughts carry it, and the newest of them as the one marigold mark. Every title under a topic lives
+// on that topic's own page, so a post that carries three topics is not listed three times here.
+import { getCollection } from 'astro:content';
+import Page from '../../layouts/Page.astro';
+import ListHead from '../../components/ListHead.astro';
+import { formatDate, thoughtSlugOf } from '../../lib/content';
+import { themeCounts, themeLabel, thoughtsLabel } from '../../lib/themes';
+
+const all = (await getCollection('thoughts', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime() || b.id.localeCompare(a.id),
+);
+const topics = themeCounts(all.map((t) => t.data.themes)).map(([topic, count]) => ({
+  topic,
+  count,
+  newest: all.find((t) => t.data.themes.includes(topic)),
+}));
+const note =
+  topics.length === 1
+    ? 'One topic so far, with its newest thought.'
+    : `${String(topics.length)} topics, the most written about first, each with its newest thought.`;
+---
+
+<Page
+  title="Topics"
+  description="Every topic the thoughts cover, with the newest thought on each."
+  width="wide"
+>
+  <ListHead label="Topics" title="What the thoughts are about" note={note} />
+  <div class="frame">
+    {topics.length === 0 && <p class="quiet">No thoughts published yet, so no topics either.</p>}
+    <ol class="topics">
+      {
+        topics.map(({ topic, count, newest }) => (
+          <li>
+            <div class="name">
+              <h2>
+                <a href={`/topics/${topic}`}>{themeLabel(topic)}</a>
+              </h2>
+              <p class="small quiet">{thoughtsLabel(count)}</p>
+            </div>
+            {newest && (
+              <div class="newest">
+                <p class="small quiet">
+                  Newest,{' '}
+                  <time datetime={newest.data.date.toISOString()}>
+                    {formatDate(newest.data.date)}
+                  </time>
+                </p>
+                <p class="title">
+                  <a href={`/thoughts/${thoughtSlugOf(newest.id)}`}>
+                    <mark>{newest.data.title}</mark>
+                  </a>
+                </p>
+              </div>
+            )}
+            <p class="all">
+              <a href={`/topics/${topic}`}>
+                {count === 1 ? 'See it' : `See all ${String(count)}`}
+                <span class="visually-hidden"> on {themeLabel(topic)}</span>
+              </a>
+            </p>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+</Page>
+
+<style>
+  .topics {
+    list-style: none;
+    margin: var(--space-5) 0 0;
+    padding: 0;
+    max-width: none;
+    border-top: var(--rule-strong) solid var(--ink);
+  }
+  li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) auto;
+    gap: var(--space-3) var(--space-5);
+    align-items: baseline;
+    padding-block: var(--space-4);
+    border-bottom: var(--rule-width) solid var(--ink);
+  }
+  h2 {
+    margin: 0;
+    font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.25rem);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+  h2 a {
+    text-decoration: none;
+  }
+  h2 a:hover {
+    text-decoration: underline;
+  }
+  p {
+    margin: 0;
+    max-width: none;
+  }
+  .name .small {
+    margin-top: var(--space-1);
+  }
+  .title {
+    margin-top: var(--space-1);
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .title a {
+    text-decoration: none;
+  }
+  mark {
+    background: var(--mark);
+    color: var(--mark-ink);
+    padding: 0.05em 0.2em;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+  .title a:hover mark,
+  .title a:focus-visible mark {
+    text-decoration: underline;
+    text-decoration-thickness: 0.1em;
+  }
+  .all a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 48rem) {
+    li {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-2);
+    }
+  }
+</style>

@@ -10,6 +10,11 @@ export function themeLabel(theme: string): string {
   return [first.charAt(0).toUpperCase() + first.slice(1), ...rest].join(' ');
 }
 
+/** 1 → "One thought", 12 → "12 thoughts": a count a screen reader says with its unit. */
+export function thoughtsLabel(count: number): string {
+  return count === 1 ? 'One thought' : `${String(count)} thoughts`;
+}
+
 /** Each theme used by at least one post, with how many, most used first, then by name. */
 export function themeCounts(themesPerPost: string[][]): [string, number][] {
   const counts = new Map<string, number>();

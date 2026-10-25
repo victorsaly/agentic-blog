@@ -29,7 +29,7 @@ const path =
     .replace(/\/$/, '') || '/';
 const sections = [
   { href: '/', name: 'Thoughts', on: path === '/' || path.startsWith('/thoughts') },
-  { href: '/themes', name: 'Themes', on: path.startsWith('/themes') },
+  { href: '/topics', name: 'Topics', on: path.startsWith('/topics') },
   { href: '/all', name: 'Archive', on: path === '/all' },
   { href: '/how-it-works', name: 'How it works', on: path === '/how-it-works' },
 ];
