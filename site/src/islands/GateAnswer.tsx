@@ -18,7 +18,11 @@ interface Context {
 }
 
 type Sending =
-  { state: 'idle' } | { state: 'sending' } | { state: 'sent' } | { state: 'failed'; error: string };
+  | { state: 'idle' }
+  | { state: 'sending' }
+  /** What was sent decides what the page says next: an approval, or a send-back. */
+  | { state: 'sent'; decision: 'approved' | 'redirected' }
+  | { state: 'failed'; error: string };
 
 function errorOf(data: unknown, fallback: string): string {
   return typeof data === 'object' &&
@@ -101,7 +105,7 @@ export function GateAnswer({
       });
       const data: unknown = await response.json().catch(() => null);
       if (!response.ok) throw new Error(errorOf(data, 'The studio could not send it.'));
-      setSending({ state: 'sent' });
+      setSending({ state: 'sent', decision });
       onSent();
     } catch (error: unknown) {
       setSending({
@@ -136,11 +140,13 @@ export function GateAnswer({
   const status =
     sending.state === 'sending'
       ? 'Sending…'
-      : sending.state === 'sent'
-        ? merges
-          ? 'Sent. GitHub records your approval, waits for the checks, then merges: a few minutes. This page shows the gate closed when it is recorded.'
-          : 'Sent. Waiting for GitHub to record it; this page shows the gate closed when it has.'
-        : '';
+      : sending.state !== 'sent'
+        ? ''
+        : sending.decision === 'redirected'
+          ? 'Sent back. GitHub records it, and the steps before this gate run again with your words.'
+          : merges && sending.decision === 'approved'
+            ? 'Sent. GitHub records your approval, waits for the checks, then merges: a few minutes. This page shows the gate closed when it is recorded.'
+            : 'Sent. Waiting for GitHub to record it; this page shows the gate closed when it has.';
 
   return (
     <section className="gate-answer" aria-labelledby={`${id}-label`}>

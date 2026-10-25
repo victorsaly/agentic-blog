@@ -17,6 +17,15 @@ describe('verdictOf', () => {
     ).toEqual({ kind: 'wait' });
   });
 
+  it('waits for a required check that has not appeared yet, even when the rest passed', () => {
+    const early = [run('Why, lint, types, tests, build', 'completed', 'success')];
+    const axe = 'Accessibility (axe on every page)';
+    expect(verdictOf(early, [axe])).toEqual({ kind: 'wait' });
+    expect(verdictOf([...early, run(axe, 'completed', 'success')], [axe])).toEqual({
+      kind: 'pass',
+    });
+  });
+
   it('passes when every check passed or was not needed', () => {
     expect(
       verdictOf([run('build', 'completed', 'success'), run('deploy', 'completed', 'skipped')]),

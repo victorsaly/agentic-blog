@@ -13,9 +13,13 @@ export type Verdict = { kind: 'wait' } | { kind: 'pass' } | { kind: 'fail'; fail
 /** Conclusions that let a merge through: passed, or not needed for this change. */
 const fine: readonly string[] = ['success', 'skipped', 'neutral'];
 
-/** Wait while there are none yet or any is still going; fail on any that did not pass; else pass. */
-export function verdictOf(runs: readonly CheckRun[]): Verdict {
+/**
+ * Wait while a required check has not appeared yet (a job that waits on another registers late), or any
+ * check is still going; fail on any that did not pass; else pass.
+ */
+export function verdictOf(runs: readonly CheckRun[], required: readonly string[] = []): Verdict {
   if (runs.length === 0 || runs.some((r) => r.status !== 'completed')) return { kind: 'wait' };
+  if (required.some((name) => !runs.some((r) => r.name === name))) return { kind: 'wait' };
   const failed = runs
     .filter((r) => !fine.includes(r.conclusion ?? ''))
     .map((r) => `${r.name} (${r.conclusion ?? 'no conclusion'})`);

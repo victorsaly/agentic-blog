@@ -5,6 +5,7 @@ import {
   closeGate,
   gatesToOpen,
   leadsOut,
+  stillReady,
   sentBackTo,
   stepsBefore,
   stepsToStart,
@@ -258,5 +259,13 @@ describe('the way out', () => {
     expect(leadsOut(out, 'look')).toBe(false);
     expect(leadsOut(out, 'write')).toBe(false);
     expect(leadsOut(workflow, 'look')).toBe(false);
+  });
+
+  it('calls an open gate stale once a step before it holds, until it is done again', async () => {
+    const runs = [await ran('convert'), await ran('image'), await opened('look')];
+    expect(stillReady(workflow, 'look', runs)).toBe(true);
+    const held = [...runs, await ran('image', 'held')];
+    expect(stillReady(workflow, 'look', held)).toBe(false);
+    expect(stillReady(workflow, 'look', [...held, await ran('image')])).toBe(true);
   });
 });

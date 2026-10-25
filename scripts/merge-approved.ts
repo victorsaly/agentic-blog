@@ -1,21 +1,30 @@
 // Why: Victor approves the gate before the way out in the studio, and that press is the merge. The gates
 // workflow runs this after recording his approval on the pull request's branch: it waits for every check on
 // that commit, then merges the pull request, naming him and the gate in the merge commit, so main shows who
-// let the post out. A check that does not pass keeps the post out, and says which. It merges the commit it
-// waited on and no other: a push in the meantime stops it.
-//   GH_TOKEN=… GITHUB_REPOSITORY=owner/repo BRANCH=… BY=… GATE=merge RUN=… npx tsx scripts/merge-approved.ts
+// let the post out. A check that does not pass keeps the post out, and says which. It merges the commit that
+// recorded the approval and no other: if the pull request has moved past it, nothing is merged. It waits for
+// the required checks by name (REQUIRED_CHECKS, one per line), so a check that registers late is not missed.
+//   GH_TOKEN=… GITHUB_REPOSITORY=owner/repo BRANCH=… APPROVED_SHA=… BY=… GATE=merge RUN=…
+//   REQUIRED_CHECKS=… npx tsx scripts/merge-approved.ts
 import { readCheckRuns, verdictOf } from './checks-verdict';
 
 const {
   GH_TOKEN: token,
   GITHUB_REPOSITORY: repo,
   BRANCH: branch,
+  APPROVED_SHA: approved,
   BY: by,
   GATE: gate,
   RUN: run,
 } = process.env;
-if (!token || !repo || !branch || !by || !gate || !run)
-  throw new Error('merge-approved needs GH_TOKEN, GITHUB_REPOSITORY, BRANCH, BY, GATE and RUN.');
+if (!token || !repo || !branch || !approved || !by || !gate || !run)
+  throw new Error(
+    'merge-approved needs GH_TOKEN, GITHUB_REPOSITORY, BRANCH, APPROVED_SHA, BY, GATE and RUN.',
+  );
+const required = (process.env['REQUIRED_CHECKS'] ?? '')
+  .split('\n')
+  .map((name) => name.trim())
+  .filter(Boolean);
 
 const WAIT_MS = 20_000;
 const LIMIT_MS = 20 * 60_000;
@@ -43,10 +52,20 @@ const number = (pull as { number?: unknown } | null)?.number;
 const sha = (pull as { head?: { sha?: unknown } } | null)?.head?.sha;
 if (typeof number !== 'number' || typeof sha !== 'string')
   throw new Error(`No open pull request for ${branch}; nothing to merge.`);
+// Only what Victor approved goes out: a push after his approval would go out unread.
+if (sha !== approved) {
+  console.error(
+    `::error::Not merged: the pull request moved after the approval (it is at ${sha}, the approval is ${approved}). Approve it again in the studio.`,
+  );
+  process.exit(1);
+}
 
 const started = Date.now();
 for (;;) {
-  const verdict = verdictOf(readCheckRuns(await github(`/commits/${sha}/check-runs?per_page=100`)));
+  const verdict = verdictOf(
+    readCheckRuns(await github(`/commits/${sha}/check-runs?per_page=100`)),
+    required,
+  );
   if (verdict.kind === 'fail') {
     console.error(`::error::Not merged: ${verdict.failed.join(', ')} did not pass on ${sha}.`);
     process.exit(1);

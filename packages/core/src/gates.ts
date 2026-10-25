@@ -184,6 +184,15 @@ export function leadsOut(workflow: WorkflowInput, gate: string): boolean {
   );
 }
 
+/**
+ * Whether a gate is still ready to be closed with an approval: every recorded step before it last ended done,
+ * and nothing they wait on changed since. A guard that held after the gate opened, or a step run again, makes
+ * an open gate stale, so an approval would agree to something that is no longer what it asked about.
+ */
+export function stillReady(workflow: WorkflowInput, gate: string, runs: Runs): boolean {
+  return readyIn(workflow, runs)(gate);
+}
+
 /** The steps a gate looks at: what runs again when its owner sends it back. */
 export function stepsBefore(workflow: WorkflowInput, gate: string): string[] {
   return (workflow.nodes[gate]?.after ?? []).filter((id) => {

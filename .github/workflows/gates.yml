@@ -34,6 +34,8 @@ jobs:
         with:
           ref: ${{ github.event.client_payload.branch || github.event.repository.default_branch }}
           path: target
+          # Some history, so a merge run again finds the commit that recorded the approval.
+          fetch-depth: 50
           # Pushes made with GitHub's own token never start CI; BOT_TOKEN pushes as a person.
           token: ${{ secrets.BOT_TOKEN || github.token }}
       - uses: actions/setup-node@v5
@@ -62,10 +64,13 @@ jobs:
           git config user.name "agentic-blog[bot]"
           git config user.email "agentic-blog[bot]@users.noreply.github.com"
           git add -A thoughts
+          # Run again to resume a merge, the approval is already there and nothing is recorded twice.
+          if git diff --cached --quiet; then echo "already recorded"; exit 0; fi
           git commit -m "$TITLE" -m "$BODY"
           git push
 
       - name: Open a pull request for a gate already on main
+        id: pr
         if: github.event.client_payload.branch == ''
         uses: peter-evans/create-pull-request@v8
         with:
@@ -79,18 +84,32 @@ jobs:
           delete-branch: true
 
       # The way out: approving the gate before it is Victor's merge. Once every check on the commit that
-      # records his approval has passed, the pull request is merged in his name; a check that fails keeps it
-      # out. Merged with BOT_TOKEN, so the push to main deploys (GitHub's own token would not start it).
+      # records his approval has passed (the required ones by name, so one that registers late is waited for),
+      # the pull request is merged in his name, and only that commit: a push after it stops the merge. A check
+      # that fails keeps it out; running this workflow again resumes the merge without recording twice. Merged
+      # with BOT_TOKEN, so the push to main deploys (GitHub's own token would not start it).
       - name: Merge the pull request on his approval
-        if: steps.close.outputs.merge == 'true' && github.event.client_payload.branch != ''
+        if: steps.close.outputs.merge == 'true'
         timeout-minutes: 25
         env:
           GH_TOKEN: ${{ secrets.BOT_TOKEN || github.token }}
-          BRANCH: ${{ github.event.client_payload.branch }}
+          BRANCH: ${{ github.event.client_payload.branch || steps.close.outputs.branch }}
+          # A gate already on main: the commit its new pull request was opened with.
+          APPROVED_SHA: ${{ steps.pr.outputs.pull-request-head-sha }}
+          THOUGHT: ${{ github.event.client_payload.thought }}
           BY: ${{ github.event.client_payload.by }}
           GATE: ${{ steps.close.outputs.gate }}
           RUN: ${{ github.event.client_payload.run }}
-        run: npx tsx scripts/merge-approved.ts
+          REQUIRED_CHECKS: |
+            Why, lint, types, tests, build
+            Accessibility (axe on every page)
+        run: |
+          # On the gate's branch, the approval is the last commit that changed the gate's ledger file.
+          if [ -z "$APPROVED_SHA" ]; then
+            APPROVED_SHA=$(git -C target log -1 --format=%H -- "thoughts/$THOUGHT/ledger/$RUN.jsonl")
+          fi
+          export APPROVED_SHA
+          npx tsx scripts/merge-approved.ts
 
       # The run goes on: the steps after the gate (or before it, when it was sent back) start on its branch.
       - name: Start what comes next
