@@ -4,12 +4,14 @@
 // post's own files, so the page cannot tidy the proof), says what changes, and plays the road a thought
 // takes. Everything a sceptic or a builder wants to check (the agents, the route, the files, the sources)
 // sits folded underneath, one layer down, so the pitch stays short and nothing is hidden.
-import { Image } from 'astro:assets';
+import { Image, getImage } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
 import { parse } from 'yaml';
 import Page from '../layouts/Page.astro';
 import FlowChart from '../components/FlowChart.astro';
 import { Tour } from '../islands/Tour';
-import { tour } from '../lib/tour';
+import { tour, tourWordsFrom } from '../lib/tour';
+import tourWords from '../lib/tour-words.json';
 import { firstSentence, phases, rosterFrom, type AgentCardFacts } from '../lib/agents';
 import { settings } from '../lib/settings';
 // The hero print shows the route, not the blogger; site/src/assets/how-it-works/prompts.md says how it was drawn.
@@ -45,6 +47,31 @@ const agentPrompts = import.meta.glob<string>('../../../agents/*/PROMPT.md', {
   import: 'default',
   eager: true,
 });
+// The tour's slides: each station with the real screen of its step, sized here, and the time of every word
+// its clip says, so the page underlines the word being said as a post's read-along does.
+const screens = import.meta.glob<ImageMetadata>('../assets/tour/*.png', {
+  import: 'default',
+  eager: true,
+});
+const timings = tourWordsFrom(tourWords);
+const slides = await Promise.all(
+  tour.map(async (s) => {
+    const shot = screens[`../assets/tour/${s.id}.png`];
+    if (!shot) throw new Error(`the tour station ${s.id} has no screen in site/src/assets/tour/`);
+    const image = await getImage({ src: shot, widths: [640, 960, 1440], format: 'webp' });
+    return {
+      ...s,
+      words: timings[s.id] ?? [],
+      image: {
+        src: image.src,
+        srcSet: image.srcSet.attribute,
+        width: shot.width,
+        height: shot.height,
+      },
+    };
+  }),
+);
+
 const roster = rosterFrom(Object.values(agentCards), Object.values(agentPrompts));
 const byPhase = Object.entries(phases)
   .map(([n, name]) => ({ n: Number(n), name, agents: roster.filter((a) => a.phase === Number(n)) }))
@@ -226,11 +253,13 @@ const trailSteps = [
     <p class="label">The tour</p>
     <h2 id="tour-title">From a voice note to a post, in {tour.length} stations</h2>
     <p class="intro">
-      Press Play to hear it, or step through it yourself. Every word the voice says is on screen.
+      Press Play to hear it, or step through it yourself with the arrow keys. Every word the voice
+      says is on screen, and the word being said is underlined, as on a post read aloud.
     </p>
-    <Tour client:visible stations={tour} />
+    <Tour client:visible stations={slides} />
     <p class="small quiet">
-      Voice made with ElevenLabs. How each clip was made, and with which voice, is written down in <a
+      Read word for word by an AI voice, {settings.media.voice_name ?? settings.site.author}, made
+      with ElevenLabs, as the posts are. How each clip was made is written down in <a
         href={`${repo}/blob/main/docs/audio-sources.md`}>docs/audio-sources.md</a
       >.
     </p>

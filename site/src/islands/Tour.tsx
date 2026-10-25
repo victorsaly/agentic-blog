@@ -1,27 +1,40 @@
-// Why: the tour shows the road a thought takes, one station at a time, with a voice saying what happens
-// there. It only moves when the reader presses Play (motion on request), it works with the sound off, and
-// every line it says is on screen as text. React because the station, the clip and the timer move together.
-// Each station's linocut opens with its line, so the picture changes as the tour moves.
+// Why: the tour shows the road a thought takes, one station at a time, like slides: the real screen of that
+// step, who works there, and what the voice says about it. The voice is the blogger's own, the one that reads
+// the posts, and while it speaks the word being said is underlined exactly as on a post, so a reader can
+// follow or just listen. It only moves when the reader presses Play (motion on request), it works with the
+// sound off, and every line it says is on screen as text. A rail of every station sits under the slide and
+// takes a reader to any of them. The controls sit right under the screen, so Next stays where the thumb
+// is however long the line is. React because the slide, the clip, the timer and the word move together.
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { wordAt, type TimedWord } from '../lib/read-along';
 import { readingTimeMs, type TourStation } from '../lib/tour';
 
+export interface TourSlide extends TourStation {
+  /** Every spoken word of the line with its start and end, from the clip. */
+  words: readonly TimedWord[];
+  /** The real screen of the step, already sized by the build. */
+  image: { src: string; srcSet: string; width: number; height: number };
+}
+
 export interface TourProps {
-  stations: TourStation[];
+  stations: TourSlide[];
 }
 
 /** The pause between one station's line ending and the next station lighting. */
 const BREATH_MS = 450;
 
 export function Tour({ stations }: TourProps): React.JSX.Element {
-  // null: nothing lit yet, the whole route is visible as a still diagram.
-  const [current, setCurrent] = useState<number | null>(null);
+  const [current, setCurrent] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [sound, setSound] = useState(true);
+  // The word being said, while the voice speaks; -1 when no word is.
+  const [said, setSaid] = useState(-1);
   // True only when the tour ran to the end by itself; then Play starts again from the first station.
   const [finished, setFinished] = useState(false);
   const audio = useRef<HTMLAudioElement | null>(null);
   const timer = useRef<number | null>(null);
-  const items = useRef<(HTMLLIElement | null)[]>([]);
+  const frame = useRef<number | null>(null);
+  const region = useRef<HTMLDivElement | null>(null);
   const last = stations.length - 1;
   const currentRef = useRef(current);
   currentRef.current = current;
@@ -35,25 +48,24 @@ export function Tour({ stations }: TourProps): React.JSX.Element {
     clearTimer();
     timer.current = window.setTimeout(() => {
       const i = currentRef.current;
-      if (i === null || i >= last) {
+      if (i >= last) {
         setPlaying(false);
         setFinished(true);
       } else setCurrent(i + 1);
     }, BREATH_MS);
   }, [clearTimer, last]);
 
-  // Each time the lit station changes while playing: say its line, or wait as long as reading it takes.
+  // Each time the slide changes while playing: say its line, or wait as long as reading it takes.
   // A paused clip resumes where it stopped; only a new station (or a clip already finished) starts over.
   useEffect(() => {
     const el = audio.current;
     let live = true; // false once this run is replaced, so a late play() failure cannot start a timer
     clearTimer();
-    if (!playing || current === null) {
+    const station = stations[current];
+    if (!playing || !station) {
       el?.pause();
       return;
     }
-    const station = stations[current];
-    if (!station) return;
     const silent = (): void => {
       if (!live) return;
       timer.current = window.setTimeout(advance, readingTimeMs(station.line) - BREATH_MS);
@@ -77,34 +89,56 @@ export function Tour({ stations }: TourProps): React.JSX.Element {
     };
   }, [current, playing, sound, stations, advance, clearTimer]);
 
-  // While playing, bring the lit station to the top (below the sticky controls, see scroll-margin in
-  // tour.css) so its print and line are in view. On a phone they open under it while the last station's
-  // close above it, so wait for that to settle (--duration-travel) or the page moves after the scroll.
+  // While the voice speaks, follow it word by word, every frame, as the read-along on a post does.
   useEffect(() => {
-    if (!playing || current === null) return;
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const wait = window.setTimeout(
-      () => {
-        items.current[current]?.scrollIntoView({
-          block: 'start',
-          behavior: reduce ? 'auto' : 'smooth',
-        });
-      },
-      reduce ? 0 : 560,
-    );
-    return () => {
-      window.clearTimeout(wait);
+    const el = audio.current;
+    const words = stations[current]?.words ?? [];
+    const stop = (): void => {
+      if (frame.current !== null) window.cancelAnimationFrame(frame.current);
+      frame.current = null;
     };
-  }, [current, playing]);
+    if (!playing || !sound || !el || words.length === 0) {
+      stop();
+      return stop;
+    }
+    const tick = (): void => {
+      if (el.dataset.station === stations[current]?.id && !el.paused)
+        setSaid(wordAt(words, el.currentTime));
+      frame.current = window.requestAnimationFrame(tick);
+    };
+    tick();
+    return stop;
+  }, [current, playing, sound, stations]);
+
+  // A new slide starts with no word underlined.
+  useEffect(() => {
+    setSaid(-1);
+  }, [current]);
 
   useEffect(() => clearTimer, [clearTimer]);
+
+  // The arrow keys turn the slides, as in any presentation, while the focus is anywhere in the tour.
+  useEffect(() => {
+    const el = region.current;
+    if (!el) return;
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+      event.preventDefault();
+      setFinished(false);
+      setCurrent((i) => Math.max(0, Math.min(last, i + (event.key === 'ArrowRight' ? 1 : -1))));
+    };
+    el.addEventListener('keydown', onKey);
+    return () => {
+      el.removeEventListener('keydown', onKey);
+    };
+  }, [last]);
 
   const play = (): void => {
     if (playing) {
       setPlaying(false);
       return;
     }
-    if (current === null || finished) setCurrent(0);
+    if (finished) setCurrent(0);
     setFinished(false);
     setPlaying(true);
   };
@@ -114,124 +148,143 @@ export function Tour({ stations }: TourProps): React.JSX.Element {
     setCurrent(Math.max(0, Math.min(last, i)));
   };
 
-  const state = (i: number): 'done' | 'current' | 'ahead' =>
-    current === null || i > current ? 'ahead' : i === current ? 'current' : 'done';
-
-  const lit = current === null ? null : stations[current];
+  const slide = stations[current];
+  if (!slide) return <div className="tour" />;
+  const spoken = slide.line.split(/\s+/).filter((w) => w !== '');
+  const number = (i: number): string => String(i + 1).padStart(2, '0');
 
   return (
-    <div className="tour" data-started={current !== null}>
-      <div className="tour-controls">
-        <button type="button" className="control filled big-play" onClick={play}>
-          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16">
-            {playing ? (
-              <path d="M3 2h3v12H3zM10 2h3v12h-3z" fill="currentColor" />
-            ) : (
-              <path d="M4 2l10 6-10 6z" fill="currentColor" />
-            )}
-          </svg>
-          {playing
-            ? 'Pause'
-            : current === null
-              ? 'Play the tour'
-              : finished
-                ? 'Play again'
-                : 'Play'}
-        </button>
-        <button
-          type="button"
-          className="control"
-          onClick={() => {
-            go((current ?? 1) - 1);
-          }}
-          disabled={current === null || current === 0}
-        >
-          Back
-        </button>
-        <button
-          type="button"
-          className="control"
-          onClick={() => {
-            go(current === null ? 0 : current + 1);
-          }}
-          disabled={current === last}
-        >
-          Next
-        </button>
-        <button
-          type="button"
-          className="control"
-          aria-pressed={sound}
-          onClick={() => {
-            setSound((s) => !s);
-          }}
-        >
-          <svg aria-hidden="true" width="18" height="16" viewBox="0 0 18 16" fill="none">
-            <path d="M1 5h4l5-4v14l-5-4H1z" fill="currentColor" />
-            {sound && (
-              <path
-                d="M13 4.5a5 5 0 0 1 0 7M15.5 2a8.5 8.5 0 0 1 0 12"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              />
-            )}
-          </svg>
-          Voice
-        </button>
-        <p className="tour-count small quiet" aria-live="polite">
-          {lit && current !== null
-            ? `Station ${String(current + 1)} of ${String(stations.length)}: ${lit.name}`
-            : `${String(stations.length)} stations, under two minutes`}
-        </p>
-      </div>
-
-      <ol className="tour-route">
-        {stations.map((s, i) => (
-          <li
-            key={s.id}
-            data-state={state(i)}
-            ref={(el) => {
-              items.current[i] = el;
+    <div
+      className="tour"
+      role="region"
+      aria-roledescription="slides"
+      aria-label="The tour"
+      ref={region}
+    >
+      <article
+        className="slide"
+        aria-roledescription="slide"
+        aria-label={`${number(current)} of ${String(stations.length)}: ${slide.name}`}
+      >
+        <header className="slide-head">
+          <img
+            className="slide-print"
+            src={`/tour/${slide.id}.png`}
+            alt={slide.print}
+            width={720}
+            height={720}
+          />
+          <div>
+            <p className="slide-count small quiet">
+              Station {number(current)} of {String(stations.length)}
+            </p>
+            <h3 className="slide-name">{slide.name}</h3>
+            <p className="slide-who">
+              {slide.who.map((w) => (
+                <span key={w}>{w}</span>
+              ))}
+            </p>
+          </div>
+        </header>
+        <figure className="slide-screen">
+          <img
+            src={slide.image.src}
+            srcSet={slide.image.srcSet}
+            sizes="(min-width: 64rem) 40rem, 100vw"
+            alt={slide.screen}
+            width={slide.image.width}
+            height={slide.image.height}
+          />
+          <figcaption className="small quiet">The real screen: {slide.from}</figcaption>
+        </figure>
+        <div className="tour-controls">
+          <button type="button" className="control filled big-play" onClick={play}>
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16">
+              {playing ? (
+                <path d="M3 2h3v12H3zM10 2h3v12h-3z" fill="currentColor" />
+              ) : (
+                <path d="M4 2l10 6-10 6z" fill="currentColor" />
+              )}
+            </svg>
+            {playing ? 'Pause' : finished ? 'Play again' : 'Play the tour'}
+          </button>
+          <button
+            type="button"
+            className="control"
+            onClick={() => {
+              go(current - 1);
+            }}
+            disabled={current === 0}
+          >
+            Back
+          </button>
+          <button
+            type="button"
+            className="control"
+            onClick={() => {
+              go(current + 1);
+            }}
+            disabled={current === last}
+          >
+            Next
+          </button>
+          <button
+            type="button"
+            className="control"
+            aria-pressed={sound}
+            onClick={() => {
+              setSound((s) => !s);
             }}
           >
+            <svg aria-hidden="true" width="18" height="16" viewBox="0 0 18 16" fill="none">
+              <path d="M1 5h4l5-4v14l-5-4H1z" fill="currentColor" />
+              {sound && (
+                <path
+                  d="M13 4.5a5 5 0 0 1 0 7M15.5 2a8.5 8.5 0 0 1 0 12"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                />
+              )}
+            </svg>
+            Voice
+          </button>
+        </div>
+        <p className="slide-line" aria-live={playing ? 'off' : 'polite'}>
+          {spoken.map((word, i) => (
+            <span key={i}>
+              <span data-said={i === said ? '' : undefined}>{word}</span>{' '}
+            </span>
+          ))}
+        </p>
+      </article>
+
+      <ol
+        className="tour-rail"
+        style={
+          {
+            '--stops': stations.length,
+            '--reached': current / Math.max(last, 1),
+          } as React.CSSProperties
+        }
+      >
+        {stations.map((s, i) => (
+          <li key={s.id} data-state={i < current ? 'done' : i === current ? 'current' : 'ahead'}>
             <button
               type="button"
-              className="station"
-              aria-current={state(i) === 'current' ? 'step' : undefined}
+              aria-current={i === current ? 'step' : undefined}
               onClick={() => {
                 go(i);
               }}
             >
-              <span className="num" aria-hidden="true">
-                {String(i + 1).padStart(2, '0')}
-              </span>
-              <span className="name">{s.name}</span>
-              <span className="job">{s.job}</span>
-              <span className="who">
-                {s.who.map((w) => (
-                  <span key={w}>{w}</span>
-                ))}
-              </span>
+              <span className="stop" aria-hidden="true" />
+              <span className="num">{number(i)}</span>
+              <span className="rail-name">{s.name}</span>
             </button>
-            <div className="said" aria-hidden={state(i) !== 'current'}>
-              <div>
-                <img
-                  className="said-print"
-                  src={`/tour/${s.id}.png`}
-                  alt={s.print}
-                  width={720}
-                  height={720}
-                  loading="lazy"
-                />
-                <p>
-                  <mark>{s.line}</mark>
-                </p>
-              </div>
-            </div>
           </li>
         ))}
       </ol>
-      {/* eslint-disable-next-line jsx-a11y/media-has-caption -- every line is on screen as text beside it */}
+
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption -- every line is on screen as text above it */}
       <audio
         ref={audio}
         preload="none"

@@ -7,41 +7,42 @@ why: >
 
 # Audio sources
 
-All audio was generated with ElevenLabs on Victor's account. The tour was made through the ElevenLabs
-connector in Claude Code; the pitch video's audio is made by `npm run pitch:voice`, which reads the key
-from `site/.env.local` (never committed). Nothing in the site's build calls ElevenLabs.
+All audio was generated with ElevenLabs on Victor's account. The tour is made by `npm run tour:voice` and
+the pitch video's audio by `npm run pitch:voice`; both read the key from `site/.env.local` (never
+committed). Nothing in the site's build calls ElevenLabs.
 
 ## The tour on /how-it-works (`site/public/tour/`)
 
-Generated on 24 October 2026.
+Made again on 25 October 2026 in the blogger's own voice, the one that reads the posts, so the tour sounds
+like the blog. `npm run tour:voice` makes them the way the voice agent makes a post's reading:
 
-|                 |                                                                                                 |
-| --------------- | ----------------------------------------------------------------------------------------------- |
-| Model           | `eleven_v3`                                                                                     |
-| Voice           | "Chris W", a warm British English male voice (`hoSRtERLhFa8UfJ6P1JP`)                           |
-| Takes           | two per clip; take 1 kept for every clip                                                        |
-| Credits         | 2,948 for all twenty takes (1,474 for the ten kept)                                             |
-| ElevenLabs flow | "Agentic blog — how it works tour" (`e1pFLtDxeRpoN5rpC0VZ`); take 2 of each clip is still there |
-
-`publish.mp3` was made again on 25 October 2026, when the voice agent joined that station: same voice and
-model, one take, through the ElevenLabs API (`text-to-speech`, `mp3_44100_128`) with the key in
-`site/.env.local`, and checked by transcribing it back (`scribe_v1`) against the line, word for word.
+|         |                                                                                                                 |
+| ------- | --------------------------------------------------------------------------------------------------------------- |
+| Voice   | `settings.yml → media.voice_id` ("Victor Saly"), model `eleven_v3`                                              |
+| Pace    | `media.voice_speed` (1.1×), applied with ffmpeg after speaking, as for a post                                   |
+| Timings | ElevenLabs with the time of every character, turned into the time of every word: `site/src/lib/tour-words.json` |
+| Check   | each clip says its line word for word, or nothing is saved; `site/src/lib/tour.test.ts` checks it again         |
+| Takes   | one per clip                                                                                                    |
 
 One clip per station, named by the station's `id`. The exact words of every clip are the `line` of that
-station in [`site/src/lib/tour.ts`](../site/src/lib/tour.ts); the page shows the same text as the caption.
+station in [`site/src/lib/tour.ts`](../site/src/lib/tour.ts); the page shows the same text, and underlines the
+word being said. To change a line: edit it there, then `npm run tour:voice -- <id>`.
 
-| File            | Length | Credits   |
-| --------------- | ------ | --------- |
-| `studio.mp3`    | 11.1 s | 170       |
-| `origin.mp3`    | 8.1 s  | 127       |
-| `interview.mp3` | 8.1 s  | 125       |
-| `structure.mp3` | 11.0 s | 138       |
-| `makers.mp3`    | 17.4 s | 240       |
-| `gates.mp3`     | 16.2 s | 188       |
-| `publish.mp3`   | 16.0 s | see below |
-| `you.mp3`       | 7.4 s  | 104       |
-| `feedback.mp3`  | 10.7 s | 162       |
-| `close.mp3`     | 7.4 s  | 94        |
+| File            | Words | Length |
+| --------------- | ----- | ------ |
+| `studio.mp3`    | 32    | 10.9 s |
+| `origin.mp3`    | 24    | 7.7 s  |
+| `interview.mp3` | 22    | 8.2 s  |
+| `structure.mp3` | 27    | 9.2 s  |
+| `makers.mp3`    | 45    | 15.1 s |
+| `gates.mp3`     | 34    | 11.1 s |
+| `publish.mp3`   | 43    | 13.7 s |
+| `you.mp3`       | 20    | 5.7 s  |
+| `feedback.mp3`  | 31    | 9.3 s  |
+| `close.mp3`     | 18    | 5.9 s  |
+
+The first tour (24 October 2026) was read by "Chris W" (`hoSRtERLhFa8UfJ6P1JP`) through the ElevenLabs
+connector; the pitch video below still is.
 
 ## The pitch video (`scripts/pitch/audio/`)
 

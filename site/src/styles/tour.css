@@ -1,30 +1,121 @@
-/* Why: the tour on /how-it-works is the route drawn as bordered boxes joined by ink, like a diagram in a
-   post. When the reader presses Play the ink runs down from station to station, the lit box fills black
-   like a control that is on, and the line being said is marked in marigold, once. Without motion the
-   same states change at once. Nothing moves until the reader asks. */
+/* Why: the tour on /how-it-works is a set of slides, one station each: the real screen of that step in
+   black and white with one ink hairline round it, the station's linocut and name beside it, and the line the
+   voice says, the word being said underlined with the same strong rule as a post's read-along. Under it a
+   rail of every station, joined by one line from the first stop to the last, inked as far as the tour has
+   come. Nothing moves until the reader asks. */
 
 .tour {
-  margin: var(--space-4) 0 var(--space-4);
-  max-width: 68rem;
+  margin: var(--space-4) 0;
+  max-width: var(--wide);
+}
+
+.slide {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-areas: 'head' 'screen' 'controls' 'line';
+  padding-top: var(--space-4);
+  border-top: var(--rule-strong) solid var(--ink);
+}
+
+.slide-head {
+  grid-area: head;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.slide-head > div {
+  min-width: 0;
+}
+
+/* The station's linocut: a print, so it keeps its paper in dark mode, dimmed. */
+.slide-print {
+  flex: none;
+  width: 4.5rem;
+  height: 4.5rem;
+  background: var(--print-paper);
+  padding: var(--print-pad);
+  filter: var(--print-filter);
+}
+
+.slide-count {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.slide-name {
+  margin: var(--space-1) 0 0;
+  font-size: var(--size-h2);
+  line-height: var(--leading-tight);
+}
+
+.slide-who {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0;
+}
+
+.slide-who span {
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  padding: 0 var(--space-2);
+  border: var(--rule-width) solid var(--ink);
+}
+
+/* The real screen, in black and white like everything else on the page, every one the same shape so the
+   slide does not jump. In dark mode it keeps its paper, dimmed, like a print. */
+.slide-screen {
+  grid-area: screen;
+  margin: 0;
+  filter: var(--print-filter);
+}
+
+.slide-screen img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  object-position: top left;
+  border: var(--rule-width) solid var(--ink);
+  background: var(--print-paper);
+  filter: grayscale(1);
+}
+
+.slide-screen figcaption {
+  margin-top: var(--space-2);
+}
+
+.slide-line {
+  grid-area: line;
+  margin: 0;
+  max-width: 34ch;
+  font-size: var(--size-message);
+  line-height: 1.5;
+  letter-spacing: var(--tracking-message);
+}
+
+/* The word being said: a strong ink rule under it, as on a post read aloud. */
+.slide-line [data-said] {
+  text-decoration-line: underline;
+  text-decoration-thickness: var(--rule-strong);
+  text-underline-offset: 0.24em;
+  text-decoration-skip-ink: none;
 }
 
 .tour-controls {
-  position: sticky;
-  top: 4.5rem; /* below the sticky header */
-  z-index: 1;
+  grid-area: controls;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-3) 0;
-  background: var(--paper);
-  border-bottom: var(--rule-width) solid var(--ink);
 }
 
 .tour-controls .big-play {
   font-size: var(--size-body);
   padding-inline: var(--space-3);
-  min-width: 10rem;
+  min-width: 11rem;
 }
 
 .tour-controls .control:disabled {
@@ -32,244 +123,136 @@
   cursor: default;
 }
 
-.tour-count {
-  margin: 0 0 0 var(--space-2);
-  font-variant-numeric: tabular-nums;
-}
-
-.tour-route {
+/* The rail: every station, joined by one line that runs from the first stop to the last. */
+.tour-rail {
+  --stops: 10;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--stops), minmax(0, 1fr));
   list-style: none;
-  max-width: calc(var(--measure) + 6rem);
+  max-width: none;
   margin: var(--space-4) 0 0;
   padding: 0;
 }
 
-.tour-route li {
-  position: relative;
-  padding-left: 3.5rem;
-  scroll-margin-top: 10rem; /* clear of the sticky header and the tour's controls */
-}
-
-.tour-route li + li {
-  margin-top: var(--space-4);
-}
-
-/* The line the thought travels: a hairline always, an ink rule over it once the station is passed. */
-.tour-route li::before,
-.tour-route li::after {
+.tour-rail::before,
+.tour-rail::after {
   content: '';
   position: absolute;
-  left: 1.25rem;
-  top: 0;
-  bottom: calc(-1 * var(--space-4));
-  width: var(--rule-width);
+  top: calc(var(--tap) / 2 - 0.5px);
+  left: calc(50% / var(--stops));
+  height: var(--rule-width);
   background: var(--rule);
+  width: calc(100% - 100% / var(--stops));
 }
 
-.tour-route li:last-child::before,
-.tour-route li:last-child::after {
-  display: none;
-}
-
-.tour-route li::after {
-  width: var(--rule-strong);
-  margin-left: -1px;
+/* Inked as far as the tour has come. */
+.tour-rail::after {
+  height: var(--rule-strong);
+  margin-top: -1px;
   background: var(--ink);
-  transform: scaleY(0);
-  transform-origin: top;
-  transition: transform var(--duration-travel) var(--ease-in-out);
+  width: calc((100% - 100% / var(--stops)) * var(--reached, 0));
 }
 
-.tour-route li[data-state='done']::after {
-  transform: scaleY(1);
-}
-
-.station {
+.tour-rail button {
   position: relative;
+  z-index: 1;
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: var(--space-1) var(--space-3);
+  justify-items: center;
+  gap: var(--space-1);
   width: 100%;
-  min-height: var(--tap);
-  padding: var(--space-2) var(--space-3);
-  text-align: left;
-  background: var(--paper);
+  padding: 0 0 var(--space-2);
+  background: none;
+  border: 0;
   color: var(--ink);
-  border: var(--rule-width) solid var(--ink);
-  transition:
-    background-color 200ms ease,
-    color 200ms ease,
-    transform var(--duration-press) var(--ease-out);
+  text-align: center;
+  cursor: pointer;
 }
 
-.station:hover {
-  background: var(--paper);
-  color: var(--ink);
+.tour-rail .stop {
+  display: grid;
+  place-items: center;
+  width: var(--tap);
+  height: var(--tap);
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .station:hover {
-    background: var(--hover);
-  }
-}
-
-.station:active {
-  transform: scale(0.99);
-}
-
-/* The stop on the line, to the left of each box: a square, filled once the thought has reached it. */
-.station::before {
+/* The stop itself: a square on the line, filled once the tour has reached it. */
+.tour-rail .stop::before {
   content: '';
-  position: absolute;
-  left: calc(-3.5rem + 1.25rem - 0.45rem);
-  top: 1rem;
   width: 0.9rem;
   height: 0.9rem;
   border: var(--rule-width) solid var(--ink);
   background: var(--paper);
-  transition: background-color 200ms ease;
 }
 
-li[data-state='done'] .station::before,
-li[data-state='current'] .station::before {
+.tour-rail [data-state='done'] .stop::before,
+.tour-rail [data-state='current'] .stop::before {
   background: var(--ink);
 }
 
-li[data-state='current'] .station,
-li[data-state='current'] .station:hover {
-  background: var(--ink);
-  color: var(--paper);
+.tour-rail [data-state='current'] .stop::before {
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
-.station .num {
-  grid-column: 2;
-  grid-row: 1;
+.tour-rail .num {
   font-size: var(--size-small);
   font-variant-numeric: tabular-nums;
-  color: inherit;
-  opacity: 0.7;
 }
 
-.station .name {
-  grid-column: 1;
-  grid-row: 1;
+.tour-rail .rail-name {
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  max-width: 9ch;
+}
+
+.tour-rail [data-state='current'] .num,
+.tour-rail [data-state='current'] .rail-name {
   font-weight: 700;
 }
 
-.station .job {
-  grid-column: 1 / -1;
-  font-size: var(--size-small);
-}
-
-.station .who {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-}
-
-.station .who span {
-  font-size: 0.8125rem;
-  line-height: 1.6;
-  padding: 0 var(--space-2);
-  border: var(--rule-width) solid currentColor;
-}
-
-/* What the voice says: opens under the lit station. Height through the grid, the one place it moves. */
-.said {
-  display: grid;
-  grid-template-rows: 0fr;
-  opacity: 0;
-  transition:
-    grid-template-rows var(--duration-travel) var(--ease-out),
-    opacity 300ms ease;
-}
-
-.said > div {
-  overflow: hidden;
-}
-
-li[data-state='current'] .said {
-  grid-template-rows: 1fr;
-  opacity: 1;
-}
-
-.said p {
-  margin: var(--space-3) 0 0;
-  font-size: var(--size-message);
-  line-height: 1.4;
-  letter-spacing: var(--tracking-message);
-}
-
-.said mark {
-  background: var(--mark);
-  color: var(--mark-ink);
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
-  padding: 0 0.15em;
-}
-
-/* The station's linocut, above its line: a print, so it keeps its paper in dark mode, dimmed. */
-.said-print {
-  display: block;
-  width: 100%;
-  max-width: 22rem;
-  height: auto;
-  margin-top: var(--space-3);
-  background: var(--print-paper);
-  padding: var(--print-pad);
-  filter: var(--print-filter);
-}
-
-/* On a desk the line is said beside its station, in the column to the right, instead of under it. */
-@media (min-width: 72rem) {
-  .tour-route {
-    max-width: 34rem;
+@media (hover: hover) and (pointer: fine) {
+  .tour-rail button:hover .rail-name {
+    text-decoration: underline;
   }
-  .said {
+}
+
+/* On a desk the screen leads on the left; the name and the line sit beside it. */
+@media (min-width: 64rem) {
+  .slide {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    grid-template-areas: 'screen head' 'screen line' 'controls line';
+    grid-template-rows: auto 1fr auto;
+    column-gap: var(--space-5);
+  }
+  .slide-line {
+    font-size: clamp(1.5rem, 1rem + 0.9vw, 1.875rem);
+  }
+}
+
+/* On a phone the rail shows its stops and numbers; the names are read out, not shown. The heading keeps
+   the height of the longest (two lines of name, two of agents) and the caption room for two lines, so Next
+   stays under the thumb. */
+@media (max-width: 48rem) {
+  .slide-head {
+    align-items: start;
+    min-height: 10.5rem;
+  }
+  .slide-screen figcaption {
+    min-height: 3.2em; /* two lines, the longest source */
+  }
+  .tour-rail .rail-name {
     position: absolute;
-    top: 0;
-    left: calc(100% + var(--space-5));
-    width: min(28rem, calc(100vw - 34rem - 8rem));
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
-  .said-print {
-    max-width: 18rem;
-    margin-top: 0;
+  .tour-rail .num {
+    font-size: 0.75rem;
   }
-  /* A hairline from the lit box to what is being said about it. */
-  li[data-state='current'] .said::before {
-    content: '';
-    position: absolute;
-    left: calc(-1 * var(--space-5));
-    top: 1.4rem;
-    width: calc(var(--space-5) - var(--space-2));
-    border-top: var(--rule-width) solid var(--ink);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tour-route li::after,
-  .station,
-  .station::before,
-  .said {
-    transition: none;
-  }
-}
-
-@media (max-width: 40rem) {
-  .tour-route li {
-    padding-left: 2.25rem;
-    scroll-margin-top: 15rem; /* the controls wrap to two rows */
-  }
-  .tour-route li::before,
-  .tour-route li::after {
-    left: 0.6rem;
-  }
-  .station::before {
-    left: calc(-2.25rem + 0.6rem - 0.45rem);
-  }
-  .tour-count {
-    flex-basis: 100%;
-    margin-left: 0;
+  .tour-rail .stop {
+    width: 100%;
   }
 }

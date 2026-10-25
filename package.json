@@ -28,6 +28,8 @@
     "agent": "npm run agent --workspace agents --",
     "dev:fresh": "npm run dev:fresh --workspace site",
     "pitch:voice": "tsx --env-file=site/.env.local scripts/pitch/voice.ts",
+    "tour:voice": "tsx --env-file=site/.env.local scripts/tour-voice.ts",
+    "tour:screens": "tsx scripts/tour-screens.ts",
     "pitch": "tsx scripts/pitch/record.ts"
   },
   "devDependencies": {
