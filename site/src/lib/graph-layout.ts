@@ -230,47 +230,40 @@ export function layoutGraph(
     single[k]?.push(id);
   }
 
-  // Around the ring, each topic's own ideas sit over its arc, and between two topics there is a gap: the
-  // ideas they share sit in it, or it is left empty, one idea wide, so no two arcs ever touch.
-  const sequence: (string | null)[] = [];
-  const spans: { k: number; a: number; b: number }[] = [];
-  const zones: { k: number; next: number; ids: string[]; from: number; to: number }[] = [];
-  const starts: number[] = [];
+  // Around the ring every topic's arc is as long as all the ideas it holds, shared ones included, so the
+  // arc and its count agree. Between two neighbours there is a gap: the ideas they share sit in it, or it is
+  // left one idea wide, so no two arcs ever touch. A topic's own ideas are spread along its arc.
+  const counts = new Map(graph.topics.map((t) => [t.topic, t.ideas]));
+  const arcUnits = order.map((t) => Math.max(counts.get(t) ?? 0, 1));
+  const gapUnits = order.map((_, k) => Math.max(between[k]?.length ?? 0, 1));
+  const total = [...arcUnits, ...gapUnits].reduce((sum, u) => sum + u, 0);
+  const slot = total > 0 ? TAU / total : TAU;
+  const arcSpans: [number, number][] = [];
+  const groups: { k: number; next: number; ids: string[]; mid: number }[] = [];
+  const unturned = new Map<string, number>();
+  let at = 0;
   for (let k = 0; k < n; k++) {
-    starts[k] = sequence.length;
-    for (const id of single[k] ?? []) {
-      spans.push({ k, a: sequence.length, b: sequence.length + 1 });
-      sequence.push(id);
-    }
-    if (n < 2) continue;
+    const length = (arcUnits[k] ?? 1) * slot;
+    arcSpans[k] = [at, at + length];
+    const own = single[k] ?? [];
+    own.forEach((id, i) => unturned.set(id, at + ((i + 0.5) * length) / own.length));
+    at += length;
+    const width = (gapUnits[k] ?? 1) * slot;
     const group = between[k] ?? [];
-    const from = sequence.length;
-    if (group.length > 0) sequence.push(...group);
-    else sequence.push(null);
-    zones.push({ k, next: (k + 1) % n, ids: group, from, to: sequence.length });
+    group.forEach((id, i) => unturned.set(id, at + ((i + 0.5) * width) / group.length));
+    if (group.length > 0) groups.push({ k, next: (k + 1) % n, ids: group, mid: at + width / 2 });
+    at += width;
   }
-  const slot = sequence.length > 0 ? TAU / sequence.length : TAU;
+  const arcOf = (k: number): [number, number] => arcSpans[k] ?? [0, slot];
 
   // The biggest topic is centred at the top.
-  const arcOf = (k: number): [number, number] => {
-    const own = spans.filter((s) => s.k === k);
-    if (own.length > 0)
-      return [Math.min(...own.map((s) => s.a)) * slot, Math.max(...own.map((s) => s.b)) * slot];
-    // No idea could be spared for it: a short arc where its own ideas would have started.
-    const at = starts[k] ?? 0;
-    return [(at - 0.5) * slot, at * slot];
-  };
   const biggest = index.get(graph.topics[0]?.topic ?? '');
   const [topA = 0, topB = 0] = biggest === undefined ? [] : arcOf(biggest);
   const turn = -Math.PI / 2 - (topA + topB) / 2;
   const gap = slot * 0.12;
-  const groups = zones
-    .filter((z) => z.ids.length > 0)
-    .map((z) => ({ k: z.k, next: z.next, ids: z.ids, mid: ((z.from + z.to) / 2) * slot }));
+  const angleOf = new Map([...unturned].map(([id, angle]) => [id, angle + turn]));
+  for (const g of groups) g.mid += turn;
 
-  const angleOf = new Map(
-    sequence.flatMap((id, i) => (id === null ? [] : [[id, (i + 0.5) * slot + turn] as const])),
-  );
   const ideas: PlacedIdea[] = graph.ideas.map((idea) => {
     const angle = angleOf.get(idea.id) ?? 0;
     const [x, y] = polar(o.ideaRadius, angle);
@@ -285,7 +278,6 @@ export function layoutGraph(
     };
   });
 
-  const counts = new Map(graph.topics.map((t) => [t.topic, t.ideas]));
   const lineHeight = o.fontSize * 1.15;
   const placed: PlacedTopic[] = order.map((topic, k) => {
     const [a, b] = arcOf(k);
@@ -398,10 +390,10 @@ export function layoutGraph(
     };
   }
 
-  // Lines are bundled so they read as a few strands, not a tangle. Ideas between two neighbouring topics
-  // run down into one knot over the gap between the arcs, and one short fork joins the knot to each arc.
-  // A line to a topic across the ring dives through the middle and arrives along the same last stretch as
-  // every other line to that topic. Every other idea drops straight onto its own arc.
+  // Lines are bundled so they read as a few strands, not a tangle, and none crosses the middle, where the
+  // mark and an idea's words sit. Ideas two neighbouring topics share drop straight down onto a short line
+  // that runs along the ring over the gap between the arcs, and that line turns down onto each arc's end.
+  // A line to a topic across the ring goes round the outside. Every other idea drops onto its own arc.
   const arcs = new Map(placed.map((p) => [p.topic, p]));
   const edges: PlacedEdge[] = [];
   const path = (...points: [string, number, number][]): string =>
@@ -410,22 +402,26 @@ export function layoutGraph(
   const joined = new Set<string>();
 
   const knotRadius = o.topicRadius + (o.ideaRadius - o.topicRadius) * 0.42;
+  /** The start of an SVG arc command along the circle of radius r, from one angle to another. */
+  const along = (r: number, from: number, to: number): string => {
+    const turnBy = Math.atan2(Math.sin(to - from), Math.cos(to - from));
+    return `A${String(round(r))} ${String(round(r))} 0 0 ${turnBy > 0 ? '1' : '0'} `;
+  };
   for (const g of groups) {
     const left = placed[g.k];
     const right = placed[g.next];
     if (left === undefined || right === undefined) continue;
-    const at = g.mid + turn;
-    const [kx, ky] = polar(knotRadius, at);
+    const [kx, ky] = polar(knotRadius, g.mid);
     for (const id of g.ids) {
       const idea = ideas.find((i) => i.id === id);
       if (idea === undefined) continue;
       const [fx, fy] = from(idea.angle);
-      const [cx, cy] = polar(knotRadius + (o.ideaRadius - knotRadius) * 0.35, idea.angle);
+      const [dx, dy] = polar(knotRadius, idea.angle);
       edges.push({
         topics: [left.topic, right.topic],
         idea: idea.id,
         post: idea.post,
-        d: path(['M', fx, fy], ['Q', cx, cy], [' ', kx, ky]),
+        d: path(['M', fx, fy], ['L', dx, dy], [along(knotRadius, idea.angle, g.mid), kx, ky]),
       });
       joined.add(`${id} ${left.topic}`).add(`${id} ${right.topic}`);
     }
@@ -433,8 +429,12 @@ export function layoutGraph(
       [left, left.end],
       [right, right.start],
     ] as const) {
+      const [ax, ay] = polar(knotRadius, end);
       const [tx, ty] = polar(o.topicRadius + 2, end);
-      edges.push({ topics: [p.topic], d: path(['M', kx, ky], ['L', tx, ty]) });
+      edges.push({
+        topics: [p.topic],
+        d: path(['M', kx, ky], [along(knotRadius, g.mid, end), ax, ay], ['L', tx, ty]),
+      });
     }
   }
 
@@ -459,17 +459,20 @@ export function layoutGraph(
         // Across the ring: out past the dots, round the outside, and in at the topic's arc, so the
         // line never crosses the middle where an idea's words appear.
         const outer = o.ideaRadius + o.dot * 3;
-        const turnTo = Math.atan2(Math.sin(to - idea.angle), Math.cos(to - idea.angle));
         const [ox, oy] = polar(o.ideaRadius + o.dot * 1.5, idea.angle);
         const [ax, ay] = polar(outer, idea.angle);
         const [bx, by] = polar(outer, to);
         const [tx, ty] = polar(o.topicRadius + 2, to);
-        const round3 = `A${String(round(outer))} ${String(round(outer))} 0 0 ${turnTo > 0 ? '1' : '0'} `;
         edges.push({
           topics: [topic],
           idea: idea.id,
           post: idea.post,
-          d: path(['M', ox, oy], ['L', ax, ay], [round3, bx, by], ['L', tx, ty]),
+          d: path(
+            ['M', ox, oy],
+            ['L', ax, ay],
+            [along(outer, idea.angle, to), bx, by],
+            ['L', tx, ty],
+          ),
         });
       }
     }

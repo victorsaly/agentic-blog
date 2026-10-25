@@ -125,12 +125,15 @@ const pointing =
     )
     .join('');
 // Tabbing to an idea in the list sets its words in the middle of the picture, as pointing at its dot does.
+// Only one idea's words can show, so the same order as for topics holds: pointing at a dot wins over the
+// keyboard, and the idea in focus steps back while a pointer rests on a dot.
+const pointingAtDot = ':not(:has(.graph-picture [data-idea]:hover))';
 const focusing =
   graph.ideas
     .filter((i) => /^[a-z0-9:-]+$/.test(i.id))
     .map(
       (i) =>
-        `.walk:has([data-item="${i.id}"] a:focus-visible) .graph-picture [data-for="${i.id}"]{visibility:visible}`,
+        `.walk:has([data-item="${i.id}"] a:focus-visible)${pointingAtDot} .graph-picture [data-for="${i.id}"]{visibility:visible}`,
     )
     .join('') + '.walk:has(.ideas a:focus-visible) .has-tips .core{visibility:hidden}';
 const css = `${focusing}@media (hover:none),(pointer:coarse){${rules(false)}}@media (hover:hover) and (pointer:fine){${rules(true)}${pointing}}`;
