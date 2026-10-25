@@ -6,7 +6,7 @@
 // Usage:
 //   npm run pr:shots -- --pr 109 --page /how-it-works --part tour=.tour [--part ...]
 //     [--after http://localhost:4321] [--before https://blog.victorsaly.com] [--devices desk,phone]
-//     [--wait 1500] [--publish]
+//     [--click "button:has-text('Ask')"] [--wait 1500] [--publish]
 import { execFileSync } from 'node:child_process';
 import {
   cpSync,
@@ -43,6 +43,8 @@ const page = one('--page', '/');
 const before = one('--before', 'https://blog.victorsaly.com');
 const after = one('--after', 'http://localhost:4321');
 const wait = Number(one('--wait', '1500'));
+// Something to press before the pictures, when the part only shows after it (a panel, a tab, a menu).
+const click = one('--click', '');
 const chosen = one('--devices', 'desk,phone')
   .split(',')
   .filter((d): d is Device => d in devices);
@@ -117,6 +119,10 @@ for (const device of chosen) {
       await p.waitForTimeout(wait);
       await p.evaluate('window.scrollTo(0, 0)');
       await p.waitForTimeout(300);
+      if (click) {
+        await p.locator(click).first().click();
+        await p.waitForTimeout(wait);
+      }
       const file = join(out, `${part.name}-${device}-${when}.png`);
       // An older picture of a part that is no longer there must not pass for the current one.
       rmSync(file, { force: true });

@@ -1,15 +1,16 @@
-// Why: the reader's side of the chat. It answers a question from the published posts, or from the one post
-// the reader is on, with the earlier turns the reader's own page sends back, and keeps nothing: no question,
-// answer or address is stored or logged. It is closed until the site is public (the corpus
-// says so), except in local development; a per-visitor burst limit runs in Cloudflare's memory, and the
-// spend cap lives on the Anthropic key itself.
+// Why: the reader's side of the chat. It answers a question from what the site publishes, picking the posts
+// and pages that match the question (or the one post the reader is on), with the earlier turns the
+// reader's own page sends back, and keeps nothing: no question, answer or address is stored or logged. It
+// is closed until the site is public (the corpus says so), except in local development; a per-visitor
+// burst limit runs in Cloudflare's memory, and the spend cap lives on the Anthropic key itself.
 import Anthropic from '@anthropic-ai/sdk';
 import {
   conversation,
-  corpusFor,
+  corpusText,
   readAnswer,
   readQuestion,
-  systemPrompt,
+  relevantCorpus,
+  rulesText,
   type Corpus,
 } from '../src/lib/ask';
 import { json, problem, type Handler } from './_lib';
@@ -37,14 +38,22 @@ export const onRequestPost: Handler = async ({ request, env }) => {
 
   const asked = readQuestion(await request.json().catch(() => null));
   if (!asked.ok) return problem(asked.error, 400);
-  const scoped = corpusFor(corpus, asked.post);
+  const scoped = relevantCorpus(corpus, asked);
+
+  // The rules and the site's own pages are the same for every reader, so they are cached; the posts that
+  // match this question follow them.
+  const stable = `${rulesText(scoped)}\n\n${corpusText({ ...scoped, posts: [] })}`;
+  const matched = corpusText({ ...scoped, pages: [] });
 
   const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
   try {
     const response = await client.messages.create({
       model: corpus.model,
       max_tokens: 1200,
-      system: [{ type: 'text', text: systemPrompt(scoped), cache_control: { type: 'ephemeral' } }],
+      system: [
+        { type: 'text', text: stable, cache_control: { type: 'ephemeral' } },
+        ...(matched ? [{ type: 'text' as const, text: matched }] : []),
+      ],
       messages: conversation(asked),
     });
     if ((response.stop_reason as string) === 'refusal')
