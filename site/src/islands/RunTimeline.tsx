@@ -20,6 +20,7 @@ import { moneyOf, type Currency } from '../lib/money';
 import { formatDate } from '../lib/content';
 import { usePoll } from './use-poll';
 import { GateAnswer } from './GateAnswer';
+import { Markdown } from './Markdown';
 import { gateOf } from '../lib/gates';
 
 const GOING_MS = 3_000;
@@ -223,7 +224,7 @@ export function RunTimeline({ titles, currency }: RunTimelineProps): React.JSX.E
                   +{clockOf(run.startedAt, line.at)}
                 </time>
               </span>
-              <span className="told">
+              <div className="told">
                 <span>
                   {line.who !== null && <strong>{line.who} </strong>}
                   {line.what}
@@ -234,10 +235,16 @@ export function RunTimeline({ titles, currency }: RunTimelineProps): React.JSX.E
                     </>
                   )}
                 </span>
-                {line.detail !== null && (
-                  <span className={line.text ? 'streamed' : 'detail quiet'}>{line.detail}</span>
-                )}
-              </span>
+                {line.detail !== null &&
+                  (line.text ? (
+                    // What an agent writes is Markdown; it reads as it will, not as source.
+                    <div className="streamed">
+                      <Markdown text={line.detail} />
+                    </div>
+                  ) : (
+                    <span className="detail quiet">{line.detail}</span>
+                  ))}
+              </div>
             </li>
           ))}
         </ol>

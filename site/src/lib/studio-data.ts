@@ -21,14 +21,17 @@ interface ThoughtEntry {
 }
 interface VersionEntry {
   id: string;
+  body?: string;
   data: { kind: string; reviewed: boolean };
 }
 interface SourcesEntry {
   id: string;
+  body?: string;
   data: { reviewed: boolean };
 }
 interface VoiceEntry {
   id: string;
+  body?: string;
   data: { audio: string; reviewed: boolean };
 }
 
@@ -61,17 +64,19 @@ export function loadWaiting(): Promise<ThoughtWaiting[]> {
       leaf: leafOf(v.id),
       kind: v.data.kind,
       reviewed: v.data.reviewed,
+      body: v.body,
     }));
     const sources = ((await getCollection('sources')) as unknown as SourcesEntry[]).map((s) => ({
       slug: thoughtSlugOf(s.id),
       reviewed: s.data.reviewed,
+      body: s.body,
     }));
     const voices = ((await getCollection('voices')) as unknown as VoiceEntry[]).map((v) => {
       const slug = thoughtSlugOf(v.id);
       const audio = Object.entries(recordings).find(([path]) =>
         path.endsWith(`/thoughts/${slug}/voice/${v.data.audio}`),
       )?.[1];
-      const voice = { slug, leaf: leafOf(v.id), reviewed: v.data.reviewed };
+      const voice = { slug, leaf: leafOf(v.id), reviewed: v.data.reviewed, body: v.body };
       return audio ? { ...voice, audio } : voice;
     });
     return waitingForReview(thoughts, versions, sources, voices);

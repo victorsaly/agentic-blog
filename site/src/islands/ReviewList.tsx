@@ -1,8 +1,11 @@
 // Why: the studio's list of what the agents wrote that Victor has not read, with a way to say "read it" in
 // place: tick the files, press one button, and a pull request flipping their flags is opened for him to
-// merge. Without a script the list still shows each file and where it lives, so it can be done by hand.
+// merge. Without a script the list still shows each file and where it lives, so it can be done by hand. Each
+// file can be read right here, as it reads rather than as Markdown source: a draft and the sources have no
+// page to go to.
 import { useId, useState } from 'react';
 import type { ThoughtWaiting } from '../lib/review';
+import { Markdown } from './Markdown';
 
 type Status =
   | { kind: 'idle' }
@@ -108,6 +111,12 @@ export function ReviewList({ waiting }: ReviewListProps): React.JSX.Element {
                     <a className="read" href={w.href}>
                       Read it
                     </a>
+                  )}
+                  {w.text !== undefined && (
+                    <details className="read-here">
+                      <summary>Read here</summary>
+                      <Markdown text={w.text} />
+                    </details>
                   )}
                   {w.listen && (
                     // eslint-disable-next-line jsx-a11y/media-has-caption -- it reads the idea word for word, and the idea is its text
