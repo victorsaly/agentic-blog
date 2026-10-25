@@ -20,23 +20,18 @@ export interface OpenPull {
 /** At most this many branches are asked for the file, to stay inside the Worker's request limit. */
 const CHECKS = 8;
 
-/**
- * The open pull request whose branch holds `path`, or null when none does: the file is on main (every branch
- * made since inherits it, so main is asked first and wins), or it is not pushed. Branches that name the
- * thought are asked first.
- */
-export async function pullHolding(env: Env, path: string, slug: string): Promise<OpenPull | null> {
-  const base = `https://api.github.com/repos/${env.GITHUB_REPO}`;
-  const headers = githubHeaders(env);
-  const onMain = await fetch(`${base}/contents/${path}?ref=main`, { headers });
-  if (onMain.ok) return null;
-  const response = await fetch(`${base}/pulls?state=open&per_page=50`, { headers });
+/** The repository's open pull requests, newest first, read back from GitHub. */
+export async function openPulls(env: Env): Promise<OpenPull[]> {
+  const response = await fetch(
+    `https://api.github.com/repos/${env.GITHUB_REPO}/pulls?state=open&per_page=50`,
+    { headers: githubHeaders(env) },
+  );
   if (!response.ok)
     throw new Error(`GitHub did not list the pull requests (${String(response.status)}).`);
   const listed: unknown = await response.json();
   if (!Array.isArray(listed))
     throw new Error('GitHub sent something that is not a list of pull requests.');
-  const pulls = listed.flatMap((p: unknown): OpenPull[] => {
+  return listed.flatMap((p: unknown): OpenPull[] => {
     if (typeof p !== 'object' || p === null) return [];
     const {
       number,
@@ -49,6 +44,24 @@ export async function pullHolding(env: Env, path: string, slug: string): Promise
       ? [{ number, url, branch }]
       : [];
   });
+}
+
+/** The open pull request a thought's work happens on: the newest whose branch names the thought. */
+export async function pullFor(env: Env, slug: string): Promise<OpenPull | null> {
+  return (await openPulls(env)).find((p) => p.branch.includes(slug)) ?? null;
+}
+
+/**
+ * The open pull request whose branch holds `path`, or null when none does: the file is on main (every branch
+ * made since inherits it, so main is asked first and wins), or it is not pushed. Branches that name the
+ * thought are asked first.
+ */
+export async function pullHolding(env: Env, path: string, slug: string): Promise<OpenPull | null> {
+  const base = `https://api.github.com/repos/${env.GITHUB_REPO}`;
+  const headers = githubHeaders(env);
+  const onMain = await fetch(`${base}/contents/${path}?ref=main`, { headers });
+  if (onMain.ok) return null;
+  const pulls = await openPulls(env);
   const ordered = [
     ...pulls.filter((p) => p.branch.includes(slug)),
     ...pulls.filter((p) => !p.branch.includes(slug)),

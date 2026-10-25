@@ -16,12 +16,11 @@ interface Props {
   id: string;
   /** Where each idea's link lands: the section of its post that says it. */
   hrefs: Map<string, string>;
-  texts: Map<string, string>;
   name: string;
   class?: string;
 }
 
-const { layout, id, hrefs, texts, name, class: className } = Astro.props;
+const { layout, id, hrefs, name, class: className } = Astro.props;
 const o = layout.options;
 
 // The mark is drawn in currentColor; its mask gets an id of this picture's own.
@@ -99,7 +98,6 @@ const markY = -(markHeight + nameSize * 1.2) / 2;
           </a>
         ) : (
           <g data-t={i.topics.join(' ')} data-p={i.post} data-idea={i.id}>
-            <title>{texts.get(i.id)}</title>
             <circle cx={i.x} cy={i.y} r={o.dot} />
           </g>
         ),

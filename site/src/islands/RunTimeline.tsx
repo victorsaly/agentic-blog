@@ -3,7 +3,8 @@
 // is checked against the chain as it is kept, so the timeline matches the run's ledger file line for line.
 // While the run is going it asks for what is new every few seconds and the clock ticks as numbers; once the
 // run has finished it stops asking. A run gone silent is said to be so. Only the state is announced. A
-// gate's run that is still waiting carries the control to answer it (GateAnswer).
+// gate's run that is still waiting carries the control to answer it (GateAnswer); a run that did not finish,
+// or that a guard held, carries Run again (RunAgain).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { agentName } from '../lib/agent-runs';
 import {
@@ -24,6 +25,7 @@ import { RouteDrawing } from './RouteDrawing';
 import { liveRoute, type BuiltStep } from '../lib/route-live';
 import type { RouteLayout } from '@roadbook/core/route';
 import { GateAnswer } from './GateAnswer';
+import { RunAgain } from './RunAgain';
 import { Markdown } from './Markdown';
 import { gateOf } from '../lib/gates';
 
@@ -68,6 +70,8 @@ export interface RunTimelineProps {
   layout: RouteLayout;
   /** Each thought's steps as the ledgers left them at build time, by folder name. */
   builtStates: Record<string, Record<string, BuiltStep>>;
+  /** What one run of each agent and guard may cost, by its card, for Run again. */
+  allowances: Record<string, number>;
 }
 
 export function RunTimeline({
@@ -75,6 +79,7 @@ export function RunTimeline({
   currency,
   layout,
   builtStates,
+  allowances,
 }: RunTimelineProps): React.JSX.Element {
   const feed = useRunsFeed();
   const [status, setStatus] = useState<Status>({
@@ -215,6 +220,18 @@ export function RunTimeline({
           </dd>
         </div>
       </dl>
+
+      {/* A run that did not finish, or that a guard held, can be run again from here. */}
+      {gate === null &&
+        (run.state === 'failed' || run.state === 'held') &&
+        allowances[run.agent] !== undefined && (
+          <RunAgain
+            agent={run.agent}
+            thought={run.thought}
+            allowance={allowances[run.agent] ?? 0}
+            currency={currency}
+          />
+        )}
 
       {gate?.open === true && (
         <GateAnswer
