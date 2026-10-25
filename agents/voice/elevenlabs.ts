@@ -1,7 +1,6 @@
-// Why: the one place the voice agent leaves the machine. The text goes to ElevenLabs and comes back as
-// speech plus a clock for every character. Kept apart from the rest so a test can stand in for it and no
-// test ever spends credits. The key is read from the environment here and nowhere else.
-import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
+// Why: the voice the blog speaks in, and the shape of speech the voice agent works with. The call to
+// ElevenLabs itself is the "voices" adapter (agents/_lib/elevenlabs.ts), reached through ctx.speak, so every
+// reading is metered and costed in the ledger; a test stands in with its own Synthesise and spends nothing.
 import type { CharacterClock } from './script.js';
 
 export interface Speech {
@@ -23,16 +22,3 @@ export const defaultVoice: Voice = {
 };
 
 export type Synthesise = (text: string, voice: Voice) => Promise<Speech>;
-
-export const synthesise: Synthesise = async (text, voice) => {
-  const apiKey = process.env['ELEVENLABS_API_KEY'];
-  if (!apiKey) throw new Error('ELEVENLABS_API_KEY is not set');
-  const client = new ElevenLabsClient({ apiKey });
-  const response = await client.textToSpeech.convertWithTimestamps(voice.id, {
-    text,
-    modelId: voice.model,
-  });
-  const clock = response.alignment;
-  if (!clock) throw new Error('the voice service sent no timing, so the audio cannot be synced');
-  return { audio: new Uint8Array(Buffer.from(response.audioBase64, 'base64')), clock };
-};

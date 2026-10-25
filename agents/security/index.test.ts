@@ -53,6 +53,7 @@ function context(
       return Promise.resolve(answer);
     },
     draw: () => Promise.reject(new Error('security draws nothing')),
+    speak: () => Promise.reject(new Error('security speaks nothing')),
     today: '2026-10-26',
   };
 }

@@ -1,7 +1,7 @@
 // Why: every agent has the same shape so the runner, the workflows and a future service can treat them
 // alike: a name, a why, what it reads, what it writes, and one run() that takes a context and returns
 // files to open a pull request with. The types are the contract; PROMPT.md is the behaviour.
-import type { ImageReply } from '@roadbook/core';
+import type { ImageReply, SpeechReply } from '@roadbook/core';
 import { z } from 'zod';
 
 export const agentNames = [
@@ -82,6 +82,8 @@ export interface AgentContext {
   ask: (user: string, options?: AskOptions) => Promise<string>;
   /** Draws a picture with the first image provider the card allows that is set up here. */
   draw: (prompt: string, reference?: Uint8Array) => Promise<ImageReply>;
+  /** Reads text aloud with the first voice provider the card allows that is set up here. */
+  speak: (text: string, voice: { id: string; model?: string }) => Promise<SpeechReply>;
   /** Today, so output files carry a date the runner controls. */
   today: string;
 }

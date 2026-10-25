@@ -8,7 +8,7 @@ import matter from 'gray-matter';
 import { markdownFile } from '../_lib/files.js';
 import { readIfPresent, readOrThrow, verdictProblem } from '../_lib/generic.js';
 import type { AgentContext, AgentRun, OutputFile, Settings } from '../_lib/types.js';
-import { defaultVoice, synthesise, type Synthesise, type Voice } from './elevenlabs.js';
+import { defaultVoice, type Synthesise, type Voice } from './elevenlabs.js';
 import {
   clockMatches,
   durationOf,
@@ -52,7 +52,8 @@ const onDisk = (dir: string) => (path: string) =>
   );
 
 export interface VoiceDeps {
-  synthesise: Synthesise;
+  /** Tests stand in for the voice service here; a real run speaks through ctx.speak, which is metered. */
+  synthesise?: Synthesise;
   /** Whether a file already exists in the thought folder (the mp3 and timings are not Markdown, so not in ctx). */
   exists: (ctx: AgentContext, path: string) => Promise<boolean>;
 }
@@ -95,7 +96,9 @@ export function makeRun(deps: VoiceDeps): AgentRun {
       };
 
     const voice = voiceFor(ctx.settings);
-    const speech = await deps.synthesise(text, voice);
+    const speech = deps.synthesise
+      ? await deps.synthesise(text, voice)
+      : await ctx.speak(text, { id: voice.id, model: voice.model });
     const timed = wordsFromClock(speech.clock);
     if (!clockMatches(text, timed))
       throw new Error(
@@ -138,6 +141,5 @@ export function makeRun(deps: VoiceDeps): AgentRun {
 }
 
 export const run: AgentRun = makeRun({
-  synthesise,
   exists: (ctx, path) => onDisk(ctx.thought.dir)(path),
 });
