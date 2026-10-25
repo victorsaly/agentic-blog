@@ -1,8 +1,11 @@
 ---
 // Why: the footer closes every page with the one line the blog stands on, set large under a heavy rule,
 // then what the blog is for in plain words, and the links a reader expects at the bottom of a blog: the
-// ways to read, the feed, and where the code lives, so the road is never hidden. The Agentic Blog mark
-// is inlined so it is drawn in the page's own ink, light or dark; its standalone <style> is dropped.
+// ways to read, the feed, and where the code lives, so the road is never hidden. The bottom line carries
+// the licence and, quietly, the door to the studio: the signed-in room where the author talks a new thought
+// in, shown so readers can see where posts are made. The Agentic Blog mark is inlined so it is drawn in
+// the page's own ink, light or dark; its standalone <style> is dropped. The link's name is its visible
+// words, so a screen reader and a voice user say the same thing.
 import { settings } from '../lib/settings';
 import markRaw from '../assets/logo/mark.svg?raw';
 
@@ -20,8 +23,10 @@ const licence =
 <footer class="site-footer">
   <div class="frame top">
     <div class="line">
-      <a class="brand" href="/" aria-label="Agentic Blog, home"
-        ><Fragment set:html={mark} /><span><b>Agentic</b><i>Blog</i></span></a
+      <a class="brand" href="/"
+        ><Fragment set:html={mark} /><span
+          ><b>Agentic</b><span class="visually-hidden"> </span><i>Blog</i></span
+        ></a
       >
       <p class="tagline">{settings.site.tagline}.</p>
       <p class="small quiet">
@@ -36,7 +41,7 @@ const licence =
       <p class="head" id="footer-read">Read</p>
       <ul>
         <li><a href="/">Thoughts</a></li>
-        <li><a href="/themes">Themes</a></li>
+        <li><a href="/topics">Topics</a></li>
         <li><a href="/all">Archive</a></li>
         <li><a href="/search">Search</a></li>
         <li><a href="/how-it-works">How it works</a></li>
@@ -60,9 +65,10 @@ const licence =
     </nav>
   </div>
   <div class="base">
-    <p class="frame small quiet">
-      Words and drawings: {licence}. Code: {settings.licence.code}.
-    </p>
+    <div class="frame small quiet">
+      <p>Words and drawings: {licence}. Code: {settings.licence.code}.</p>
+      <a class="studio" href="/studio" rel="nofollow">Studio, for the author</a>
+    </div>
   </div>
 </footer>
 
@@ -144,8 +150,20 @@ const licence =
   .base {
     border-top: var(--rule-width) solid var(--ink);
   }
+  .base .frame {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0 var(--space-4);
+    padding-block: var(--space-2);
+  }
   .base p {
-    margin-block: 0;
-    padding-block: var(--space-3);
+    margin: 0;
+  }
+  .studio {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
   }
 </style>
