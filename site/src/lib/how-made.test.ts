@@ -2,7 +2,7 @@
 // publish a guard's reason, and never show an unknown cost as free.
 import { describe, expect, it } from 'vitest';
 import { Ledger, type EventBody, type Receipt } from '@roadbook/core';
-import { howMade, moneyOf, runRows, spendIn } from './how-made.js';
+import { howMade, moneyOf, runRows, shareOfCap, spendIn } from './how-made.js';
 
 const receipt = (agent: string): Receipt => ({
   origin: 'thoughts/t/origin/text.md',
@@ -167,5 +167,17 @@ describe('runRows and spendIn', () => {
     ]);
     expect(spendIn(rows, '2026-10')).toEqual({ usd: 0.05, isFloor: true });
     expect(spendIn(rows, '2026-09')).toEqual({ usd: 0.5, isFloor: false });
+  });
+});
+
+describe('shareOfCap', () => {
+  it('rounds to a whole per cent, and says so when a little is under 1%', () => {
+    expect(shareOfCap(0, 20)).toBe('0%');
+    expect(shareOfCap(0.05, 20)).toBe('under 1%');
+    expect(shareOfCap(5, 20)).toBe('25%');
+  });
+
+  it('never divides by a cap of nothing', () => {
+    expect(shareOfCap(3, 0)).toBe('0%');
   });
 });

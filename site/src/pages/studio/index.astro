@@ -1,66 +1,187 @@
 ---
 // Why: the door into the studio. Most visits are to say something new, so that is the one big thing here;
-// below it each other area is named with what it is for, one link each, so the room is clear at a glance
-// instead of one long page to scroll.
+// beside it, what is waiting for Victor, each as a number that opens its area: the agents' writing to read,
+// readers' comments to decide, and what this month has cost against the budget. Review and money are as of
+// the last deploy; comments are counted when the page opens, since readers write at any time.
 import Studio from '../../layouts/Studio.astro';
-import { studioAreas } from '../../lib/studio-areas';
+import { loadCosted, loadWaiting } from '../../lib/studio-data';
+import { moneyOf, shareOfCap, spendIn } from '../../lib/how-made';
+import { formatDate } from '../../lib/content';
+import { settings } from '../../lib/settings';
+import project from '../../../../roadbook.config';
 
-const others = studioAreas.filter((a) => a.id !== 'today' && a.id !== 'talk');
+const waiting = await loadWaiting();
+const files = waiting.reduce((sum, t) => sum + t.waiting.length, 0);
+const thoughts = waiting.filter((t) => t.waiting.length > 0).length;
+
+const builtAt = new Date();
+const { show, per_usd: perUsd } = settings.publishing.currency;
+const money = (usd: number): string => moneyOf(usd, { show, perUsd });
+const month = spendIn(
+  (await loadCosted()).flatMap((t) => t.rows),
+  builtAt.toISOString().slice(0, 7),
+);
+const cap = project.budget.monthlyCapUsd;
+const plural = (n: number, one: string, many: string): string => (n === 1 ? one : many);
 ---
 
 <Studio description="A private room to talk in.">
   <h1>Today</h1>
-  <p class="quiet">
-    Talk. Don't tidy. Everything else the agents and readers left is one area away.
-  </p>
 
-  <a class="say-it" href="/studio/talk">Say it</a>
+  <div class="today">
+    <a class="say-it" href="/studio/talk">
+      <span class="say-it-name">Say it</span>
+      <span class="quiet">Talk. Don't tidy. Or paste it.</span>
+    </a>
 
-  <ul class="areas">
-    {
-      others.map((area) => (
+    <section aria-labelledby="waiting-label">
+      <h2 class="label" id="waiting-label">Waiting for you</h2>
+      <ul class="waiting">
         <li>
-          <a href={area.href}>{area.name}</a>
-          <span class="quiet">{area.hint}</span>
+          <a href="/studio/review">
+            <span class="number">{files}</span>
+            <span class="what">
+              {plural(files, 'file', 'files')} to review
+              <span class="quiet">
+                {
+                  files === 0
+                    ? 'nothing the agents wrote is unread'
+                    : `in ${String(thoughts)} ${plural(thoughts, 'thought', 'thoughts')}`
+                }
+              </span>
+            </span>
+          </a>
         </li>
-      ))
-    }
-  </ul>
+        <li>
+          <a href="/studio/comments">
+            <span class="number" data-today-comments>–</span>
+            <span class="what">
+              comments to decide
+              <span class="quiet">counted just now</span>
+            </span>
+          </a>
+        </li>
+        <li>
+          <a href="/studio/runs">
+            <span class="number">{month.isFloor ? '≥ ' : ''}{money(month.usd)}</span>
+            <span class="what">
+              spent this month
+              <span class="quiet">
+                {shareOfCap(month.usd, cap)} of {money(cap)}, as of {formatDate(builtAt)}
+              </span>
+            </span>
+          </a>
+        </li>
+      </ul>
+    </section>
+  </div>
 </Studio>
 
+<script>
+  import { COMMENTS_CHANGED } from '../../lib/studio-areas';
+
+  const cell = document.querySelector<HTMLElement>('[data-today-comments]');
+  async function count(): Promise<void> {
+    if (!cell) return;
+    try {
+      const response = await fetch('/api/comments/count');
+      const data: unknown = await response.json();
+      const pending =
+        typeof data === 'object' && data !== null ? (data as { pending?: unknown }).pending : null;
+      if (response.ok && typeof pending === 'number') cell.textContent = String(pending);
+    } catch {
+      /* the dash stays: open the area to see what failed */
+    }
+  }
+  void count();
+  window.addEventListener(COMMENTS_CHANGED, () => void count());
+</script>
+
 <style>
+  .today {
+    display: grid;
+    gap: var(--space-5);
+  }
+  @media (min-width: 60rem) {
+    .today {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+      align-items: start;
+    }
+  }
   .say-it {
     display: grid;
-    place-items: center;
-    min-height: calc(var(--tap) * 3);
-    margin: var(--space-4) 0 var(--space-6);
+    place-content: center;
+    gap: var(--space-1);
+    min-height: calc(var(--tap) * 4);
+    padding: var(--space-4);
     border: 2px solid var(--ink);
+    text-align: center;
+    text-decoration: none;
+    transition: scale var(--duration-press) var(--ease-out);
+  }
+  .say-it-name {
     font-size: var(--size-message);
     font-weight: 700;
-    text-decoration: none;
   }
   @media (hover: hover) and (pointer: fine) {
     .say-it:hover {
       background: var(--hover);
     }
   }
-  .areas {
+  .say-it:active {
+    scale: 0.98;
+  }
+  .waiting {
     list-style: none;
     margin: 0;
     padding: 0;
     max-width: none;
-    border-top: var(--rule-strong) solid var(--ink);
   }
-  .areas li {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: var(--space-1) var(--space-3);
-    min-height: var(--tap);
-    padding-block: var(--space-3);
+  @media (min-width: 40rem) {
+    .waiting {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .waiting li + li {
+      border-left: var(--rule-width) solid var(--rule);
+    }
+  }
+  .waiting li {
     border-bottom: var(--rule-width) solid var(--rule);
   }
-  .areas a {
+  .waiting a {
+    display: grid;
+    align-content: start;
+    gap: var(--space-1);
+    height: 100%;
+    padding: var(--space-3);
+    text-decoration: none;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .waiting a:hover {
+      background: var(--hover);
+    }
+    .waiting a:hover .what {
+      text-decoration: underline;
+    }
+  }
+  .number {
+    font-size: var(--size-title);
     font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: var(--leading-tight);
+  }
+  .what {
+    display: grid;
+    font-weight: 700;
+  }
+  .what .quiet {
+    font-weight: 400;
+    font-size: var(--size-small);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .say-it {
+      transition: none;
+    }
   }
 </style>

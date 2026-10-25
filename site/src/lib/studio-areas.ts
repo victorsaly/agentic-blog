@@ -37,3 +37,6 @@ export function areaFor(pathname: string): StudioAreaId {
   const found = studioAreas.find((a) => a.id !== 'today' && path === a.href);
   return found ? found.id : 'today';
 }
+
+/** Sent on the window when Victor decides a comment, so anything counting them counts again. */
+export const COMMENTS_CHANGED = 'studio:comments-changed';

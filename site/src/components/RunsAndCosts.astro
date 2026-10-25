@@ -4,7 +4,7 @@
 // adds up, and the month is set against the project's budget. Read from the ledger at build time, so it is
 // as fresh as the last deploy. Costs are recorded in US dollars and shown in the site's currency.
 import { formatDate } from '../lib/content';
-import { moneyOf, spendIn, type Ending, type RunRow } from '../lib/how-made';
+import { moneyOf, shareOfCap, spendIn, type Ending, type RunRow } from '../lib/how-made';
 import { settings } from '../lib/settings';
 
 interface Props {
@@ -30,9 +30,7 @@ const day = (iso: string): string => formatDate(new Date(`${iso}T12:00:00Z`));
 const month = builtAt.toISOString().slice(0, 7);
 const all = posts.flatMap((p) => p.rows);
 const thisMonth = spendIn(all, month);
-const percent = (thisMonth.usd / monthlyCapUsd) * 100;
-// A few pence is not nothing: below one per cent says so instead of rounding to 0%.
-const share = percent > 0 && percent < 1 ? 'under 1%' : `${String(Math.round(percent))}%`;
+const share = shareOfCap(thisMonth.usd, monthlyCapUsd);
 const withRuns = posts.filter((p) => p.rows.length > 0);
 ---
 

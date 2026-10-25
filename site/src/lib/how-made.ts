@@ -141,6 +141,12 @@ export function runRows(runs: readonly { id: string; events: readonly LedgerEven
     .sort((a, b) => b.id.localeCompare(a.id));
 }
 
+/** How much of the monthly cap is spent, in words. A few pence is not nothing: below 1% says so. */
+export function shareOfCap(usd: number, capUsd: number): string {
+  const percent = capUsd > 0 ? (usd / capUsd) * 100 : 0;
+  return percent > 0 && percent < 1 ? 'under 1%' : `${String(Math.round(percent))}%`;
+}
+
 /** What the runs that started in a month (YYYY-MM) cost, and whether any of them left its cost unknown. */
 export function spendIn(rows: readonly RunRow[], month: string): { usd: number; isFloor: boolean } {
   const inMonth = rows.filter((r) => r.on.startsWith(month));
