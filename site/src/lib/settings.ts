@@ -19,7 +19,15 @@ const settingsSchema = z
       origin: z.string().min(2).max(5),
       publish: z.array(z.string().min(2).max(5)).min(1),
     }),
-    themes: z.array(z.string().min(1)).min(1),
+    // A topic is an address (/topics/<topic>, #t-<topic>) and a name the graph keys on: lowercase words
+    // joined by hyphens, nothing else, so it can never break a link or a selector.
+    themes: z
+      .array(
+        z
+          .string()
+          .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'a topic is lowercase words joined by hyphens'),
+      )
+      .min(1),
     /** One plain line per theme, keyed by the theme, for the topic pages. */
     topics: z.record(z.string(), z.string().min(1)).default({}),
     topic_names: z.record(z.string(), z.string().min(1)).default({}),
