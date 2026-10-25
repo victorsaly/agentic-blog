@@ -980,7 +980,8 @@ const pad = (n: number): string => String(n).padStart(2, '0');
     padding: 0;
     max-width: none;
   }
-  .source-list li {
+  /* The numbered sources only; the lines with no source below them are plain rows. */
+  .source-list ol > li {
     display: grid;
     grid-template-columns: 2.5rem minmax(0, 1fr);
     gap: var(--space-3);
@@ -988,7 +989,7 @@ const pad = (n: number): string => String(n).padStart(2, '0');
     border-bottom: var(--rule-width) solid var(--ink);
     scroll-margin-top: 6rem;
   }
-  .source-list li:target {
+  .source-list ol > li:target {
     background: var(--hover);
   }
   .source-list .n {
@@ -1017,8 +1018,14 @@ const pad = (n: number): string => String(n).padStart(2, '0');
     font-weight: 700;
   }
   .unsourced ul {
+    list-style: none;
     margin: 0;
-    padding-left: var(--space-4);
+    padding: 0;
+    max-width: none;
+  }
+  .unsourced li {
+    padding-block: var(--space-2);
+    border-bottom: var(--rule-width) solid var(--rule);
   }
 </style>
 
