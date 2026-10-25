@@ -31,8 +31,12 @@ const workflow = {
   },
 } as unknown as WorkflowInput;
 
+// One clock for every run in a file, a second a tick, so the order things happened is never a tie.
+let tick = 0;
+const now = (): Date => new Date(Date.UTC(2026, 9, 25, 9, 0, tick++));
+
 async function run(...bodies: EventBody[]): Promise<{ events: Ledger['events'] }> {
-  const ledger = new Ledger();
+  const ledger = new Ledger({ now });
   for (const body of bodies) await ledger.append(body);
   return { events: ledger.events };
 }
@@ -178,6 +182,7 @@ describe('the run goes on', () => {
   });
 
   it('hands the sent-back words to the step before the gate, once', async () => {
+    const before = await ran('interview');
     const said = await run(
       { type: 'node.state', node: 'answers', from: 'idle', to: 'needs-you' },
       {
@@ -188,8 +193,44 @@ describe('the run goes on', () => {
         by: 'owner',
       },
     );
-    expect(sentBackTo(workflow, 'interview', [await ran('interview'), said])).toBe('Not this.');
-    expect(sentBackTo(workflow, 'convert', [await ran('interview'), said])).toBeNull();
-    expect(sentBackTo(workflow, 'interview', [said, await ran('interview')])).toBeNull();
+    expect(sentBackTo(workflow, 'interview', [before, said])).toBe('Not this.');
+    expect(sentBackTo(workflow, 'convert', [before, said])).toBeNull();
+    expect(sentBackTo(workflow, 'interview', [before, said, await ran('interview')])).toBeNull();
+  });
+
+  it('reads the words in the order they were said, not the order of the run files', async () => {
+    // The gate opened, then interview ran again while it waited, then the owner sent the gate back: the
+    // words are in the gate's run, the older file, but came last.
+    const gate = new Ledger({ now });
+    await gate.append({ type: 'node.state', node: 'answers', from: 'idle', to: 'needs-you' });
+    const rerun = await ran('interview');
+    await gate.append({
+      type: 'feedback.given',
+      node: 'answers',
+      kind: 'redirect',
+      words: 'Ask about the second idea.',
+      by: 'owner',
+    });
+    expect(sentBackTo(workflow, 'interview', [{ events: gate.events }, rerun])).toBe(
+      'Ask about the second idea.',
+    );
+  });
+
+  it('runs again only what follows a step that ran again: a join waits for its inputs to be redone', async () => {
+    // convert feeds proof and review; review also waits for proof, so a new convert makes proof old work.
+    const join = {
+      id: 'j',
+      why: 'A join after a step and the step after it.',
+      nodes: {
+        convert: { kind: 'agent', why: 'Writes.' },
+        proof: { kind: 'agent', why: 'Checks.', after: ['convert'] },
+        review: { kind: 'guard', why: 'Looks at both.', after: ['convert', 'proof'] },
+      },
+    } as unknown as WorkflowInput;
+    const first = [await ran('convert'), await ran('proof')];
+    expect(stepsToStart(join, 'proof', first)).toEqual(['review']);
+    const again = [...first, await ran('review'), await ran('convert')];
+    expect(stepsToStart(join, 'convert', again)).toEqual(['proof']);
+    expect(stepsToStart(join, 'proof', [...again, await ran('proof')])).toEqual(['review']);
   });
 });

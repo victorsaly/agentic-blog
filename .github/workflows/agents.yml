@@ -74,6 +74,13 @@ jobs:
           # Pushes made with GitHub's own token never start CI, so the pull request would show checks from
           # before the agent wrote anything. BOT_TOKEN pushes as a person; without it, the old behaviour.
           token: ${{ secrets.BOT_TOKEN || github.token }}
+      # A step started by the run going on may land on a branch made before the tools it needs (the runner's
+      # cap check, start-next.mjs). Its tools come from main, as in gates.yml; only its content stays its own,
+      # and only that content is committed below. A label on a pull request keeps the branch's own tools, so
+      # a change to an agent can be tried on its own branch.
+      - name: Use main's tools on a branch made before them
+        if: github.event_name == 'repository_dispatch'
+        run: git restore --source=origin/main --worktree -- . ':!thoughts' ':!wiki' ':!profile.md'
       - uses: actions/setup-node@v5
         with:
           node-version-file: .node-version
@@ -170,11 +177,12 @@ jobs:
           echo "::error::The ${{ steps.pick.outputs.agent }} agent held this post. Read its file in the pull request before merging."
           exit 1
 
-      # At the monthly cap the run waits (the project's atCap is "queue"): nothing was spent or written.
+      # At the monthly cap the run waits (the project's atCap is "queue"). Stopped before it started, nothing
+      # was spent; stopped before a call, its ledger (committed above) says what it had spent by then.
       - name: Say the run waits for the monthly cap
         if: steps.agent.outputs.code == '5'
         run: |
-          echo "::warning::The ${{ steps.pick.outputs.agent }} agent waits: this month's runs have reached the cap in roadbook.config.ts. Nothing was spent. Run it again next month, or raise the cap."
+          echo "::warning::The ${{ steps.pick.outputs.agent }} agent waits: this month's runs have reached the cap in roadbook.config.ts. No call that could pass it was made. Run it again next month, or raise the cap."
 
       - name: Fail if the agent failed
         if: >-

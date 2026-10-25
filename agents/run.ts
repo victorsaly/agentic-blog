@@ -10,8 +10,10 @@
 // (roadbook.config.ts) that are now ready, each as its own run waiting on Victor with the gate's question;
 // opening one can fail without undoing the agent's work, and says so. It also names the steps that start
 // next (the summary's "next"), which the agents workflow starts on the same branch: the run goes on by
-// itself up to the next gate. Before anything is spent, the month's spend plus this agent's allowance per
-// run must fit under the monthly cap; at the cap the run waits (exit 5) and nothing is recorded.
+// itself up to the next gate; a run with nothing to do starts them too, but opens no gate. Before anything
+// is spent, the month's spend plus this agent's allowance per run must fit under the monthly cap; at the cap
+// the run waits (exit 5) and nothing is recorded. Every call is checked again before it is made, and one
+// that could pass the cap stops the run there (exit 5), recorded with what it had spent.
 // Agents never call a provider themselves: ask() and draw() go to the providers the agent's card allows,
 // declared once in roadbook.config.ts, and every call's usage is logged and priced the same way.
 import { resolve } from 'node:path';
@@ -51,7 +53,7 @@ import {
 import { writeOutputs } from './_lib/files.js';
 import { liveFromEnv } from './_lib/live.js';
 import { withLock } from './_lib/lock.js';
-import { fitsBudget, monthSpend } from './_lib/budget.js';
+import { BudgetError, fitsBudget, monthSpend } from './_lib/budget.js';
 import { agentNames, type AgentContext, type AgentName, type AgentRun } from './_lib/types.js';
 
 function isAgentName(value: string): value is AgentName {
@@ -108,11 +110,16 @@ async function main(): Promise<void> {
 
   const system = systemMessage(profile, prompt, settings);
   const log = new UsageLog();
-  const calls = connect(chosen, log, {
-    system,
-    model,
-    maxOutputTokens: prompt.meta.max_output_tokens ?? settings.agents.max_output_tokens,
-  });
+  const calls = connect(
+    chosen,
+    log,
+    {
+      system,
+      model,
+      maxOutputTokens: prompt.meta.max_output_tokens ?? settings.agents.max_output_tokens,
+    },
+    { leftUsd: cap - spent, unknownUsd: card.budget.usdPerRun },
+  );
 
   const ctx: AgentContext = {
     agent,
@@ -246,6 +253,14 @@ async function main(): Promise<void> {
         reason: reason.slice(0, 300),
       });
     }
+    // A call that could pass the cap was never made: the run waits, like one stopped before it started.
+    if (error instanceof BudgetError) {
+      console.info(
+        JSON.stringify({ agent, slug, status: 'waiting', summary: error.message, next: [] }),
+      );
+      process.exitCode = 5;
+      return;
+    }
     throw error;
   } finally {
     await saveRun(thought.dir, run, ledger);
@@ -254,16 +269,19 @@ async function main(): Promise<void> {
 
   // The gates after this step that are now ready open as runs of their own, after this run is saved. Only a
   // run that did work opens them: with nothing to do (the answers are already in, say), nothing changed for a
-  // gate to ask about. Deciding and opening happen under the thought's lock, from the ledger read again inside
-  // it (this run included), so two runs at once never open the same gate twice.
+  // gate to ask about. Either way the step is done, so the steps after it start: a drilldown with no new
+  // page is still the last input the guards wait for. Deciding and opening happen under the thought's lock,
+  // from the ledger read again inside it (this run included), so two runs at once never open the same gate
+  // twice.
   const opened: string[] = [];
   const next: string[] = [];
-  if (workflow && result.status === 'done') {
+  if (workflow && (result.status === 'done' || result.status === 'nothing-to-do')) {
+    const worked = result.status === 'done';
     try {
       await withLock(resolve(thought.dir), async () => {
         const now = await readRuns(thought.dir, `thoughts/${slug}`);
         if (now.issues.length > 0) throw new LedgerError(`refused: ${now.issues.join(' ')}`);
-        for (const gate of gatesToOpen(workflow, node, now.runs)) {
+        for (const gate of worked ? gatesToOpen(workflow, node, now.runs) : []) {
           const id = runId(new Date(), gate.id);
           const reporter = liveFromEnv(id, slug, process.env);
           const waiting = new Ledger({ onAppend: reporter.hear });

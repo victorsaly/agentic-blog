@@ -1,7 +1,8 @@
 // Why: an agent asks and draws; it never chooses a provider. The card says which of the project's providers
 // it may use, in order, and this turns that into the two calls an agent gets: ask (the first provider that
 // writes) and draw (the first provider that draws and is set up here). Every reply, failed or not, goes into
-// the run's usage log, and no call is made to a model the price list cannot cost.
+// the run's usage log, no call is made to a model the price list cannot cost, and none is made that could
+// take the month past its cap (budget.ts).
 import {
   ModelCallError,
   type ImageReply,
@@ -10,6 +11,7 @@ import {
   type Provider,
   type UsageLog,
 } from '@roadbook/core';
+import { afford, askCeiling, speechCost, type Purse } from './budget.js';
 import { claudeAdapter } from './claude.js';
 import { elevenLabsAdapter } from './elevenlabs.js';
 import { openAiImagesAdapter } from './openai-images.js';
@@ -91,12 +93,16 @@ export interface Calls {
   speak: (text: string, voice: { id: string; model?: string }) => Promise<SpeechReply>;
 }
 
-/** The calls an agent gets, each logging what it used. */
+/** The calls an agent gets, each logging what it used; with a purse, each checked against it first. */
 export function connect(
   chosen: Chosen,
   log: UsageLog,
   defaults: { system: string; model: string; maxOutputTokens: number },
+  purse?: Purse,
 ): Calls {
+  const check = (what: string, usd: () => number): void => {
+    if (purse) afford(purse, log, what, usd());
+  };
   const { writer, drawers } = chosen;
   const speakers = chosen.speakers ?? [];
   const write = writer.write;
@@ -107,12 +113,21 @@ export function connect(
       // A call the ledger could not cost is never made.
       if (!hasPrice(model))
         throw new Error(`no price for ${model}; add it to agents/_lib/prices.ts first`);
+      const maxOutputTokens = options.maxOutputTokens ?? defaults.maxOutputTokens;
+      check(`a call to ${model}`, () =>
+        askCeiling(model, {
+          words: defaults.system.length + user.length,
+          images: options.images?.length ?? 0,
+          webSearches: options.webSearch?.maxUses ?? 0,
+          maxOutputTokens,
+        }),
+      );
       try {
         const reply = await write({
           system: defaults.system,
           user,
           model,
-          maxOutputTokens: options.maxOutputTokens ?? defaults.maxOutputTokens,
+          maxOutputTokens,
           ...(options.images ? { images: options.images } : {}),
           ...(options.webSearch ? { webSearch: options.webSearch } : {}),
         });
@@ -133,6 +148,7 @@ export function connect(
           ok: false,
           reason: `no image provider is set up here (the card allows ${drawers.map((d) => d.provider).join(', ') || 'none'}).`,
         };
+      check(`a drawing by ${drawer.provider}`, () => purse?.unknownUsd ?? 0);
       try {
         const reply = await drawer.draw({ prompt, ...(reference ? { reference } : {}) });
         log.record(reply);
@@ -152,6 +168,9 @@ export function connect(
       // A call the ledger could not cost is never made.
       if (model !== undefined && !hasPrice(model))
         throw new Error(`no price for ${model}; add it to agents/_lib/prices.ts first`);
+      check(`a reading by ${speaker.provider}`, () =>
+        model === undefined ? (purse?.unknownUsd ?? 0) : speechCost(model, text),
+      );
       try {
         const reply = await speaker.speak({
           text,

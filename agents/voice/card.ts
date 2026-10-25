@@ -44,9 +44,10 @@ export const card = defineAgentCard({
   ],
   qualityBar: { approvedWithoutRewrite: 0.8 },
   model: { default: 'voices', allowed: ['voices'] },
-  budget: { usdPerRun: 0.15, secondsPerRun: 120 },
+  // The longest reading allowed (400 words, about 2,800 characters at $0.08 per 1,000) costs about $0.23.
+  budget: { usdPerRun: 0.25, secondsPerRun: 120 },
   behaviour: optionalStep(),
-  metrics: standardMetrics(0.8, 0.15),
+  metrics: standardMetrics(0.8, 0.25),
   variables: {
     maxSpokenWords: {
       type: 'number',
@@ -56,6 +57,6 @@ export const card = defineAgentCard({
   },
   data: { sends: ['text'] },
   owner: 'Victor Saly',
-  version: '1.0.0',
+  version: '1.1.0',
   stage: 'active',
 });
