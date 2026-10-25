@@ -121,10 +121,11 @@ const pointing =
         `.graph-picture:has([data-idea="${i.id}"]:hover) [data-for="${i.id}"]{visibility:visible}`,
     )
     .join('') +
+  // Pointing fades the other posts only while nothing is kept; a kept idea's post holds until it is let go.
   slugs
     .map(
       (p) =>
-        `.graph-picture:has([data-idea][data-p="${p}"]:hover) [data-p]:not([data-p="${p}"]){opacity:.16}`,
+        `.graph-picture:not(.pinned):has([data-idea][data-p="${p}"]:hover) [data-p]:not([data-p="${p}"]){opacity:.16}`,
     )
     .join('');
 // Tabbing to an idea in the list sets its words in the middle of the picture, as pointing at its dot does.
@@ -675,9 +676,11 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && kept) unpin();
   });
-  addEventListener('resize', () => {
-    if (kept) place();
-  });
+  // The picture changes size with the window, and when the chat docks beside the page; the panel follows.
+  if (stage)
+    new ResizeObserver(() => {
+      if (kept) place();
+    }).observe(stage);
 
   // Ask. The chat lives in the header; when it is closed (the site not yet public), the buttons go.
   const chat = document.querySelector('.ask-open') !== null;

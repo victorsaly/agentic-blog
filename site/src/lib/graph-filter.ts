@@ -39,8 +39,8 @@ export function segmentsOf(text: string, terms: readonly string[]): Segment[] {
   const segments: Segment[] = [];
   for (const piece of text.split(/(\s+)/)) {
     if (piece === '') continue;
-    const [stem] = wordsOf(piece);
-    const hit = stem !== undefined && begins(stem, terms);
+    // A hyphenated word has more than one stem ("AI-assisted"): any of them may be the match.
+    const hit = wordsOf(piece).some((stem) => begins(stem, terms));
     const last = segments.at(-1);
     if (last?.hit === hit) last.text += piece;
     else segments.push({ text: piece, hit });

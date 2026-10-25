@@ -39,6 +39,16 @@ describe('segmentsOf', () => {
     ]);
   });
 
+  it('marks a hyphenated word by any of its parts, as matching does', () => {
+    const text = 'We hide AI-assisted work';
+    expect(matchingIdeas(termsOf('assisted'), [{ id: 'x', text }]).has('x')).toBe(true);
+    expect(segmentsOf(text, termsOf('assisted'))).toEqual([
+      { text: 'We hide ', hit: false },
+      { text: 'AI-assisted', hit: true },
+      { text: ' work', hit: false },
+    ]);
+  });
+
   it('marks nothing when there are no terms', () => {
     expect(segmentsOf('Keep the raw note', [])).toEqual([
       { text: 'Keep the raw note', hit: false },
