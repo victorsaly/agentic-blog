@@ -1,6 +1,6 @@
 // Why: the rule "everything here has a why" is only real if a missing why fails the build.
 // This walks thoughts/, wiki/ and agents/, parses each Markdown file's front matter and refuses anything
-// without a why, or an origin that claims to have been edited.
+// without a why, an origin that claims to have been edited, or a published thought without its own number.
 import { readdir, readFile } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
 import matter from 'gray-matter';
@@ -59,12 +59,56 @@ export function checkFrontMatter(file: string, source: string): Problem[] {
   }));
 }
 
+/**
+ * A thought's number sits beside its title on every list, so it is written in its front matter once, when
+ * the thought is published, and nothing a later post does can move it. Refuses a published thought without
+ * one and two thoughts that share one, and says which number is free.
+ */
+export function checkNumbers(thoughts: { file: string; data: unknown }[]): Problem[] {
+  const parsed = thoughts.flatMap(({ file, data }) => {
+    const result = structureFrontMatter.safeParse(data);
+    return result.success ? [{ file, ...result.data }] : [];
+  });
+  const free = String(Math.max(0, ...parsed.map((t) => t.number ?? 0)) + 1);
+  const owners = new Map<number, string>();
+  const problems: Problem[] = [];
+  for (const t of parsed) {
+    if (t.number === undefined) {
+      if (!t.draft) {
+        problems.push({
+          file: t.file,
+          message: `number: a published thought needs a number; the next free one is ${free}`,
+        });
+      }
+      continue;
+    }
+    const owner = owners.get(t.number);
+    if (owner === undefined) owners.set(t.number, t.file);
+    else {
+      problems.push({
+        file: t.file,
+        message: `number: ${String(t.number)} is already ${owner}'s; the next free one is ${free}`,
+      });
+    }
+  }
+  return problems;
+}
+
 export async function checkAll(root = process.cwd()): Promise<Problem[]> {
   const files = (await Promise.all(ROOTS.map((r) => listMarkdown(join(root, r))))).flat();
-  const problems = await Promise.all(
-    files.map(async (file) => checkFrontMatter(relative(root, file), await readFile(file, 'utf8'))),
+  const sources = await Promise.all(
+    files.map(async (file) => ({
+      file: relative(root, file),
+      source: await readFile(file, 'utf8'),
+    })),
   );
-  return problems.flat();
+  const structures = sources
+    .filter(({ file }) => file.split(sep).at(-1) === 'structure.md')
+    .map(({ file, source }) => ({ file, data: matter(source).data }));
+  return [
+    ...sources.flatMap(({ file, source }) => checkFrontMatter(file, source)),
+    ...checkNumbers(structures),
+  ];
 }
 
 const isMain = process.argv[1]?.endsWith('check-why.ts') ?? false;
@@ -79,7 +123,7 @@ if (isMain) {
       if (process.env['GITHUB_ACTIONS']) console.error(`::error file=${p.file}::${p.message}`);
     }
     console.error(
-      `\n${String(problems.length)} file(s) without a proper why. Add a why: line to each.`,
+      `\n${String(problems.length)} problem(s) in front matter. Each line above says what to fix.`,
     );
     process.exitCode = 1;
   }

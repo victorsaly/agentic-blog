@@ -8,8 +8,8 @@ import {
   plainText,
   readingLabel,
   readingMinutes,
+  newestFirst,
   splitFirstSentence,
-  thoughtNumbers,
   thoughtSlugOf,
 } from './content.js';
 
@@ -81,19 +81,19 @@ describe('first sentence', () => {
   });
 });
 
-describe('thoughtNumbers', () => {
-  const at = (id: string, day: string) => ({ id, data: { date: new Date(day) } });
-
-  it('counts from the first thought, so a new one never renumbers the old', () => {
-    const two = [at('b', '2026-10-24'), at('a', '2026-10-23')];
-    expect(thoughtNumbers(two).get('a')).toBe(1);
-    const three = [at('c', '2026-11-01'), ...two];
-    expect(thoughtNumbers(three).get('a')).toBe(1);
-    expect(thoughtNumbers(three).get('c')).toBe(3);
+describe('newestFirst', () => {
+  const at = (id: string, day: string, number: number) => ({
+    id,
+    data: { date: new Date(day), number },
   });
 
-  it('orders thoughts from the same day by id', () => {
-    const sameDay = thoughtNumbers([at('z', '2026-10-23'), at('m', '2026-10-23')]);
-    expect([sameDay.get('m'), sameDay.get('z')]).toEqual([1, 2]);
+  it('puts the newest day first', () => {
+    const sorted = [at('old', '2026-10-23', 1), at('new', '2026-10-24', 2)].sort(newestFirst);
+    expect(sorted.map((t) => t.id)).toEqual(['new', 'old']);
+  });
+
+  it('orders a day by number, whatever the slugs, so a later post never takes an earlier place', () => {
+    const sameDay = [at('zebra', '2026-10-25', 3), at('apple', '2026-10-25', 4)].sort(newestFirst);
+    expect(sameDay.map((t) => t.id)).toEqual(['apple', 'zebra']);
   });
 });

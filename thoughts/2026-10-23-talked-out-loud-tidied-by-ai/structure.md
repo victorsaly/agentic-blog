@@ -6,6 +6,7 @@ why: >
   did not exist yet; the road says so.
 title: Talked out loud, tidied by AI
 date: 2026-10-23
+number: 1
 language: en
 themes: [ai-changing-work, accountability, credibility]
 message: >

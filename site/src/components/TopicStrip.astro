@@ -1,10 +1,12 @@
 ---
-// Why: on a phone the side column falls below every post, so a reader who wants to narrow the list would
-// have to scroll past all of it first. This strip puts the topics under the page heading instead, one ruled
-// row like the home page's band, and only on narrow screens; on a desk the side column does the same job.
+// Why: the topics belong before the list, where a reader decides what to read. On a phone the side column
+// falls below every post, so this strip puts the topics under the page heading instead, one labelled, ruled
+// row like the home page's band, once the side column has dropped (base.css, .when-stacked). On a desk the
+// side column shows them, but after every post in the reading order, so a keyboard reader gets a link that
+// skips straight there; it shows only when focused.
 import type { CollectionEntry } from 'astro:content';
+import TopicLink from './TopicLink.astro';
 import { themeCounts } from '../lib/themes';
-import { topicName } from '../lib/topic-name';
 
 interface Props {
   thoughts: CollectionEntry<'thoughts'>[];
@@ -17,27 +19,57 @@ const counts = themeCounts(thoughts.map((t) => t.data.themes));
 
 {
   counts.length > 0 && (
-    <nav class="frame strip" aria-label="Topics">
-      <ul>
-        {counts.map(([topic, count]) => (
-          <li>
-            <a href={`/topics/${topic}`} aria-current={current === topic ? 'page' : undefined}>
-              {topicName(topic)}
-              <span class="quiet">
-                {count}
-                <span class="visually-hidden">{count === 1 ? ' thought' : ' thoughts'}</span>
-              </span>
-            </a>
-          </li>
-        ))}
-      </ul>
-    </nav>
+    <>
+      <div class="frame when-beside">
+        <a class="skip" href="#aside-topics">
+          Skip to the topics
+        </a>
+      </div>
+      <nav class="frame strip when-stacked" aria-labelledby="strip-topics">
+        <div class="row">
+          <span class="strip-label" id="strip-topics">
+            Topics
+          </span>
+          <ul>
+            {counts.map(([topic, count]) => (
+              <li>
+                <TopicLink topic={topic} count={count} current={current} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      </nav>
+    </>
   )
 }
 
 <style>
+  .skip {
+    position: absolute;
+    left: -10000px;
+  }
+  .skip:focus {
+    position: static;
+    display: inline-block;
+    margin-top: var(--space-4);
+    padding: var(--space-2) var(--space-3);
+    border: var(--rule-width) solid var(--ink);
+  }
   .strip {
-    display: none;
+    margin-top: var(--space-4);
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: var(--space-4);
+    border-bottom: var(--rule-width) solid var(--ink);
+  }
+  .strip-label {
+    font-size: var(--size-label);
+    font-weight: 700;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
   }
   ul {
     display: flex;
@@ -46,9 +78,8 @@ const counts = themeCounts(thoughts.map((t) => t.data.themes));
     margin: 0;
     padding: 0;
     max-width: none;
-    border-bottom: var(--rule-width) solid var(--ink);
   }
-  a {
+  ul :global(a) {
     display: inline-flex;
     align-items: center;
     gap: var(--space-1);
@@ -56,17 +87,14 @@ const counts = themeCounts(thoughts.map((t) => t.data.themes));
     padding-right: var(--space-4);
     text-decoration: none;
   }
-  a:hover {
+  ul :global(a:hover) {
     text-decoration: underline;
   }
-  a[aria-current='page'] {
+  /* The topic you are on: its name, not its count, carries the mark, the same as in the side column. */
+  ul :global(a[aria-current='page'] .name) {
     font-weight: 700;
-  }
-  /* The same width at which the list pages drop their side column. */
-  @media (max-width: 61rem) {
-    .strip {
-      display: block;
-      margin-top: var(--space-4);
-    }
+    text-decoration: underline;
+    text-decoration-thickness: var(--rule-strong);
+    text-underline-offset: 6px;
   }
 </style>
