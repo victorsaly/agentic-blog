@@ -5,8 +5,9 @@
 // topics before anyone points at them. It is hidden from screen readers and from the tab order because the
 // list beside it says the same thing in words; a pointer can still use it, a topic to open its ideas, a dot
 // (on a desk, where its words show on pointing) to go to the paragraph that says it. On a phone the dots
-// are marks only: too small to tap, and the list holds the same links. Strokes keep their weight at any
-// size, so the rules match the rest of the page.
+// are marks only: too small to tap, and the list holds the same links. Once the dots would touch, the ring
+// draws the topics alone (arcs, names, counts), since a band of ink says less than the counts do. Strokes
+// keep their weight at any size, so the rules match the rest of the page.
 import markRaw from '../assets/logo/mark.svg?raw';
 import type { GraphLayout } from '../lib/graph-layout';
 
@@ -38,7 +39,7 @@ const markY = -(markHeight + nameSize * 1.2) / 2;
 ---
 
 <svg
-  class:list={['graph-picture', { 'has-tips': o.tipSize > 0 }, className]}
+  class:list={['graph-picture', { 'has-tips': o.tipSize > 0 && !layout.crowded }, className]}
   viewBox={layout.viewBox}
   data-inner={o.topicRadius * 1.8}
   aria-hidden="true"
@@ -46,9 +47,10 @@ const markY = -(markHeight + nameSize * 1.2) / 2;
 >
   <g class="edges">
     {
-      layout.edges.map((e) => (
-        <path d={e.d} data-t={e.topics.join(' ')} data-p={e.post} data-i={e.idea} />
-      ))
+      !layout.crowded &&
+        layout.edges.map((e) => (
+          <path d={e.d} data-t={e.topics.join(' ')} data-p={e.post} data-i={e.idea} />
+        ))
     }
   </g>
   <g class="topics">
@@ -84,24 +86,25 @@ const markY = -(markHeight + nameSize * 1.2) / 2;
   </g>
   <g class="ideas">
     {
-      layout.ideas.map((i) =>
-        i.tip ? (
-          <a
-            href={hrefs.get(i.id) ?? `/thoughts/${i.post}`}
-            tabindex="-1"
-            data-t={i.topics.join(' ')}
-            data-p={i.post}
-            data-idea={i.id}
-          >
-            <circle class="hit" cx={i.x} cy={i.y} r={o.dot * 2.6} />
-            <circle cx={i.x} cy={i.y} r={o.dot} />
-          </a>
-        ) : (
-          <g data-t={i.topics.join(' ')} data-p={i.post} data-idea={i.id}>
-            <circle cx={i.x} cy={i.y} r={o.dot} />
-          </g>
-        ),
-      )
+      !layout.crowded &&
+        layout.ideas.map((i) =>
+          i.tip ? (
+            <a
+              href={hrefs.get(i.id) ?? `/thoughts/${i.post}`}
+              tabindex="-1"
+              data-t={i.topics.join(' ')}
+              data-p={i.post}
+              data-idea={i.id}
+            >
+              <circle class="hit" cx={i.x} cy={i.y} r={layout.hitRadius} />
+              <circle cx={i.x} cy={i.y} r={o.dot} />
+            </a>
+          ) : (
+            <g data-t={i.topics.join(' ')} data-p={i.post} data-idea={i.id}>
+              <circle cx={i.x} cy={i.y} r={o.dot} />
+            </g>
+          ),
+        )
     }
   </g>
   <a class="core" href="/how-it-works" tabindex="-1">
@@ -126,6 +129,7 @@ const markY = -(markHeight + nameSize * 1.2) / 2;
     {
       layout.ideas.map(
         (i) =>
+          !layout.crowded &&
           i.tip && (
             <text data-for={i.id} text-anchor="middle">
               {i.tip.lines.map((line, n) => (
