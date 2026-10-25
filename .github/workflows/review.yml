@@ -16,8 +16,8 @@ jobs:
     name: Flip the flags and open a pull request
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .node-version
       - run: npm ci --no-audit --no-fund
@@ -28,7 +28,7 @@ jobs:
         run: npx tsx scripts/mark-reviewed.ts
       - name: Open the pull request
         if: steps.mark.outputs.changed != '0'
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           # A pull request opened with GitHub's own token never starts CI, so it could never pass the checks
           # main requires. BOT_TOKEN opens it as a person; without it, reopen the pull request by hand.

@@ -56,7 +56,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.label.name, 'agent:')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ github.head_ref || github.ref }}
           # The full history, so main is there to diff against when working out the thought.
@@ -64,7 +64,7 @@ jobs:
           # Pushes made with GitHub's own token never start CI, so the pull request would show checks from
           # before the agent wrote anything. BOT_TOKEN pushes as a person; without it, the old behaviour.
           token: ${{ secrets.BOT_TOKEN || github.token }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .node-version
       - run: npm ci --no-audit --no-fund
