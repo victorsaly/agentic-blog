@@ -1,12 +1,15 @@
 ---
-// Why: the agents at work, in one place. On top, what is running on GitHub right now, read live. Below, where
-// every thought stands, one line each: what stops it (a guard's hold, or an agent that did not finish), its
-// latest run, and how many agents have worked on it. That line is the decision; the full grid of every agent
-// against every thought is behind one press, for when the detail is wanted. Both are read from the ledgers,
-// so as of the last deploy, including runs made on Victor's computer once they are merged. Seeing local runs
-// live is the next step (Slice 7 in docs/roadbook-plan.md).
+// Why: the agents at work, in one place. On top, every run as it happens, wherever it runs, read from the
+// live copy the runner fills event by event; each opens on its timeline. Then what GitHub has queued and
+// running, with logs and pull requests. Below, where every thought stands, one line each: what stops it (a
+// guard's hold, or an agent that did not finish), its latest run, and how many agents have worked on it. That
+// line is the decision; the full grid of every agent against every thought is behind one press. Both are read
+// from the ledgers as of the last deploy; reading them live is the next step (Slice 7b in
+// docs/roadbook-plan.md).
 import Studio from '../../layouts/Studio.astro';
 import { AgentsLive } from '../../islands/AgentsLive';
+import { RunsBoard } from '../../islands/RunsBoard';
+import { settings } from '../../lib/settings';
 import { loadCosted } from '../../lib/studio-data';
 import { inOrder, pipelineOf, standingOf, type Standing } from '../../lib/pipeline';
 import { agentName } from '../../lib/agent-runs';
@@ -47,17 +50,21 @@ const day = (iso: string): string => formatDate(new Date(`${iso}T12:00:00Z`));
 const short = (iso: string): string =>
   new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 const builtAt = formatDate(new Date());
+const { show, per_usd: perUsd } = settings.publishing.currency;
 ---
 
 <Studio description="What the agents are doing, and where each thought stands.">
   <h1>Agents</h1>
-  <AgentsLive client:load titles={titles} />
+  <RunsBoard client:load titles={titles} currency={{ show, perUsd }} />
+  <div class="on-github">
+    <AgentsLive client:load titles={titles} />
+  </div>
 
   <section class="pipeline" aria-labelledby="pipeline-label">
     <h2 class="label" id="pipeline-label">Where each thought stands</h2>
     <p class="small quiet">
-      From the ledgers as of {builtAt}, the last deploy. Runs made on your computer show here once
-      their pull request is merged.
+      From the ledgers as of {builtAt}, the last deploy. A run made on your computer shows above as
+      it happens, and here once its pull request is merged.
     </p>
     <ul class="runs-list standings">
       {
@@ -141,80 +148,14 @@ const builtAt = formatDate(new Date());
   </section>
 </Studio>
 
-<style is:global>
-  .agents-live .summary {
-    font-size: var(--size-message);
-    font-weight: 700;
-    margin: 0 0 var(--space-4);
-  }
-  .agents-live section + section,
-  .pipeline {
-    margin-top: var(--space-5);
-  }
-  .runs-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    max-width: none;
-  }
-  .runs-list li {
-    display: grid;
-    grid-template-columns: 9rem minmax(0, 1fr) auto;
-    align-items: baseline;
-    gap: var(--space-2) var(--space-3);
-    padding-block: var(--space-3);
-    border-bottom: var(--rule-width) solid var(--rule);
-  }
-  @media (max-width: 40rem) {
-    .runs-list li {
-      grid-template-columns: minmax(0, 1fr) auto;
-    }
-    .runs-list .what {
-      grid-column: 1 / -1;
-      grid-row: 2;
-    }
-  }
-  .runs-list .what {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: var(--space-1) var(--space-3);
-    min-width: 0;
-  }
-  .runs-list .links {
-    display: flex;
-    gap: var(--space-3);
-  }
-  /* A state is a word in a hairline box: filled while it is going, like a control that is on; a heavier rule
-     where something stopped; quiet where nothing has happened yet. The same marks in the list and the grid. */
-  .agents-live .state,
-  .pipeline .state {
-    justify-self: start;
-    padding: 0 var(--space-2);
-    border: var(--rule-width) solid var(--ink);
-    font-size: var(--size-small);
-    font-weight: 700;
-    line-height: 1.6;
-    white-space: nowrap;
-  }
-  .agents-live .state-running {
-    background: var(--ink);
-    color: var(--paper);
-  }
-  .agents-live .state-held,
-  .agents-live .state-failed,
-  .pipeline .state-held,
-  .pipeline .state-failed {
-    border-width: var(--rule-strong);
-  }
-  .pipeline .state-untouched {
-    border-color: var(--rule);
-    color: var(--quiet);
-    font-weight: 400;
-  }
-</style>
-
 <style>
+  /* GitHub's own list comes second, so its summary is said at reading size, not as the page's lead. */
+  .on-github {
+    margin-top: var(--space-6);
+  }
+  .on-github :global(.summary) {
+    font-size: var(--size-body);
+  }
   .standings {
     margin-top: var(--space-3);
   }

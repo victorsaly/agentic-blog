@@ -9,38 +9,15 @@ import {
   checkAppend,
   isRunId,
   readAppendRequest,
+  rowOf,
   summarise,
   GENESIS,
-  type LiveRunRow,
+  type RunRecord,
 } from '../../../../src/lib/live-runs';
 import { json, problem, type Handler } from '../../../_lib';
 
 /** A few hundred events of a few hundred bytes each, with room to spare. */
 const MAX_BYTES = 512 * 1024;
-
-interface RunRecord {
-  id: string;
-  thought: string;
-  agent: string;
-  state: string;
-  started_at: string;
-  updated_at: string;
-  usd: number;
-  events: number;
-  head: string;
-}
-
-const rowOf = (r: RunRecord): LiveRunRow => ({
-  id: r.id,
-  thought: r.thought,
-  agent: r.agent,
-  state: r.state,
-  startedAt: r.started_at,
-  updatedAt: r.updated_at,
-  usd: r.usd,
-  events: r.events,
-  head: r.head,
-});
 
 export const onRequestPost: Handler = async ({ request, env, params }) => {
   const db = env.COMMENTS_DB;

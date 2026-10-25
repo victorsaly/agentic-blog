@@ -123,4 +123,76 @@ const title = current === 'today' || !area ? 'Studio' : `${area.name} · Studio`
   .recorder form .row {
     margin-top: var(--space-3);
   }
+
+  /* The live lists of the Agents area and a run's own page: a summary line, then rows with a state box. */
+  .agents-live .summary {
+    font-size: var(--size-message);
+    font-weight: 700;
+    margin: 0 0 var(--space-4);
+  }
+  .agents-live section + section,
+  .pipeline {
+    margin-top: var(--space-5);
+  }
+  .runs-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-width: none;
+  }
+  .runs-list li {
+    display: grid;
+    grid-template-columns: 9rem minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: var(--space-2) var(--space-3);
+    padding-block: var(--space-3);
+    border-bottom: var(--rule-width) solid var(--rule);
+  }
+  @media (max-width: 40rem) {
+    .runs-list li {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .runs-list .what {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+  }
+  .runs-list .what {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-1) var(--space-3);
+    min-width: 0;
+  }
+  .runs-list .links {
+    display: flex;
+    gap: var(--space-3);
+  }
+  /* A state is a word in a hairline box: filled while it is going, like a control that is on; a heavier rule
+     where something stopped; quiet where nothing has happened yet, or a run has gone silent. The same marks
+     in every list, the grid and a run's page. */
+  .studio .state {
+    justify-self: start;
+    padding: 0 var(--space-2);
+    border: var(--rule-width) solid var(--ink);
+    font-size: var(--size-small);
+    font-weight: 700;
+    line-height: 1.6;
+    white-space: nowrap;
+  }
+  .studio .state-running,
+  .studio .state-needs-you {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .studio .state-held,
+  .studio .state-failed {
+    border-width: var(--rule-strong);
+  }
+  .studio .state-untouched,
+  .studio .state-quiet {
+    border-color: var(--rule);
+    color: var(--quiet);
+    font-weight: 400;
+  }
 </style>

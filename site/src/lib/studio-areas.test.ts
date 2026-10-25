@@ -14,6 +14,12 @@ describe('studio areas', () => {
     expect(areaFor('/studio/review/')).toBe('review');
   });
 
+  it('keeps a page inside an area on that area', () => {
+    expect(areaFor('/studio/agents/run')).toBe('agents');
+    expect(areaFor('/studio/agents/run.html')).toBe('agents');
+    expect(areaFor('/studio/agentsx')).toBe('today');
+  });
+
   it('treats the studio itself and anything unknown as the overview', () => {
     expect(areaFor('/studio')).toBe('today');
     expect(areaFor('/studio.html')).toBe('today');

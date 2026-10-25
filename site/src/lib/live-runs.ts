@@ -130,6 +130,31 @@ export interface LiveRunRow {
   head: string;
 }
 
+/** A run's row as the database keeps it. */
+export interface RunRecord {
+  id: string;
+  thought: string;
+  agent: string;
+  state: string;
+  started_at: string;
+  updated_at: string;
+  usd: number;
+  events: number;
+  head: string;
+}
+
+export const rowOf = (r: RunRecord): LiveRunRow => ({
+  id: r.id,
+  thought: r.thought,
+  agent: r.agent,
+  state: r.state,
+  startedAt: r.started_at,
+  updatedAt: r.updated_at,
+  usd: r.usd,
+  events: r.events,
+  head: r.head,
+});
+
 /** The run's row after its new events: the latest state, the cost so far, how far the chain reaches. */
 export function summarise(
   current: LiveRunRow | null,
