@@ -41,11 +41,16 @@ const markY = -(markHeight + nameSize * 1.2) / 2;
 <svg
   class:list={['graph-picture', { 'has-tips': o.tipSize > 0 }, className]}
   viewBox={layout.viewBox}
+  data-inner={o.topicRadius * 1.8}
   aria-hidden="true"
   focusable="false"
 >
   <g class="edges">
-    {layout.edges.map((e) => <path d={e.d} data-t={e.topics.join(' ')} data-p={e.post} />)}
+    {
+      layout.edges.map((e) => (
+        <path d={e.d} data-t={e.topics.join(' ')} data-p={e.post} data-i={e.idea} />
+      ))
+    }
   </g>
   <g class="topics">
     {
@@ -93,7 +98,7 @@ const markY = -(markHeight + nameSize * 1.2) / 2;
             <circle cx={i.x} cy={i.y} r={o.dot} />
           </a>
         ) : (
-          <g data-t={i.topics.join(' ')} data-p={i.post}>
+          <g data-t={i.topics.join(' ')} data-p={i.post} data-idea={i.id}>
             <title>{texts.get(i.id)}</title>
             <circle cx={i.x} cy={i.y} r={o.dot} />
           </g>
@@ -224,6 +229,15 @@ const markY = -(markHeight + nameSize * 1.2) / 2;
   }
   .core text {
     letter-spacing: -0.01em;
+  }
+  /* An idea kept by a click: its dot stays large, and the mark and the pointer's own words step aside for
+     the words the page sets over the middle. */
+  .graph-picture.pinned .core,
+  .graph-picture.pinned .tips {
+    display: none;
+  }
+  .ideas a[data-pinned] circle:not(.hit) {
+    transform: scale(1.8);
   }
   /* The site underlines its links; in the picture a name is already a target, so the line only crowds it. */
   a {
