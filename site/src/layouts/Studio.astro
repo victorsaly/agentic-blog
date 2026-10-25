@@ -6,6 +6,7 @@ import Page from './Page.astro';
 import StudioTabs from '../components/StudioTabs.astro';
 import { settings } from '../lib/settings';
 import { areaFor, studioAreas } from '../lib/studio-areas';
+import { loadWaiting } from '../lib/studio-data';
 
 interface Props {
   description: string;
@@ -14,13 +15,14 @@ interface Props {
 const { description } = Astro.props;
 const current = areaFor(Astro.url.pathname);
 const area = studioAreas.find((a) => a.id === current);
+const reviewWaiting = (await loadWaiting()).reduce((sum, t) => sum + t.waiting.length, 0);
 const title = current === 'today' || !area ? 'Studio' : `${area.name} · Studio`;
 ---
 
 <Page title={title} description={description} noindex={true} width="wide">
   <div class="frame studio">
     <p class="label">Studio</p>
-    <StudioTabs current={current} />
+    <StudioTabs current={current} counts={{ review: reviewWaiting }} />
     <slot />
     <p class="small quiet signed-in">
       Signed in as {settings.site.author}. This page is behind Cloudflare Access and is never

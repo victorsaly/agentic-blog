@@ -5,13 +5,19 @@
 // linked to, and the keyboard simply tabs along it. The open one says so with aria-current. Nothing moves
 // when an area opens; this row is used many times a day. On a desk the six areas sit in one row; on a phone
 // they fold into two rows of three, so every area stays in sight and the open one is never scrolled away.
+// An area with something waiting shows how many: the review count is known at build time; the comments are
+// counted when the page opens, and again whenever a decision on one is made, since readers write any time.
 import { studioAreas, type StudioAreaId } from '../lib/studio-areas';
 
 interface Props {
   current: StudioAreaId;
+  /** Things waiting in an area, known at build time. */
+  counts?: Partial<Record<StudioAreaId, number>>;
 }
 
-const { current } = Astro.props;
+const { current, counts = {} } = Astro.props;
+// Only these areas count what waits; comments arrive after the build, so theirs is filled in by the script.
+const counted: readonly StudioAreaId[] = ['review', 'comments'];
 
 // Line icons in the text colour, so they invert with it on the open cell.
 const icons: Record<StudioAreaId, string> = {
@@ -44,12 +50,43 @@ const icons: Record<StudioAreaId, string> = {
               set:html={icons[area.id]}
             />
             <span class="name">{area.name}</span>
+            {counted.includes(area.id) && (
+              <span class="count" data-count={area.id} hidden={!counts[area.id]}>
+                <span class="n">{counts[area.id] ?? 0}</span>
+                <span class="visually-hidden"> waiting</span>
+              </span>
+            )}
           </a>
         </li>
       ))
     }
   </ul>
 </nav>
+
+<script>
+  import { COMMENTS_CHANGED } from '../lib/studio-areas';
+
+  const badge = document.querySelector<HTMLElement>('.studio-tabs [data-count="comments"]');
+  const number = badge?.querySelector('.n');
+
+  async function countComments(): Promise<void> {
+    if (!badge || !number) return;
+    try {
+      const response = await fetch('/api/comments/count');
+      const data: unknown = await response.json();
+      const pending =
+        typeof data === 'object' && data !== null ? (data as { pending?: unknown }).pending : null;
+      if (!response.ok || typeof pending !== 'number') return;
+      number.textContent = String(pending);
+      badge.hidden = pending === 0;
+    } catch {
+      /* no count is better than a wrong one: the area itself says what failed */
+    }
+  }
+
+  void countComments();
+  window.addEventListener(COMMENTS_CHANGED, () => void countComments());
+</script>
 
 <style>
   .studio-tabs {
@@ -73,6 +110,7 @@ const icons: Record<StudioAreaId, string> = {
     }
   }
   a {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -120,6 +158,27 @@ const icons: Record<StudioAreaId, string> = {
   }
   .icon {
     flex: none;
+  }
+  /* How many wait: a number in a hairline box, drawn in the cell's own ink so it inverts with it. */
+  .count:not([hidden]) {
+    position: absolute;
+    top: var(--space-1);
+    right: var(--space-1);
+    display: inline-grid;
+    place-items: center;
+    min-width: 1.6em;
+    padding: 0 0.3em;
+    border: var(--rule-width) solid currentColor;
+    font-size: var(--size-small);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.4;
+  }
+  /* On a phone the cell is narrow, so the number sits in its corner; on a desk it follows the name. */
+  @media (min-width: 48rem) {
+    .count:not([hidden]) {
+      position: static;
+    }
   }
   @media (prefers-reduced-motion: reduce) {
     a {

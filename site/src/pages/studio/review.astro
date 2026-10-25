@@ -1,29 +1,11 @@
 ---
 // Why: what the agents wrote that Victor has not read yet, so nothing waits unseen. Drafts are included: the
 // structure agent opens every thought as a draft, and its versions wait for review then.
-import { getCollection } from 'astro:content';
 import Studio from '../../layouts/Studio.astro';
 import { ReviewList } from '../../islands/ReviewList';
-import { leafOf, thoughtSlugOf } from '../../lib/content';
-import { waitingForReview } from '../../lib/review';
+import { loadWaiting } from '../../lib/studio-data';
 
-const thoughts = (await getCollection('thoughts')).map((t) => ({
-  slug: thoughtSlugOf(t.id),
-  title: t.data.title,
-  date: t.data.date,
-  draft: t.data.draft,
-}));
-const versions = (await getCollection('versions')).map((v) => ({
-  slug: thoughtSlugOf(v.id),
-  leaf: leafOf(v.id),
-  kind: v.data.kind,
-  reviewed: v.data.reviewed,
-}));
-const sources = (await getCollection('sources')).map((s) => ({
-  slug: thoughtSlugOf(s.id),
-  reviewed: s.data.reviewed,
-}));
-const waiting = waitingForReview(thoughts, versions, sources);
+const waiting = await loadWaiting();
 ---
 
 <Studio description="What the agents wrote that you have not read yet.">

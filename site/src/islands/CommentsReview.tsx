@@ -13,6 +13,7 @@ import {
   type OwnerListState,
 } from '../lib/owner-list';
 import { CommentSection } from './CommentSection';
+import { COMMENTS_CHANGED } from '../lib/studio-areas';
 
 function errorOf(data: unknown, fallback: string): string {
   return typeof data === 'object' &&
@@ -108,6 +109,7 @@ export function CommentsReview(): React.JSX.Element {
       if (response.ok || response.status === 404) {
         setters[from]((now) => without(now, comment.id));
         if (action === 'approve' && response.ok) setApproved((now) => withApproved(now, comment));
+        window.dispatchEvent(new Event(COMMENTS_CHANGED));
         setNote({
           list: from,
           text:
