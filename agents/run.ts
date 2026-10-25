@@ -4,7 +4,8 @@
 // summary the workflow turns into a pull request body. A held result exits non-zero on purpose.
 // Every run is recorded in its own file in the thought's ledger (thoughts/<slug>/ledger/<run>.jsonl, with its
 // head in <run>.head): that it started, the state it moved through, what it cost as each provider reported
-// it, and each file it wrote with a receipt. A run that fails at any point after it starts is recorded as
+// it, and each file it wrote with a receipt. With STUDIO_URL set, each event is also sent to the studio as it
+// is recorded, so the run shows there while it happens (see _lib/live.ts). A run that fails at any point after it starts is recorded as
 // failed, and saved, before the error goes on.
 // Agents never call a provider themselves: ask() and draw() go to the providers the agent's card allows,
 // declared once in roadbook.config.ts, and every call's usage is logged and priced the same way.
@@ -39,6 +40,7 @@ import {
   systemMessage,
 } from './_lib/context.js';
 import { writeOutputs } from './_lib/files.js';
+import { liveFromEnv } from './_lib/live.js';
 import { agentNames, type AgentContext, type AgentName, type AgentRun } from './_lib/types.js';
 
 function isAgentName(value: string): value is AgentName {
@@ -100,8 +102,10 @@ async function main(): Promise<void> {
   if (past.issues.length > 0) throw new LedgerError(`refused: ${past.issues.join(' ')}`);
   const node = agent;
   const origin = originOf(slug, await originFiles(thought.dir));
-  const ledger = new Ledger();
   const run = runId(new Date(), agent);
+  // Each event also goes to the studio as it is recorded, when STUDIO_URL is set; the file stays the record.
+  const live = liveFromEnv(run, slug, process.env);
+  const ledger = new Ledger({ onAppend: live.hear });
 
   // One cost event per provider and model, from the usage each reported; returns the run's total.
   // Recorded once.
@@ -212,6 +216,7 @@ async function main(): Promise<void> {
     throw error;
   } finally {
     await saveRun(thought.dir, run, ledger);
+    await live.flush();
   }
 
   console.info(

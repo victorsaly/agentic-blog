@@ -129,6 +129,13 @@ vendor and no heavier database: the volume is a few dozen runs a day, and D1 alr
 
 #### Slice 7: the runner reports as it goes (D1)
 
+**7a is built** (`feat/live-runs`): the core `Ledger` takes an `onAppend` listener; `agents/_lib/live.ts`
+sends each event to `POST /api/runs/:id/events`, which checks every event's hash, its place and the chain
+before keeping it (`site/src/lib/live-runs.ts`), and keeps the run's row in the same transaction;
+`migrations/0002_runs.sql` adds the tables; `npm run live:rebuild` refills them from the ledgers. Setup for
+the live site is in `site/README.md`, step 8. **7b is next**: the studio reads these tables (Agents board,
+pipeline without waiting for a deploy, "needs you" on Today) and the run timeline.
+
 - `agents/run.ts` sends each ledger event, as it appends it, to `POST /api/runs/:id/events`. The Worker
   checks the hash chain before storing (an event whose `prev` does not match the last one is refused).
   A send that fails never fails the run: the ledger file is still the record.
