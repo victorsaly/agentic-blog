@@ -114,11 +114,12 @@ if (event === 'new-origin') {
   await writeFile(join(dir, file), content, 'utf8');
   outputs.push(
     ['branch', `origin/${slug}`],
+    ['slug', slug],
     ['title', `content: new origin for ${slug}`],
     ['label', 'origin'],
     [
       'body',
-      `${medium === 'text' ? 'New text' : 'A new voice note'} landed from the studio.\n\n- Folder: \`thoughts/${slug}\`\n- ${medium === 'text' ? 'Recording: none, this origin arrived as text' : `Recording: \`${key}\` in R2`}\n- Recorded: ${date}\n\nThe ${medium === 'text' ? 'text' : 'transcript'} is unedited. Merging makes it an origin. The interview agent runs next: add the label \`agent:interview\` to ask the questions, or merge and let the schedule pick it up.`,
+      `${medium === 'text' ? 'New text' : 'A new voice note'} landed from the studio.\n\n- Folder: \`thoughts/${slug}\`\n- ${medium === 'text' ? 'Recording: none, this origin arrived as text' : `Recording: \`${key}\` in R2`}\n- Recorded: ${date}\n\nThe ${medium === 'text' ? 'text' : 'transcript'} is unedited. **Don't merge it yet.** The interview starts on this pull request by itself and asks its questions; answer them in the studio, and the rest of the post is built here too, one agent after another. The merge gate in the studio asks you to merge when the post is ready.`,
     ],
   );
 } else {
