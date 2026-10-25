@@ -30,6 +30,9 @@ jobs:
         if: steps.mark.outputs.changed != '0'
         uses: peter-evans/create-pull-request@v7
         with:
+          # A pull request opened with GitHub's own token never starts CI, so it could never pass the checks
+          # main requires. BOT_TOKEN opens it as a person; without it, reopen the pull request by hand.
+          token: ${{ secrets.BOT_TOKEN || github.token }}
           branch: ${{ steps.mark.outputs.branch }}
           title: ${{ steps.mark.outputs.title }}
           body: ${{ steps.mark.outputs.body }}

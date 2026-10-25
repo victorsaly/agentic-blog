@@ -30,6 +30,9 @@ jobs:
       - name: Open the pull request
         uses: peter-evans/create-pull-request@v7
         with:
+          # A pull request opened with GitHub's own token never starts CI, so it could never pass the checks
+          # main requires. BOT_TOKEN opens it as a person; without it, reopen the pull request by hand.
+          token: ${{ secrets.BOT_TOKEN || github.token }}
           branch: ${{ steps.write.outputs.branch }}
           title: ${{ steps.write.outputs.title }}
           body: ${{ steps.write.outputs.body }}
