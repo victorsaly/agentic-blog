@@ -311,7 +311,7 @@ export function Recorder({ mode, thoughtSlug }: RecorderProps): React.JSX.Elemen
   const discardButton = (somethingToLose: boolean, disabled: boolean): React.JSX.Element => (
     <button
       type="button"
-      className="discard"
+      className="control discard"
       disabled={disabled}
       onClick={() => {
         discard(somethingToLose);
@@ -343,7 +343,7 @@ export function Recorder({ mode, thoughtSlug }: RecorderProps): React.JSX.Elemen
           </button>
           <button
             type="button"
-            className="alternative"
+            className="control alternative"
             onClick={() => {
               setPhase({ kind: 'writing', text: '', sending: false });
             }}

@@ -75,7 +75,7 @@ const plural = (n: number, one: string, many: string): string => (n === 1 ? one 
               spent this month
               <span class="quiet">
                 {month.isFloor ? 'at least; ' : ''}{shareOfCap(month.usd, cap)} of {money(cap)}, as
-                of
+                of{' '}
                 {formatDate(builtAt)}
               </span>
             </span>
