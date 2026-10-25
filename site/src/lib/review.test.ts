@@ -77,6 +77,27 @@ describe('waitingForReview', () => {
     ]);
   });
 
+  it("carries each file's words, so a draft and the sources can be read in the studio", () => {
+    const [draft] = waitingForReview(
+      [{ slug: '2026-10-24-c', title: 'Draft', date: new Date('2026-10-24'), draft: true }],
+      [
+        {
+          slug: '2026-10-24-c',
+          leaf: 'short',
+          kind: 'short',
+          reviewed: false,
+          body: '\nThe **idea**.\n',
+        },
+      ],
+      [{ slug: '2026-10-24-c', reviewed: false, body: '- [A book](https://example.org)' }],
+      [],
+    );
+    expect(draft?.waiting.map((w) => w.text)).toEqual([
+      'The **idea**.',
+      '- [A book](https://example.org)',
+    ]);
+  });
+
   it('lists an unreviewed recording with its audio, since the post will not play it yet', () => {
     expect(
       waitingForReview(
