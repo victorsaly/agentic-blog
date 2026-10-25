@@ -125,6 +125,25 @@ describe('the security agent and the blogger’s decision', () => {
   });
 });
 
+describe('a reply that cannot be checked', () => {
+  it('fails the run when held is broken, keeping none of it', async () => {
+    const answer = matter.stringify('\n# Security check\n', {
+      why: 'The publish check for a thought.',
+      verdict: 'pass',
+      held: ['an unapproved private passage', null],
+    });
+    await expect(run(context({}, answer))).rejects.toThrow(/held/);
+  });
+
+  it('fails the run when held is missing', async () => {
+    const answer = matter.stringify('\n# Security check\n', {
+      why: 'The publish check for a thought.',
+      verdict: 'pass',
+    });
+    await expect(run(context({}, answer))).rejects.toThrow(/held/);
+  });
+});
+
 describe('decisionIn', () => {
   it('reads who, when and the exact passages, with the date YAML makes a Date', () => {
     const file = `---\nwhy: x\nverdict: pass\ndecided_by: Victor Saly\ndecided: 2026-10-25\nkept:\n  - "${KEPT}"\n---\n`;
@@ -153,6 +172,24 @@ describe('notKept', () => {
     expect(
       notKept(['“Built for a dyslexic reader”'], ['"Built for a dyslexic reader" and more']),
     ).toEqual([]);
+  });
+});
+
+describe('notKept on whole words', () => {
+  it('never takes a name for the end of a longer one', () => {
+    expect(notKept(['Anna has cancer.'], ['Joanna has cancer.'])).toEqual(['Anna has cancer.']);
+  });
+
+  it('never takes a word for the start of a longer one', () => {
+    expect(notKept(['my son'], ['my sons are grown'])).toEqual(['my son']);
+  });
+
+  it('needs the words next to each other, in order', () => {
+    expect(notKept(['daughter dyslexic'], [KEPT])).toEqual(['daughter dyslexic']);
+  });
+
+  it('holds a quote with no words in it', () => {
+    expect(notKept(['—'], [KEPT])).toEqual(['—']);
   });
 });
 

@@ -28,14 +28,25 @@ export function decisionIn(file: string | undefined): Decision | null {
     : null;
 }
 
-/** Quotes compare on their words: the same text with straight or curly quotes and any spacing. */
-const plain = (text: string): string =>
-  text.replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, ' ').trim().toLowerCase();
+/**
+ * A passage as its words: lower case, curly quotes made straight, every mark and space between words
+ * dropped. "Joanna has cancer." is [joanna, has, cancer], never a longer form of [anna, has, cancer].
+ */
+const wordsOf = (text: string): string[] =>
+  text
+    .toLowerCase()
+    .replace(/[\u2018\u2019]/g, "'")
+    .match(/[\p{L}\p{N}]+(?:'[\p{L}\p{N}]+)*/gu) ?? [];
 
-/** The held passages no kept passage covers. A held quote is covered when it sits inside one kept. */
+/** Whether the words of part appear in whole, in order and next to each other, in the words of passage. */
+const runOf = (part: readonly string[], passage: readonly string[]): boolean =>
+  part.length > 0 &&
+  passage.some((_, start) => part.every((word, i) => passage[start + i] === word));
+
+/** The held passages no kept passage covers. A held quote is covered when its words sit inside one kept. */
 export function notKept(held: readonly string[], kept: readonly string[]): string[] {
-  const keptPlain = kept.map(plain);
-  return held.filter((quote) => !keptPlain.some((k) => k.includes(plain(quote))));
+  const keptWords = kept.map(wordsOf);
+  return held.filter((quote) => !keptWords.some((k) => runOf(wordsOf(quote), k)));
 }
 
 export interface Verdict {
@@ -66,7 +77,9 @@ export function verdictFor(
   return { verdict: open.length === 0 ? 'pass' : 'hold', released, open };
 }
 
-const heldSchema = z.array(z.string().trim().min(1)).catch([]);
+// Every passage the model would hold, quoted. A list that is missing or broken fails the run rather than
+// reading as "nothing held": a bad reply must never release a thought.
+const heldSchema = z.array(z.string().trim().min(1));
 
 /**
  * The file as written: the model's body, its front matter with the verdict set by code, and the decision
@@ -78,7 +91,12 @@ export function finalFile(
   decision: Decision | null,
 ): { content: string; verdict: Verdict } {
   const { data, content } = matter(reply);
-  const held = heldSchema.parse(data['held']);
+  const parsedHeld = heldSchema.safeParse(data['held']);
+  if (!parsedHeld.success)
+    throw new Error(
+      'security.md must list held: every passage it would hold, quoted (an empty list when none)',
+    );
+  const held = parsedHeld.data;
   const verdict = verdictFor(data['verdict'], held, decision);
   const front: Record<string, unknown> = Object.fromEntries(
     Object.entries(data).filter(([key]) => !['decided_by', 'decided', 'kept'].includes(key)),
