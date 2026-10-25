@@ -38,7 +38,10 @@
     },
   ],
   // The Turnstile site key is public by design; the secret is not (see below).
-  "vars": { "GITHUB_REPO": "victorsaly/agentic-blog", "TURNSTILE_SITE_KEY": "" },
+  "vars": {
+    "GITHUB_REPO": "victorsaly/agentic-blog",
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAFk-_BvvggwwxE6c",
+  },
   "observability": { "enabled": true },
   // Secrets: GITHUB_TOKEN (`npx wrangler secret put GITHUB_TOKEN`, fine-grained, contents: write, this repo
   // only), ANTHROPIC_API_KEY for the reader chat (a key with a spend limit set in the Anthropic console), and

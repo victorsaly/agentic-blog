@@ -33,10 +33,10 @@ The site deploys as a **Worker with static assets** (`site/wrangler.jsonc`), not
    `/studio` and `/api/*`, policy *Allow* with your email. Nothing else needs a login.
 6. **Comments**: the D1 database `agentic-blog-comments` (bound as `COMMENTS_DB`) exists, its id is pinned
    in `wrangler.jsonc` so the deploy token needs no D1 permission, and its table is in. A later migration
-   is applied by hand, from `site/`: `npx wrangler d1 migrations apply COMMENTS_DB --remote`. Then
-   Turnstile: dashboard → Turnstile → add a widget for `blog.victorsaly.com`, put its **site key** in
-   `vars.TURNSTILE_SITE_KEY` in `wrangler.jsonc` and run `npx wrangler secret put TURNSTILE_SECRET` with its
-   **secret key**. Until both are set the form stays hidden. Every comment waits in `/studio` under
+   is applied by hand, from `site/`: `npx wrangler d1 migrations apply COMMENTS_DB --remote`. Turnstile
+   is set up too: the widget "Agentic Blog comments" (dashboard → Turnstile, for `blog.victorsaly.com` and
+   `localhost`), its **site key** in `vars.TURNSTILE_SITE_KEY` in `wrangler.jsonc`, its **secret key** as
+   the Worker secret `TURNSTILE_SECRET`. If either goes missing the form hides itself. Every comment waits in `/studio` under
    "Comments waiting"; nothing shows to readers until it is approved. Only the name, the comment and the
    optional email are kept, and the email is shown to nobody but Victor (the form says so).
 7. Local: `npm run worker:dev --workspace site` runs the built site with local R2, AI and D1 bindings. For the
