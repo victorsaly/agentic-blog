@@ -21,6 +21,13 @@ themes: # the ring around the core; one idea can carry several
   - scalable-secure
   - apps-and-workflows
 
+topics: # one plain line per theme, shown on the Topics page and on each topic's page; Victor's words win
+  ai-changing-work: How AI is changing the work we do, and who still makes the call.
+  accountability: Who answers for the work when a machine helped to make it.
+  credibility: What makes people believe what you say, and what you ship.
+  scalable-secure: Building systems that grow without breaking and keep people's data safe.
+  apps-and-workflows: The apps and the small workflows that get real work done.
+
 depths: # the three reading depths, in order
   - message
   - idea

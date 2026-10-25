@@ -1,48 +1,73 @@
 ---
-// Why: the home page and the archive list thoughts as one numbered, ruled index: the number, the title as
-// the one marigold mark, the message under it, the date at the end of the row. It is the compact list, so a
-// reader can scan many posts at once; the topic pages keep the prints (ThoughtList) for a shorter list.
+// Why: every list of thoughts on the site (home, the archive, a topic page) is this one ruled index, so a
+// reader learns one row and reads it everywhere: the thought's number, kept from the day it was published,
+// then the title as the one marigold mark, the message, and under it the date and the thought's topics as
+// links. A topic page adds each post's linocut print, beside the text on a desk and above it on a phone.
+// The number stays quiet so the title leads; spacing and ink rules only, no cards.
 import type { CollectionEntry } from 'astro:content';
-import { thoughtSlugOf } from '../lib/content';
+import { Image } from 'astro:assets';
+import { formatDate, thoughtSlugOf } from '../lib/content';
+import { coversBySlug } from '../lib/covers';
 import { settings } from '../lib/settings';
+import { themeLabel } from '../lib/themes';
 
 interface Props {
   thoughts: CollectionEntry<'thoughts'>[];
-  /** The number of the first row, so a list split by year keeps counting. */
-  start?: number;
+  /** Each thought's number, from thoughtNumbers over every published thought. */
+  numbers: Map<string, number>;
+  /** Show each post's cover print (the topic pages). */
+  prints?: boolean;
+  /** The topic page this list is on: left out of each post's topic links, since you are there. */
+  current?: string;
 }
 
-const { thoughts, start = 1 } = Astro.props;
-const pad = (n: number): string => String(n).padStart(2, '0');
-const short = (date: Date): string =>
-  new Intl.DateTimeFormat('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    timeZone: settings.site.timezone,
-  }).format(date);
+const { thoughts, numbers, prints = false, current } = Astro.props;
+const covers = await coversBySlug();
 ---
 
-<ol class="index" start={start}>
+<ol class:list={['index', { prints }]}>
   {
-    thoughts.map((t, i) => (
-      <li>
-        <span class="n" aria-hidden="true">
-          {pad(start + i)}
-        </span>
-        <div>
-          <h3>
-            <a href={`/thoughts/${thoughtSlugOf(t.id)}`}>
-              <mark>{t.data.title}</mark>
+    thoughts.map((t) => {
+      const slug = thoughtSlugOf(t.id);
+      const cover = prints ? covers.get(slug) : undefined;
+      const others = t.data.themes.filter((topic) => topic !== current);
+      return (
+        <li>
+          <span class="n" aria-hidden="true">
+            {String(numbers.get(t.id) ?? '').padStart(2, '0')}
+          </span>
+          {cover && (
+            <a class="print" href={`/thoughts/${slug}`} tabindex="-1" aria-hidden="true">
+              <Image src={cover.image} alt="" width={240} height={240} loading="lazy" />
             </a>
-          </h3>
-          <p class="summary">{t.data.message}</p>
-        </div>
-        <time class="small quiet" datetime={t.data.date.toISOString()}>
-          {short(t.data.date)}
-        </time>
-      </li>
-    ))
+          )}
+          <div class="text">
+            <h3>
+              <a href={`/thoughts/${slug}`}>
+                <mark>{t.data.title}</mark>
+              </a>
+            </h3>
+            <p class="summary">{t.data.message}</p>
+            <p class="small quiet meta">
+              <time datetime={t.data.date.toISOString()}>
+                {formatDate(t.data.date, 'en-GB', settings.site.timezone)}
+              </time>
+              {others.length > 0 && (
+                <span>
+                  {current ? 'Also in ' : 'In '}
+                  {others.map((topic, i) => (
+                    <>
+                      {i > 0 && ', '}
+                      <a href={`/topics/${topic}`}>{themeLabel(topic)}</a>
+                    </>
+                  ))}
+                </span>
+              )}
+            </p>
+          </div>
+        </li>
+      );
+    })
   }
 </ol>
 
@@ -55,16 +80,44 @@ const short = (date: Date): string =>
   }
   li {
     display: grid;
-    grid-template-columns: 4.5rem minmax(0, 1fr) 8rem;
-    gap: var(--space-4);
+    grid-template-columns: 3rem minmax(0, 1fr);
+    grid-template-areas: 'n text';
+    gap: var(--space-2) var(--space-4);
     align-items: baseline;
     padding-block: var(--space-4);
     border-bottom: var(--rule-width) solid var(--ink);
   }
+  .prints li {
+    grid-template-columns: 3rem 13rem minmax(0, 1fr);
+    grid-template-areas: 'n print text';
+    align-items: start;
+  }
+  /* The number: quiet, small, and the same width for every digit, so the titles line up and lead. */
   .n {
-    font-size: 2rem;
+    grid-area: n;
+    font-size: var(--size-small);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
+    color: var(--quiet);
+  }
+  .prints .n {
+    padding-top: 0.6rem;
+  }
+  .print {
+    grid-area: print;
+    display: block;
+  }
+  .print :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: var(--print-paper);
+    padding: var(--print-pad);
+    filter: var(--print-filter);
+  }
+  .text {
+    grid-area: text;
+    min-width: 0;
   }
   h3 {
     margin: 0;
@@ -91,24 +144,30 @@ const short = (date: Date): string =>
     font-size: 1.0625rem;
     line-height: 1.55;
   }
-  time {
-    text-align: right;
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-3);
+    margin: var(--space-2) 0 0;
   }
 
   @media (max-width: 40rem) {
-    li {
-      grid-template-columns: 2.75rem minmax(0, 1fr);
-      gap: var(--space-1) var(--space-3);
+    li,
+    .prints li {
+      grid-template-columns: 2.25rem minmax(0, 1fr);
+      grid-template-areas: 'n text';
+      gap: var(--space-2) var(--space-3);
     }
-    .n {
-      font-size: 1.5rem;
+    .prints li {
+      grid-template-areas:
+        'n print'
+        '. text';
+    }
+    .print {
+      width: 10rem;
     }
     h3 {
       font-size: 1.375rem;
-    }
-    time {
-      grid-column: 2;
-      text-align: left;
     }
   }
 </style>

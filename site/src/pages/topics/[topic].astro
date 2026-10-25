@@ -1,11 +1,16 @@
 ---
-// Why: one page per topic, listing every post that carries it, message first, with the other topics beside
-// the list. A topic with no published post has no page, so a reader never lands on an empty list.
+// Why: one page per topic: what the topic means in one plain line, then every post that carries it, in the
+// same ruled index as every other list but with each post's print, and the other topics beside it (on a
+// phone, under the heading). The label above the name links back to all the topics. A topic with no
+// published post has no page, so a reader never lands on an empty list.
 import { getCollection } from 'astro:content';
 import Page from '../../layouts/Page.astro';
 import ListHead from '../../components/ListHead.astro';
-import ThoughtList from '../../components/ThoughtList.astro';
+import ThoughtIndex from '../../components/ThoughtIndex.astro';
+import TopicStrip from '../../components/TopicStrip.astro';
 import TopicsAside from '../../components/TopicsAside.astro';
+import { thoughtNumbers } from '../../lib/content';
+import { settings } from '../../lib/settings';
 import { themeCounts, themeLabel, thoughtsLabel } from '../../lib/themes';
 
 export async function getStaticPaths() {
@@ -19,18 +24,31 @@ const all = (await getCollection('thoughts', ({ data }) => !data.draft)).sort(
 );
 const thoughts = all.filter((t) => t.data.themes.includes(topic));
 const label = themeLabel(topic);
+const about = settings.topics[topic];
+const count = `${thoughtsLabel(thoughts.length)} so far.`;
 ---
 
 <Page
   title={`${label} — Topics`}
-  description={`Every thought about ${label.toLowerCase()}.`}
+  description={about ?? `Every thought about ${label.toLowerCase()}.`}
   width="wide"
 >
-  <ListHead label="Topic" title={label} note={`${thoughtsLabel(thoughts.length)} on this topic.`} />
+  <ListHead
+    parent={{ href: '/topics', name: 'Topics' }}
+    label={label}
+    title={label}
+    note={about ? `${about} ${count}` : count}
+  />
+  <TopicStrip thoughts={all} current={topic} />
   <div class="frame body">
     <section class="main" aria-labelledby="topic-list">
-      <h2 class="label" id="topic-list">Newest first</h2>
-      <ThoughtList thoughts={thoughts} current={topic} />
+      <h2 class="label" id="topic-list">Thoughts on {label.toLowerCase()}</h2>
+      <ThoughtIndex
+        thoughts={thoughts}
+        numbers={thoughtNumbers(all)}
+        prints={true}
+        current={topic}
+      />
     </section>
     <TopicsAside thoughts={all} current={topic} />
   </div>
@@ -38,13 +56,17 @@ const label = themeLabel(topic);
 
 <style>
   .body {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 17rem;
     gap: var(--space-6);
     padding-top: var(--space-5);
   }
   .main {
-    flex: 999 1 36rem;
     min-width: 0;
+  }
+  @media (max-width: 61rem) {
+    .body {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 </style>

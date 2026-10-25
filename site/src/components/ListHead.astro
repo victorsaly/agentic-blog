@@ -1,18 +1,31 @@
 ---
 // Why: the archive, the topics page and each topic page open the way the home page does, at full width: a
-// heavy rule, a small label saying where you are, the name set large, and one quiet line of what is below,
-// closed by a hairline (like the home page's band) so the labels underneath own the strong rules.
+// heavy rule, a small label saying where you are (with a link one level up when there is one, so a topic
+// page is one tap from all the topics), the name set large, and one quiet line of what is below. No rule
+// closes it: the labelled section underneath opens with its own strong rule.
 interface Props {
   label: string;
   title: string;
   note: string;
+  /** The page one level up, shown before the label as a link: "Topics / Accountability". */
+  parent?: { href: string; name: string };
 }
 
-const { label, title, note } = Astro.props;
+const { label, title, note, parent } = Astro.props;
 ---
 
 <header class="frame head">
-  <p class="label-plain">{label}</p>
+  <p class="label-plain">
+    {
+      parent && (
+        <>
+          <a href={parent.href}>{parent.name}</a>
+          <span aria-hidden="true"> / </span>
+        </>
+      )
+    }
+    {label}
+  </p>
   <h1>{title}</h1>
   <p class="note">{note}</p>
 </header>
@@ -31,6 +44,12 @@ const { label, title, note } = Astro.props;
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
   }
+  .label-plain a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+    margin-block: calc((var(--tap) - 1lh) / -2);
+  }
   h1 {
     margin: var(--space-3) 0 0;
     font-size: clamp(2.75rem, 1.4rem + 4.6vw, 5.5rem);
@@ -39,9 +58,7 @@ const { label, title, note } = Astro.props;
   }
   .note {
     margin: var(--space-4) 0 0;
-    padding-bottom: var(--space-3);
-    border-bottom: var(--rule-width) solid var(--ink);
-    max-width: none;
+    max-width: 60ch;
     font-size: 1.3125rem;
   }
 </style>

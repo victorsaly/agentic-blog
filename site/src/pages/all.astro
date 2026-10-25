@@ -1,31 +1,36 @@
 ---
 // Why: the home page shows the newest ten; this page lists every published thought, newest first, so
-// nothing older is ever out of reach. It is the place to scan everything, so it uses the compact numbered
-// index (not the prints), grouped by year with a link to each year once there is more than one, and the
-// topics beside it to narrow the list.
+// nothing older is ever out of reach. It uses the same ruled index as every list on the site, grouped by
+// year, with a link to each year once there are enough thoughts to need one, and the topics beside it (on a
+// phone, under the heading) to narrow the list.
 import { getCollection } from 'astro:content';
 import Page from '../layouts/Page.astro';
 import ListHead from '../components/ListHead.astro';
 import ThoughtIndex from '../components/ThoughtIndex.astro';
+import TopicStrip from '../components/TopicStrip.astro';
 import TopicsAside from '../components/TopicsAside.astro';
+import { thoughtNumbers } from '../lib/content';
 import { settings } from '../lib/settings';
 import { thoughtsLabel } from '../lib/themes';
 
 const thoughts = (await getCollection('thoughts', ({ data }) => !data.draft)).sort(
   (a, b) => b.data.date.getTime() - a.data.date.getTime() || b.id.localeCompare(a.id),
 );
+const numbers = thoughtNumbers(thoughts);
 const yearOf = (date: Date): string =>
   new Intl.DateTimeFormat('en-GB', { year: 'numeric', timeZone: settings.site.timezone }).format(
     date,
   );
-// Each year with its thoughts and the number its first row carries, so the count runs on across years.
-const years: { year: string; list: typeof thoughts; start: number }[] = [];
+const years: { year: string; list: typeof thoughts }[] = [];
 for (const t of thoughts) {
   const year = yearOf(t.data.date);
   const last = years.at(-1);
   if (last?.year === year) last.list.push(t);
-  else years.push({ year, list: [t], start: thoughts.indexOf(t) + 1 });
+  else years.push({ year, list: [t] });
 }
+// A list short enough to scroll needs no jump links; the counts per year matter only when there are years.
+const JUMP_FROM = 10;
+const showJump = years.length > 1 && thoughts.length >= JUMP_FROM;
 ---
 
 <Page title="Archive" description="Every published thought, newest first." width="wide">
@@ -34,11 +39,12 @@ for (const t of thoughts) {
     title="Every thought"
     note={`${thoughtsLabel(thoughts.length)}, newest first.`}
   />
+  <TopicStrip thoughts={thoughts} />
   <div class="frame body">
     <div class="main">
       {thoughts.length === 0 && <p class="quiet">Nothing published yet.</p>}
       {
-        years.length > 1 && (
+        showJump && (
           <nav class="years" aria-label="Jump to a year">
             <ul>
               {years.map(({ year }) => (
@@ -51,12 +57,13 @@ for (const t of thoughts) {
         )
       }
       {
-        years.map(({ year, list, start }) => (
+        years.map(({ year, list }) => (
           <section aria-labelledby={`year-${year}`}>
             <h2 class="label" id={`year-${year}`}>
-              {year} <span class="quiet">{thoughtsLabel(list.length)}</span>
+              {year}
+              {years.length > 1 && <span class="quiet">{thoughtsLabel(list.length)}</span>}
             </h2>
-            <ThoughtIndex thoughts={list} start={start} />
+            <ThoughtIndex thoughts={list} numbers={numbers} />
           </section>
         ))
       }
@@ -67,13 +74,12 @@ for (const t of thoughts) {
 
 <style>
   .body {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 17rem;
     gap: var(--space-6);
     padding-top: var(--space-5);
   }
   .main {
-    flex: 999 1 36rem;
     min-width: 0;
   }
   .years ul {
@@ -83,8 +89,8 @@ for (const t of thoughts) {
     margin: 0 0 var(--space-5);
     padding: 0;
     max-width: none;
-    border-right: var(--rule-width) solid var(--ink);
     width: fit-content;
+    border-right: var(--rule-width) solid var(--ink);
   }
   .years a {
     display: inline-flex;
@@ -109,5 +115,10 @@ for (const t of thoughts) {
     font-weight: 400;
     letter-spacing: 0;
     text-transform: none;
+  }
+  @media (max-width: 61rem) {
+    .body {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 </style>
