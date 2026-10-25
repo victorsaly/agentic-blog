@@ -41,7 +41,16 @@ const markY = showName ? -markHeight * 0.75 : -markHeight / 2;
   focusable="false"
 >
   <g class="edges">
-    {layout.edges.map((e) => <path d={e.d} data-t={e.topic} />)}
+    {
+      layout.edges.map((e) => (
+        <path
+          d={e.d}
+          data-t={e.topics.join(' ')}
+          data-p={e.post}
+          class={e.spoke ? 'spoke' : undefined}
+        />
+      ))
+    }
   </g>
   <g class="topics">
     {
@@ -67,8 +76,14 @@ const markY = showName ? -markHeight * 0.75 : -markHeight / 2;
   <g class="ideas">
     {
       layout.ideas.map((i) => (
-        <a href={`#${anchors.get(i.id) ?? ''}`} tabindex="-1" data-t={i.topics.join(' ')}>
-          <title>{texts.get(i.id)}</title>
+        <a
+          href={`#${anchors.get(i.id) ?? ''}`}
+          tabindex="-1"
+          data-t={i.topics.join(' ')}
+          data-p={i.post}
+          data-idea={i.id}
+        >
+          {i.tip === undefined && <title>{texts.get(i.id)}</title>}
           <circle class="hit" cx={i.x} cy={i.y} r={o.dot * 2.6} />
           <circle cx={i.x} cy={i.y} r={o.dot} />
         </a>
@@ -101,6 +116,27 @@ const markY = showName ? -markHeight * 0.75 : -markHeight / 2;
       )
     }
   </a>
+  <g class="tips">
+    {
+      layout.ideas.map(
+        (i) =>
+          i.tip && (
+            <text data-for={i.id} text-anchor="middle">
+              {i.tip.lines.map((line, n) => (
+                <tspan x="0" y={i.tip?.baselines[n]} font-size={o.tipSize}>
+                  {line}
+                </tspan>
+              ))}
+              {i.tip.from.map((line, n) => (
+                <tspan class="from" x="0" y={i.tip?.fromBaselines[n]} font-size={o.tipSize * 0.75}>
+                  {line}
+                </tspan>
+              ))}
+            </text>
+          ),
+      )
+    }
+  </g>
 </svg>
 
 <style>
@@ -150,6 +186,28 @@ const markY = showName ? -markHeight * 0.75 : -markHeight / 2;
   }
   .ideas .hit {
     stroke: none;
+  }
+  /* An idea's words take the middle while a pointer rests on its dot; the mark steps aside for them. */
+  .tips text {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .tips .from {
+    fill: var(--quiet);
+    font-weight: 400;
+  }
+  .ideas circle:not(.hit) {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .graph-picture:has(.ideas a:hover) .core,
+    .graph-picture:has(.ideas a:hover) .spoke {
+      visibility: hidden;
+    }
+    .ideas a:hover circle:not(.hit) {
+      transform: scale(1.8);
+    }
   }
   .core text {
     letter-spacing: -0.01em;

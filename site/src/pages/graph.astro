@@ -68,7 +68,24 @@ const rules = (pointer: boolean): string =>
       return `${dim}{opacity:.16}${arc}{stroke-width:var(--rule-heavy)}${name}{stroke:var(--mark);fill:var(--mark-ink)}`;
     })
     .join('');
-const css = `${rules(false)}@media (hover:hover) and (pointer:fine){${rules(true)}}`;
+// Pointing at a dot sets its words in the middle and steps back every idea from another post, so the
+// ideas a post holds show together.
+const slugs = [...new Set(graph.ideas.map((i) => i.slug))].filter((p) => /^[a-z0-9-]+$/.test(p));
+const pointing =
+  graph.ideas
+    .filter((i) => /^[a-z0-9:-]+$/.test(i.id))
+    .map(
+      (i) =>
+        `.graph-picture:has([data-idea="${i.id}"]:hover) [data-for="${i.id}"]{visibility:visible}`,
+    )
+    .join('') +
+  slugs
+    .map(
+      (p) =>
+        `.graph-picture:has([data-idea][data-p="${p}"]:hover) [data-p]:not([data-p="${p}"]){opacity:.16}`,
+    )
+    .join('');
+const css = `${rules(false)}@media (hover:hover) and (pointer:fine){${rules(true)}${pointing}}`;
 ---
 
 <Page

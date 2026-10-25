@@ -118,8 +118,22 @@ describe('layoutGraph', () => {
       });
 
       it('joins every idea to each of its topics, and every topic to the middle', () => {
-        const ideaEdges = graph.ideas.reduce((sum, i) => sum + i.topics.length, 0);
-        expect(layout.edges).toHaveLength(ideaEdges + graph.topics.length);
+        for (const idea of layout.ideas) {
+          const reached = layout.edges.filter((e) => e.idea === idea.id).flatMap((e) => e.topics);
+          for (const t of idea.topics) expect(reached, `${idea.id} → ${t}`).toContain(t);
+        }
+        const toMiddle = layout.edges.filter((e) => e.idea === undefined && e.topics.length === 1);
+        for (const t of layout.topics)
+          expect(toMiddle.some((e) => e.topics[0] === t.topic)).toBe(true);
+      });
+
+      it('bundles ideas between two neighbouring topics into one knot', () => {
+        const shared = layout.edges.filter(
+          (e) => e.topics.includes('ai-changing-work') && e.topics.includes('credibility'),
+        );
+        expect(shared).toHaveLength(2);
+        const knots = new Set(shared.map((e) => e.d.split(' ').slice(-2).join(' ')));
+        expect(knots.size).toBe(1);
       });
 
       it('draws the same picture for the same posts', () => {
@@ -127,6 +141,19 @@ describe('layoutGraph', () => {
       });
     });
   }
+
+  it('sets the words of each idea inside the topic ring on a desk, and none on a phone', () => {
+    const desk = layoutGraph(graph, deskLayout);
+    for (const idea of desk.ideas) {
+      const tip = idea.tip;
+      if (tip === undefined) throw new Error(`no words for ${idea.id}`);
+      const last = tip.fromBaselines[tip.fromBaselines.length - 1] ?? 0;
+      expect(Math.abs(tip.baselines[0] ?? 0)).toBeLessThan(deskLayout.topicRadius);
+      expect(Math.abs(last)).toBeLessThan(deskLayout.topicRadius);
+      expect(tip.from.join(' ')).toBe(`From ${idea.post}`);
+    }
+    expect(layoutGraph(graph, phoneLayout).ideas.every((i) => i.tip === undefined)).toBe(true);
+  });
 
   it('draws nothing but the middle when there are no ideas', () => {
     const empty = layoutGraph(graphOf([], known), deskLayout);
