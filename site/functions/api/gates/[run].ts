@@ -64,10 +64,12 @@ export const onRequestPost: Handler = async ({ request, env, params }) => {
   if (!env.GITHUB_TOKEN) return problem('GITHUB_TOKEN is not set for this deployment.', 500);
   const id = runOf(params);
   if (id === null) return problem('That is not a run.', 400);
-  const by = signedInEmail(request);
+  const by = signedInEmail(request, env);
   if (!isPerson(by))
     return problem(
-      'A gate is closed only by a person signed in through Cloudflare Access (RB080).',
+      env.DEV_SKIP_ACCESS === '1'
+        ? 'A gate is closed only by a person (RB080). In local dev, set DEV_EMAIL in site/.dev.vars to who you are.'
+        : 'A gate is closed only by a person signed in through Cloudflare Access (RB080).',
       403,
     );
   const parsed = readGateRequest(await request.json().catch(() => null));

@@ -21,6 +21,8 @@ export interface Env {
   ASSETS: { fetch: (input: URL | Request | string) => Promise<Response> };
   /** Set to "1" in .dev.vars only. wrangler never deploys that file, so production never sees it. */
   DEV_SKIP_ACCESS?: string;
+  /** Who is signed in during local dev, where Access is not in front; read only with DEV_SKIP_ACCESS. */
+  DEV_EMAIL?: string;
 }
 
 export type Handler = PagesFunction<Env>;
@@ -44,9 +46,15 @@ export function cameThroughAccess(request: Request): boolean {
   );
 }
 
-/** The signed-in person, as Access reports it; "unknown" in local dev where Access is not in front. */
-export function signedInEmail(request: Request): string {
-  return request.headers.get('cf-access-authenticated-user-email') ?? 'unknown';
+/**
+ * The signed-in person, as Access reports it. In local dev, where Access is not in front, it is DEV_EMAIL
+ * from .dev.vars when that is set (never deployed), so a decision can be tried end to end; else "unknown".
+ */
+export function signedInEmail(request: Request, env?: Env): string {
+  const access = request.headers.get('cf-access-authenticated-user-email');
+  if (access !== null) return access;
+  if (env?.DEV_SKIP_ACCESS === '1' && env.DEV_EMAIL) return env.DEV_EMAIL;
+  return 'unknown';
 }
 
 /** R2 keys are dated and random so two recordings can never collide or be guessed. */

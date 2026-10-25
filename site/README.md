@@ -15,7 +15,9 @@ npm run worker:dev --workspace site  # the built site plus the API, with local R
 
 The functions skip the Access check when `DEV_SKIP_ACCESS=1` is set in `site/.dev.vars` (copy
 `.dev.vars.example`). The hostname cannot tell local from production, because wrangler dev rewrites every
-request to the custom domain. Everything else behaves as in production.
+request to the custom domain. Everything else behaves as in production. Answering a gate needs a person
+(RB080): set `DEV_EMAIL` in `.dev.vars` to your address, and a decision sent locally is recorded through
+GitHub as it would be in production.
 
 ## Cloudflare setup (once)
 
@@ -25,12 +27,12 @@ The site deploys as a **Worker with static assets** (`site/wrangler.jsonc`), not
    (or let the Cloudflare connector do it). It is bound as `AUDIO`.
 2. **Workers AI** is bound as `AI`; nothing to create.
 3. **Secrets**, from `site/`: `npx wrangler secret put GITHUB_TOKEN` (a fine-grained token on this repo,
-   *Contents: read and write* only). In GitHub, add `CLOUDFLARE_API_TOKEN` (Workers Scripts: edit, DNS: edit
+   _Contents: read and write_ only). In GitHub, add `CLOUDFLARE_API_TOKEN` (Workers Scripts: edit, DNS: edit
    on victorsaly.com, Workers R2: read) and `CLOUDFLARE_ACCOUNT_ID` as repository secrets for the deploy.
 4. **Domain**: `wrangler.jsonc` claims `blog.victorsaly.com` as a custom domain; the first deploy creates the
    DNS record. Remove any CNAME you added by hand first, or the deploy refuses with a conflict.
 5. **Access**: Zero Trust → Access → Applications → self-hosted, domain `blog.victorsaly.com`, paths
-   `/studio` and `/api/*`, policy *Allow* with your email. Nothing else needs a login.
+   `/studio` and `/api/*`, policy _Allow_ with your email. Nothing else needs a login.
 6. **Comments**: the D1 database `agentic-blog-comments` (bound as `COMMENTS_DB`) exists, its id is pinned
    in `wrangler.jsonc` so the deploy token needs no D1 permission, and its table is in. A later migration
    is applied by hand, from `site/`: `npx wrangler d1 migrations apply COMMENTS_DB --remote`. Turnstile
@@ -49,14 +51,14 @@ The site deploys as a **Worker with static assets** (`site/wrangler.jsonc`), not
    `/api/runs/<run>/events` when `STUDIO_URL` is set. To let it through Access:
    - Zero Trust → Access → Service Auth → **Service Tokens** → create one ("agentic-blog runner"). Copy its
      client id and secret; the secret is shown once.
-   - In the Access application of step 5, add a policy with action **Service Auth**, include *Service
-     Token* → that token.
+   - In the Access application of step 5, add a policy with action **Service Auth**, include _Service
+     Token_ → that token.
    - GitHub → Settings → Secrets and variables → Actions: variable `STUDIO_URL` =
      `https://blog.victorsaly.com`, secrets `STUDIO_ACCESS_CLIENT_ID` and `STUDIO_ACCESS_CLIENT_SECRET`.
    - For runs on your computer, the same three in the root `.env` (see `.env.example`). Against
      `npm run worker:dev` locally, `STUDIO_URL=http://localhost:8787` needs no token.
-   The tables are only a copy of the ledger files: `npm run live:rebuild` (add `-- --remote` for the live
-   database) empties and refills them from git.
+     The tables are only a copy of the ledger files: `npm run live:rebuild` (add `-- --remote` for the live
+     database) empties and refills them from git.
 
 ## Where things are
 
