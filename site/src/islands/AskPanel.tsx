@@ -10,6 +10,7 @@
 // be answered, and nothing is kept on the site.
 import { Fragment, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { blocksOf, isPlace, plainText, type Inline } from '../lib/answer-text';
+import { isListenRequest } from '../lib/read-along';
 import { NARROW, useDock } from './use-dock';
 
 interface Source {
@@ -51,6 +52,8 @@ const POST_SUGGESTIONS = [
   'Where in the road should I start?',
   'What changed from the original note?',
 ];
+/** Offered on a post whose idea has a recording. */
+const LISTEN_SUGGESTION = 'Read the idea to me.';
 const PASSAGE_SUGGESTIONS = [
   'Explain this passage in plain words.',
   'Where does this come from in the original note?',
@@ -144,6 +147,7 @@ export function AskPanel({ iconSrc }: AskPanelProps): React.JSX.Element {
     null,
   );
   const [copied, setCopied] = useState<number | null>(null);
+  const [listenable, setListenable] = useState(false);
   const nextId = useRef(1);
   const restored = useRef(false);
   const id = useId();
@@ -167,6 +171,18 @@ export function AskPanel({ iconSrc }: AskPanelProps): React.JSX.Element {
     restored.current = true;
   }, [openPanel]);
 
+  // The post's read-aloud row shows itself once it has checked the voice against the page.
+  useEffect(() => {
+    const check = (): void => {
+      setListenable(document.querySelector('[data-read-along]:not([hidden])') !== null);
+    };
+    check();
+    addEventListener('listen:ready', check);
+    return () => {
+      removeEventListener('listen:ready', check);
+    };
+  }, []);
+
   useEffect(() => {
     if (restored.current) keep({ turns: settled(turns), reopen: false });
   }, [turns]);
@@ -176,6 +192,28 @@ export function AskPanel({ iconSrc }: AskPanelProps): React.JSX.Element {
       const q = question.replace(/\s+/g, ' ').trim();
       if (q === '' || turns.some((t) => t.state === 'asking')) return;
       const turnId = nextId.current++;
+      // "Play it" on a post is answered here, not by the model: the post reads its idea aloud.
+      if (post && !about && isListenRequest(q)) {
+        const playable = document.querySelector('[data-read-along]:not([hidden])') !== null;
+        setTurns((all) => [
+          ...all,
+          {
+            id: turnId,
+            question: q,
+            state: 'answered',
+            fromPost: true,
+            answer: playable
+              ? 'Playing the idea, read aloud word for word. The word being said is underlined in the text; press Listen to pause.'
+              : 'This post has no recording yet, so there is nothing to play. The idea is one screen to read.',
+          },
+        ]);
+        setDraft('');
+        if (playable) {
+          if (matchMedia(NARROW).matches) dock.close(false);
+          dispatchEvent(new CustomEvent('listen:play'));
+        }
+        return;
+      }
       const history = turns
         .filter((t) => t.state === 'answered' && t.answer)
         .slice(-4)
@@ -226,7 +264,7 @@ export function AskPanel({ iconSrc }: AskPanelProps): React.JSX.Element {
         });
       }
     },
-    [turns, post, scope],
+    [turns, post, scope, dock],
   );
 
   // A new question scrolls to its own top, so its answer is read from the first line, not the last.
@@ -377,7 +415,11 @@ export function AskPanel({ iconSrc }: AskPanelProps): React.JSX.Element {
   };
 
   const fromPost = Boolean(post && scope === 'post');
-  const suggestions = quote ? PASSAGE_SUGGESTIONS : fromPost ? POST_SUGGESTIONS : SITE_SUGGESTIONS;
+  const suggestions = quote
+    ? PASSAGE_SUGGESTIONS
+    : fromPost
+      ? [...(listenable ? [LISTEN_SUGGESTION] : []), ...POST_SUGGESTIONS]
+      : SITE_SUGGESTIONS;
 
   return (
     <>
