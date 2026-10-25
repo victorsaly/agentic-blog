@@ -58,6 +58,15 @@ The rules that keep this honest:
 `plan` counts retries and fallbacks in the worst-case cost of every run, so a generous retry policy shows up
 in the budget before it shows up on the bill.
 
+## The route, drawn
+
+`route.ts` lays any workflow out as a route to draw: `layoutOf(workflow)` puts each step one column past the
+latest step it waits for (siblings in rows) and lists the lines between them; `routeOf(layout, states)`
+fills in where each step stands, from a ledger (`statesOfRuns`) or a live copy. Steps the ledger does not
+record (inputs, tools) count as passed once anything after them has started. It imports only types, so a
+browser can use it from `@roadbook/core/route` without the rest of the framework. The blog's studio draws it
+by hand as SVG, left to right, per thought.
+
 ## Use
 
 ```ts

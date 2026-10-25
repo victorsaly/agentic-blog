@@ -140,7 +140,7 @@ const title = current === 'today' || !area ? 'Studio' : `${area.name} · Studio`
     padding: 0;
     max-width: none;
   }
-  .runs-list li {
+  .runs-list > li {
     display: grid;
     grid-template-columns: 9rem minmax(0, 1fr) auto;
     align-items: baseline;
@@ -149,7 +149,7 @@ const title = current === 'today' || !area ? 'Studio' : `${area.name} · Studio`
     border-bottom: var(--rule-width) solid var(--rule);
   }
   @media (max-width: 40rem) {
-    .runs-list li {
+    .runs-list > li {
       grid-template-columns: minmax(0, 1fr) auto;
     }
     .runs-list .what {
@@ -259,5 +259,112 @@ const title = current === 'today' || !area ? 'Studio' : `${area.name} · Studio`
     padding: var(--space-3);
     border: var(--rule-width) solid var(--ink);
     max-width: var(--measure);
+  }
+
+  /* A thought's route: the workflow left to right, in the studio's ink. Every mark uses the tokens, so it
+     follows the theme. Filled while a step works or waits on Victor, a strong rule where it held or failed,
+     quiet where it has not run; a gate is round. On a phone the picture gives way to a numbered list. */
+  .route-scroll {
+    overflow-x: auto;
+    margin: var(--space-3) 0 var(--space-2);
+    padding-bottom: var(--space-2);
+  }
+  .route-scroll:focus-visible {
+    outline: var(--focus);
+    outline-offset: var(--focus-offset);
+  }
+  .route-picture {
+    display: block;
+    max-width: none;
+  }
+  .route-line {
+    fill: none;
+    stroke: var(--rule);
+    stroke-width: 1.5;
+  }
+  .route-line.lit {
+    stroke: var(--ink);
+  }
+  .route-step rect {
+    fill: var(--paper);
+    stroke: var(--ink);
+    stroke-width: 1;
+  }
+  .route-step text {
+    fill: var(--ink);
+    font-family: inherit;
+  }
+  .route-step .name {
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .route-step .word {
+    font-size: 12px;
+  }
+  .route-step.state-running rect,
+  .route-step.state-needs-you rect {
+    fill: var(--ink);
+  }
+  .route-step.state-running text,
+  .route-step.state-needs-you text {
+    fill: var(--paper);
+  }
+  .route-step.state-held rect,
+  .route-step.state-failed rect {
+    stroke-width: 3;
+  }
+  .route-step.state-not-run rect {
+    stroke: var(--rule);
+  }
+  .route-step.state-not-run text {
+    fill: var(--quiet);
+  }
+  .route-step rect.here {
+    fill: var(--ink);
+    stroke: none;
+  }
+  .route a:focus-visible rect:first-child {
+    stroke-width: 3;
+  }
+  .route a:hover .name {
+    text-decoration: underline;
+  }
+  .route-list {
+    display: none;
+    margin: var(--space-3) 0;
+    padding-left: var(--space-5);
+  }
+  .studio .route-list .state-not-run {
+    border-color: var(--rule);
+    color: var(--quiet);
+    font-weight: 400;
+  }
+  .route-list > li {
+    padding-block: var(--space-1);
+  }
+  .route-list .state {
+    margin-left: var(--space-2);
+  }
+  .route-list > li.here {
+    font-weight: 700;
+  }
+  .route-key {
+    margin: 0;
+  }
+  @media (max-width: 40rem) {
+    .route-scroll {
+      display: none;
+    }
+    .route-list {
+      display: block;
+    }
+  }
+  .show-route {
+    grid-column: 1 / -1;
+  }
+  .show-route > summary {
+    cursor: pointer;
+    font-size: var(--size-small);
+    font-weight: 700;
   }
 </style>

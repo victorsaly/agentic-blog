@@ -171,6 +171,14 @@ Actions. Durable Objects and Workflows both run on Workers Free (checked 25 Octo
 orchestration on Cloudflare is Slice 8e, decided after living with 8a–8d. Merge happens in the studio
 (8d), by Victor's press, never an agent's.
 
+#### The route, drawn (built, `feat/route-picture`)
+
+Victor asked for a picture of the stages as part of the framework (25 October 2026), studio only, per thought,
+left to right like a GitHub Actions graph. Core lays the workflow out and fills states (`packages/core/src/route.ts`,
+exported as `@roadbook/core/route`); the studio draws it by hand (`site/src/islands/RouteDrawing.tsx`, no graph
+library) under each thought in "Where each thought stands" and on a run's page with its step marked, live from
+the runs feed, a numbered list on a phone. Each step opens its latest run.
+
 ### Later (each needs its own plan before work starts)
 
 - Runtime on Cloudflare: see Slice 8e in `docs/questions-plan.md`.
