@@ -7,10 +7,12 @@
 // gate's branch that is changed (the repository itself when unset). It also names what starts next (the
 // "start" output, which the workflow starts on the same branch): the steps after the gate, or, when Victor
 // sent it back, the steps before it, which then run again with his words.
+// When the gate approved is the one before the way out, it says so ("merge"), and the workflow merges the
+// pull request once its checks pass: the approval in the studio is the merge.
 //   PAYLOAD='{"run":…,"thought":…,"decision":…,"words":…,"by":…}' npx tsx scripts/close-gate.ts
 import { appendFile, mkdir, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
-import { Ledger, closeGate, stepsBefore, stepsToStart } from '@roadbook/core';
+import { Ledger, closeGate, leadsOut, stepsBefore, stepsToStart } from '@roadbook/core';
 import project from '../roadbook.config';
 import { extendRun, readRuns } from '@roadbook/core/node';
 import { liveFromEnv } from '../agents/_lib/live';
@@ -76,6 +78,10 @@ const outputs = {
   body: `Closed in the studio by ${payload.by}: \`${closing.node}\` ${payload.decision}.${file ? `\n\n- Answer: \`thoughts/${payload.thought}/${file}\`` : ''}\n- Run: \`${run.id}\``,
   branch: `gate/${payload.thought}-${run.id.slice(-4)}`,
   start: start.join(' '),
+  // Approving the gate before the way out is Victor's merge; the workflow carries it out once checks pass.
+  gate: closing.node,
+  merge:
+    payload.decision === 'approved' && workflow && leadsOut(workflow, closing.node) ? 'true' : '',
 };
 const out = process.env['GITHUB_OUTPUT'];
 if (out)

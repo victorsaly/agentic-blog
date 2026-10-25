@@ -154,6 +154,16 @@ cap the run waits (exit 5), never runs on credit. **8c-2 next**: the studio's "R
 
 ### Slice 8d: merge from the studio
 
+**Built** (`feat/merge-gate`), changed from the plan below after the first real post: the merge is carried out
+by `gates.yml`, not the Worker, so no new token is needed. Approving the gate before the way out (core
+`leadsOut`: a gate directly before a sink) records `gate.closed` by Victor's Access email on the branch; then
+`scripts/merge-approved.ts` waits for every check on that commit (the approval commit starts them again, so
+checks before it cannot be final), and merges with `BOT_TOKEN` (so the push to main deploys), naming him and
+the gate run in the merge commit. A check that fails keeps the post out, and says which. The studio's control
+is Approve and merge, then Yes, merge: never one press.
+
+The plan as first written:
+
 - When `publish` ends `done`, the `merge` gate opens like any gate (8a). Its control in the studio is
   Merge. Beside it is what will go live: the pull request's title, its files, its checks, and any hold
   that stands.

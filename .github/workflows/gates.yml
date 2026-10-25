@@ -2,7 +2,8 @@
 # a gate in the studio, the studio sends close-gate with his decision and the Access email he is signed in
 # with; this workflow writes it on the branch of the gate's pull request (scripts/close-gate.ts), so the
 # pull request shows the answer beside the questions. A gate whose run is already on main gets a pull request
-# of its own. Nothing merges by itself.
+# of its own. Nothing merges by itself: approving the gate before the way out is Victor's merge, carried out
+# here once the checks pass.
 name: Close a gate
 run-name: >-
   gate · ${{ github.event.client_payload.decision }} · ${{ github.event.client_payload.thought }}
@@ -76,6 +77,20 @@ jobs:
           labels: gate
           commit-message: ${{ steps.close.outputs.title }}
           delete-branch: true
+
+      # The way out: approving the gate before it is Victor's merge. Once every check on the commit that
+      # records his approval has passed, the pull request is merged in his name; a check that fails keeps it
+      # out. Merged with BOT_TOKEN, so the push to main deploys (GitHub's own token would not start it).
+      - name: Merge the pull request on his approval
+        if: steps.close.outputs.merge == 'true' && github.event.client_payload.branch != ''
+        timeout-minutes: 25
+        env:
+          GH_TOKEN: ${{ secrets.BOT_TOKEN || github.token }}
+          BRANCH: ${{ github.event.client_payload.branch }}
+          BY: ${{ github.event.client_payload.by }}
+          GATE: ${{ steps.close.outputs.gate }}
+          RUN: ${{ github.event.client_payload.run }}
+        run: npx tsx scripts/merge-approved.ts
 
       # The run goes on: the steps after the gate (or before it, when it was sent back) start on its branch.
       - name: Start what comes next

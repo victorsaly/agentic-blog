@@ -220,6 +220,8 @@ export function RunTimeline({
         <GateAnswer
           run={run.id}
           gate={gate}
+          // The gate before the way out: approving it is the merge.
+          merges={layout.steps.some((s) => s.kind === 'sink' && s.after.includes(gate.gate))}
           onSent={() => {
             sent.current = true;
           }}

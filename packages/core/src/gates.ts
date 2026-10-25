@@ -173,6 +173,17 @@ export function stepsToStart(workflow: WorkflowInput, finished: string, runs: Ru
   });
 }
 
+/**
+ * Whether approving `gate` lets the work out: a gate directly before the workflow's way out (a sink). Its
+ * owner approving it is the merge, so the runtime may carry it out on their word, and only on it.
+ */
+export function leadsOut(workflow: WorkflowInput, gate: string): boolean {
+  return (
+    workflow.nodes[gate]?.kind === 'gate' &&
+    Object.values(workflow.nodes).some((n) => n.kind === 'sink' && (n.after ?? []).includes(gate))
+  );
+}
+
 /** The steps a gate looks at: what runs again when its owner sends it back. */
 export function stepsBefore(workflow: WorkflowInput, gate: string): string[] {
   return (workflow.nodes[gate]?.after ?? []).filter((id) => {

@@ -1,7 +1,8 @@
 // Why: a gate waits on Victor, and this is where he answers it: beside the question, what he is answering
 // about (the interview's questions, the structure he is approving) and the pull request it is on. An answer
 // can be spoken or written (the studio's recorder, with a preview of how it reads); an approval is Approve,
-// or Not this with his words. What he is answering about is shown as it reads, not as Markdown source.
+// or Not this with his words; at the gate before the way out it is Approve and merge, and says what that
+// does. What he is answering about is shown as it reads, not as Markdown source.
 // Sending only asks GitHub to record it,
 // which takes about a minute, so the page says it was sent and is waiting, never that it is done; the run
 // turns Done on its own when the workflow has written it. Every control has a label, and the status line is
@@ -51,14 +52,23 @@ export interface GateAnswerProps {
   gate: GateView;
   /** Told when the decision has been sent, so the page asks for news more often. */
   onSent: () => void;
+  /** The gate before the way out: approving it merges the pull request once its checks pass. */
+  merges?: boolean;
 }
 
-export function GateAnswer({ run, gate, onSent }: GateAnswerProps): React.JSX.Element {
+export function GateAnswer({
+  run,
+  gate,
+  onSent,
+  merges = false,
+}: GateAnswerProps): React.JSX.Element {
   const id = useId();
   const [about, setAbout] = useState<Context | null>(null);
   const [aboutError, setAboutError] = useState<string | null>(null);
   const [words, setWords] = useState('');
   const [notThis, setNotThis] = useState(false);
+  // Merging is public and hard to undo, so it is never one press: the first asks, the second merges.
+  const [confirming, setConfirming] = useState(false);
   const [sending, setSending] = useState<Sending>({ state: 'idle' });
 
   useEffect(() => {
@@ -127,7 +137,9 @@ export function GateAnswer({ run, gate, onSent }: GateAnswerProps): React.JSX.El
     sending.state === 'sending'
       ? 'Sending…'
       : sending.state === 'sent'
-        ? 'Sent. Waiting for GitHub to record it; this page shows the gate closed when it has.'
+        ? merges
+          ? 'Sent. GitHub records your approval, waits for the checks, then merges: a few minutes. This page shows the gate closed when it is recorded.'
+          : 'Sent. Waiting for GitHub to record it; this page shows the gate closed when it has.'
         : '';
 
   return (
@@ -155,14 +167,30 @@ export function GateAnswer({ run, gate, onSent }: GateAnswerProps): React.JSX.El
 
       {gate.asks === 'approve' && (
         <div className="decide">
+          {merges && (
+            <p className="small">
+              Approving merges the pull request once its checks pass on the commit that records your
+              approval: the post goes live on the site. A check that fails keeps it out.
+            </p>
+          )}
           <div className="row">
             <button
               type="button"
               className="control filled"
               disabled={busy}
-              onClick={() => void send('approved')}
+              onClick={() => {
+                if (merges && !confirming) setConfirming(true);
+                else void send('approved');
+              }}
+              onBlur={() => {
+                setConfirming(false);
+              }}
             >
-              Approve
+              {!merges
+                ? 'Approve'
+                : confirming
+                  ? 'Yes, merge: it goes live on the site'
+                  : 'Approve and merge'}
             </button>
             <button
               type="button"
