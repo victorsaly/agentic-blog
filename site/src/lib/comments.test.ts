@@ -7,11 +7,14 @@ import {
   MAX_NAME,
   isApproval,
   isThoughtSlug,
+  mergeById,
+  pageOf,
   parseCommentRequest,
+  parseCursor,
   parseId,
   parseStatus,
   readCommentsReply,
-  readOwnerComments,
+  readOwnerPage,
   toOwner,
   toPublic,
 } from './comments';
@@ -157,12 +160,18 @@ describe('what a reader may see', () => {
     });
     expect(reply.siteKey).toBe('abc');
     expect(reply.comments).toHaveLength(1);
-    expect(readCommentsReply(null)).toEqual({ comments: [], siteKey: null });
+    expect(readCommentsReply(null)).toEqual({ comments: [], siteKey: null, next: null });
     expect(readCommentsReply({ siteKey: '' }).siteKey).toBeNull();
   });
 
+  it('reads where the next public page starts, and ignores nonsense', () => {
+    expect(readCommentsReply({ comments: [], next: 7 }).next).toBe(7);
+    expect(readCommentsReply({ comments: [], next: 0 }).next).toBeNull();
+    expect(readCommentsReply({ comments: [], next: 'x' }).next).toBeNull();
+  });
+
   it('reads the owner list and drops malformed rows', () => {
-    const rows = readOwnerComments({
+    const page = readOwnerPage({
       comments: [
         {
           id: 1,
@@ -175,7 +184,37 @@ describe('what a reader may see', () => {
         },
         { id: 2, name: 'A', body: 'B', createdAt: 'now', slug: 's', email: null, status: 'nope' },
       ],
+      next: 1,
     });
-    expect(rows).toHaveLength(1);
+    expect(page.comments).toHaveLength(1);
+    expect(page.next).toBe(1);
+    expect(readOwnerPage(null)).toEqual({ comments: [], next: null });
+  });
+});
+
+describe('paging', () => {
+  it('reads a cursor: none is the start, a number is a place, anything else is refused', () => {
+    expect(parseCursor(null)).toBeNull();
+    expect(parseCursor('40')).toBe(40);
+    expect(parseCursor('0')).toBeUndefined();
+    expect(parseCursor('1; drop table comments')).toBeUndefined();
+  });
+
+  it('keeps one page and says where the next starts', () => {
+    const rows = [{ id: 1 }, { id: 2 }, { id: 3 }];
+    expect(pageOf(rows, 2)).toEqual({ rows: [{ id: 1 }, { id: 2 }], next: 2 });
+  });
+
+  it('has no next page when everything fits', () => {
+    expect(pageOf([{ id: 1 }, { id: 2 }], 2)).toEqual({ rows: [{ id: 1 }, { id: 2 }], next: null });
+    expect(pageOf([], 2)).toEqual({ rows: [], next: null });
+  });
+
+  it('merges a page without showing a comment twice', () => {
+    expect(mergeById([{ id: 1 }, { id: 2 }], [{ id: 2 }, { id: 3 }])).toEqual([
+      { id: 1 },
+      { id: 2 },
+      { id: 3 },
+    ]);
   });
 });

@@ -1,14 +1,18 @@
-// Why: nothing a reader writes shows until Victor says so. This is the studio's list of comments, with the
-// email only he may see. Waiting ones can be approved (they appear under the post) or deleted. Approved ones
-// can still be deleted, in case one was let through by mistake; that takes a second press because readers
-// can already see it. Each decision is on a single comment, so it takes effect at once and the row leaves the list.
-import { useEffect, useState } from 'react';
-import { readOwnerComments, type OwnerComment } from '../lib/comments';
-
-type Load =
-  | { kind: 'loading' }
-  | { kind: 'ready'; comments: OwnerComment[] }
-  | { kind: 'failed'; message: string };
+// Why: nothing a reader writes shows until Victor says so. This is the studio's comments: the ones waiting
+// and the ones showing under the posts, in one place so a decision on one moves it to the other at once
+// (approve it and it appears under "showing", where it can still be deleted if it was a mistake). Each
+// decision is on a single comment and takes effect immediately; long lists load a page at a time.
+import { useCallback, useEffect, useState } from 'react';
+import { readOwnerPage, type CommentStatus, type OwnerComment } from '../lib/comments';
+import {
+  readyList,
+  withApproved,
+  withMore,
+  withPage,
+  without,
+  type OwnerListState,
+} from '../lib/owner-list';
+import { CommentSection } from './CommentSection';
 
 function errorOf(data: unknown, fallback: string): string {
   return typeof data === 'object' &&
@@ -18,51 +22,77 @@ function errorOf(data: unknown, fallback: string): string {
     : fallback;
 }
 
-function dateOf(iso: string): string {
-  const date = new Date(iso);
-  return Number.isNaN(date.getTime())
-    ? ''
-    : date.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
+interface Note {
+  list: CommentStatus;
+  text: string;
 }
 
-export interface CommentsReviewProps {
-  status: 'pending' | 'approved';
-}
-
-export function CommentsReview({ status }: CommentsReviewProps): React.JSX.Element {
-  const [load, setLoad] = useState<Load>({ kind: 'loading' });
+export function CommentsReview(): React.JSX.Element {
+  const [pending, setPending] = useState<OwnerListState>({ kind: 'loading' });
+  const [approved, setApproved] = useState<OwnerListState>({ kind: 'loading' });
   const [busy, setBusy] = useState<number | null>(null);
-  const [note, setNote] = useState('');
-  const [confirming, setConfirming] = useState<number | null>(null);
+  const [note, setNote] = useState<Note | null>(null);
+
+  const setters: Record<CommentStatus, typeof setPending> = {
+    pending: setPending,
+    approved: setApproved,
+  };
+
+  const fetchPage = useCallback(
+    async (list: CommentStatus, before: number | null, signal?: AbortSignal) => {
+      const query = before === null ? '' : `&before=${String(before)}`;
+      const response = await fetch(
+        `/api/comments?status=${list}${query}`,
+        signal === undefined ? {} : { signal },
+      );
+      const data: unknown = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(errorOf(data, 'The studio could not read the comments.'));
+      return readOwnerPage(data);
+    },
+    [],
+  );
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(`/api/comments?status=${status}`, { signal: controller.signal })
-      .then(async (response) => {
-        const data: unknown = await response.json().catch(() => null);
-        if (response.ok) setLoad({ kind: 'ready', comments: readOwnerComments(data) });
-        else
-          setLoad({
+    const lists: CommentStatus[] = ['pending', 'approved'];
+    for (const list of lists) {
+      const set = list === 'pending' ? setPending : setApproved;
+      fetchPage(list, null, controller.signal)
+        .then((page) => {
+          set(readyList(page.comments, page.next));
+        })
+        .catch((error: unknown) => {
+          if (controller.signal.aborted) return;
+          set({
             kind: 'failed',
-            message: errorOf(data, 'The studio could not read the comments.'),
+            message:
+              error instanceof Error && error.message !== 'Failed to fetch'
+                ? error.message
+                : 'The studio could not be reached. Check the connection.',
           });
-      })
-      .catch(() => {
-        if (!controller.signal.aborted)
-          setLoad({
-            kind: 'failed',
-            message: 'The studio could not be reached. Check the connection.',
-          });
-      });
+        });
+    }
     return () => {
       controller.abort();
     };
-  }, [status]);
+  }, [fetchPage]);
+
+  const showMore = async (list: CommentStatus, state: OwnerListState): Promise<void> => {
+    if (state.kind !== 'ready' || state.next === null) return;
+    const set = setters[list];
+    set((now) => withMore(now, 'loading'));
+    try {
+      const page = await fetchPage(list, state.next);
+      set((now) => withPage(now, page.comments, page.next));
+    } catch {
+      set((now) => withMore(now, 'failed'));
+    }
+  };
 
   const decide = async (comment: OwnerComment, action: 'approve' | 'delete'): Promise<void> => {
+    const from = comment.status;
     setBusy(comment.id);
-    setConfirming(null);
-    setNote('');
+    setNote(null);
     try {
       const response = await fetch(`/api/comments/${String(comment.id)}`, {
         method: action === 'approve' ? 'POST' : 'DELETE',
@@ -76,86 +106,59 @@ export function CommentsReview({ status }: CommentsReviewProps): React.JSX.Eleme
       const data: unknown = await response.json().catch(() => null);
       // A comment that is already gone is settled either way, so it leaves the list too.
       if (response.ok || response.status === 404) {
-        setLoad((before) =>
-          before.kind === 'ready'
-            ? { kind: 'ready', comments: before.comments.filter((c) => c.id !== comment.id) }
-            : before,
-        );
-        setNote(
-          action === 'approve'
-            ? `Approved. ${comment.name}'s comment is now under the post.`
-            : `Deleted ${comment.name}'s comment.`,
-        );
-      } else setNote(errorOf(data, 'That did not work. Try again.'));
+        setters[from]((now) => without(now, comment.id));
+        if (action === 'approve' && response.ok) setApproved((now) => withApproved(now, comment));
+        setNote({
+          list: from,
+          text:
+            action === 'approve'
+              ? `Approved. ${comment.name}'s comment is now under the post.`
+              : `Deleted ${comment.name}'s comment.`,
+        });
+      } else setNote({ list: from, text: errorOf(data, 'That did not work. Try again.') });
     } catch {
-      setNote('The studio could not be reached. Check the connection.');
+      setNote({ list: from, text: 'The studio could not be reached. Check the connection.' });
     } finally {
       setBusy(null);
     }
   };
 
-  if (load.kind === 'loading') return <p className="quiet">Looking for comments…</p>;
-  if (load.kind === 'failed') return <p role="alert">{load.message}</p>;
+  const onApprove = (comment: OwnerComment): void => {
+    void decide(comment, 'approve');
+  };
+  const onDelete = (comment: OwnerComment): void => {
+    void decide(comment, 'delete');
+  };
 
   return (
-    <div className="comments-review">
-      {load.comments.length === 0 ? (
-        <p className="quiet">
-          {status === 'pending' ? 'No comments waiting.' : 'No approved comments yet.'}
-        </p>
-      ) : (
-        <ul>
-          {load.comments.map((comment) => (
-            <li key={comment.id}>
-              <p className="head">
-                <strong>{comment.name}</strong>
-                {comment.email !== null && (
-                  <a className="small" href={`mailto:${comment.email}`}>
-                    {comment.email}
-                  </a>
-                )}
-                <span className="small quiet">{dateOf(comment.createdAt)}</span>
-              </p>
-              <p className="small quiet">
-                On <a href={`/thoughts/${comment.slug}`}>{comment.slug}</a>
-              </p>
-              <p className="text">{comment.body}</p>
-              <div className="actions">
-                {status === 'pending' && (
-                  <button
-                    type="button"
-                    className="control filled"
-                    disabled={busy === comment.id}
-                    onClick={() => {
-                      void decide(comment, 'approve');
-                    }}
-                  >
-                    Approve
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className={confirming === comment.id ? 'control filled' : 'control'}
-                  disabled={busy === comment.id}
-                  onClick={() => {
-                    if (status === 'approved' && confirming !== comment.id)
-                      setConfirming(comment.id);
-                    else void decide(comment, 'delete');
-                  }}
-                  onBlur={() => {
-                    setConfirming((now) => (now === comment.id ? null : now));
-                  }}
-                >
-                  {confirming === comment.id ? 'Delete for good' : 'Delete'}
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-      <p className="small status" role="status">
-        {note}
-      </p>
-    </div>
+    <>
+      <CommentSection
+        list="pending"
+        heading="Comments waiting"
+        empty="No comments waiting."
+        state={pending}
+        busy={busy}
+        note={note?.list === 'pending' ? note.text : ''}
+        onApprove={onApprove}
+        onDelete={onDelete}
+        onMore={() => {
+          void showMore('pending', pending);
+        }}
+      />
+      <CommentSection
+        list="approved"
+        heading="Comments showing"
+        hint="Approved by mistake? Delete it here and it leaves the post at once."
+        empty="No approved comments yet."
+        state={approved}
+        busy={busy}
+        note={note?.list === 'approved' ? note.text : ''}
+        onApprove={onApprove}
+        onDelete={onDelete}
+        onMore={() => {
+          void showMore('approved', approved);
+        }}
+      />
+    </>
   );
 }

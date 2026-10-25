@@ -7,6 +7,7 @@ import {
   MAX_BODY,
   MAX_EMAIL,
   MAX_NAME,
+  mergeById,
   readCommentsReply,
   type PublicComment,
 } from '../lib/comments';
@@ -54,7 +55,13 @@ function loadTurnstile(): Promise<TurnstileApi> {
 
 type Load =
   | { kind: 'loading' }
-  | { kind: 'ready'; comments: PublicComment[]; siteKey: string | null }
+  | {
+      kind: 'ready';
+      comments: PublicComment[];
+      siteKey: string | null;
+      next: number | null;
+      more: 'idle' | 'loading' | 'failed';
+    }
   | { kind: 'failed' };
 
 type Sending =
@@ -106,7 +113,13 @@ export function Comments({ slug }: CommentsProps): React.JSX.Element | null {
           return;
         }
         const reply = readCommentsReply(data);
-        setLoad({ kind: 'ready', comments: reply.comments, siteKey: reply.siteKey });
+        setLoad({
+          kind: 'ready',
+          comments: reply.comments,
+          siteKey: reply.siteKey,
+          next: reply.next,
+          more: 'idle',
+        });
       })
       .catch(() => {
         if (!controller.signal.aborted) setLoad({ kind: 'failed' });
@@ -115,6 +128,34 @@ export function Comments({ slug }: CommentsProps): React.JSX.Element | null {
       controller.abort();
     };
   }, [slug]);
+
+  const showMore = async (after: number): Promise<void> => {
+    setLoad((before) => (before.kind === 'ready' ? { ...before, more: 'loading' } : before));
+    try {
+      const response = await fetch(`/comments/${slug}?after=${String(after)}`);
+      const data: unknown = response.ok ? await response.json().catch(() => null) : null;
+      if (data === null) throw new Error('No page');
+      const reply = readCommentsReply(data);
+      setLoad((before) =>
+        before.kind === 'ready'
+          ? {
+              ...before,
+              comments: mergeById(before.comments, reply.comments),
+              next: reply.next,
+              more: 'idle',
+            }
+          : before,
+      );
+    } catch {
+      setLoad((before) => (before.kind === 'ready' ? { ...before, more: 'failed' } : before));
+    }
+  };
+
+  // A Turnstile token works once, so every send (kept or refused) needs a fresh check.
+  const freshCheck = (): void => {
+    setToken('');
+    if (widget.current !== null) window.turnstile?.reset(widget.current);
+  };
 
   const startChallenge = (): void => {
     if (started.current || siteKey === null) return;
@@ -155,20 +196,20 @@ export function Comments({ slug }: CommentsProps): React.JSX.Element | null {
         setName('');
         setEmail('');
         setBody('');
-        setToken('');
+        freshCheck();
       } else {
         setSending({
           kind: 'failed',
           message: messageOf(data, 'The comment could not be sent. Try again in a moment.'),
         });
-        if (widget.current !== null) window.turnstile?.reset(widget.current);
-        setToken('');
+        freshCheck();
       }
     } catch {
       setSending({
         kind: 'failed',
         message: 'The comment could not be sent. Check the connection and try again.',
       });
+      freshCheck();
     }
   };
 
@@ -197,6 +238,26 @@ export function Comments({ slug }: CommentsProps): React.JSX.Element | null {
             </li>
           ))}
         </ul>
+      )}
+
+      {load.next !== null && (
+        <div className="actions">
+          <button
+            type="button"
+            className="control"
+            disabled={load.more === 'loading'}
+            onClick={() => {
+              if (load.next !== null) void showMore(load.next);
+            }}
+          >
+            {load.more === 'loading' ? 'Loading…' : 'Show more comments'}
+          </button>
+          {load.more === 'failed' && (
+            <p className="small" role="alert">
+              More comments could not be loaded. Try again.
+            </p>
+          )}
+        </div>
       )}
 
       {siteKey !== null && (

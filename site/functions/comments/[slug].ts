@@ -4,11 +4,15 @@
 // burst limit and Turnstile; the route is closed until the blog is public, as the chat is.
 import {
   MAX_REQUEST_BYTES,
+  PAGE_SIZE,
   isThoughtSlug,
+  pageOf,
   parseCommentRequest,
+  parseCursor,
   toPublic,
   type PublicComment,
 } from '../../src/lib/comments';
+import { readBoundedText } from '../../src/lib/read-bounded';
 import { verifyTurnstile } from '../../src/lib/turnstile';
 import { json, problem, type Env, type Handler } from '../_lib';
 
@@ -43,26 +47,33 @@ export const onRequestGet: Handler = async ({ request, env, params }) => {
   const slug = params.slug;
   if (!isThoughtSlug(slug)) return problem('That is not a post.', 404);
 
-  if (!env.COMMENTS_DB) return json({ comments: [], siteKey: null });
+  if (!env.COMMENTS_DB) return json({ comments: [], siteKey: null, next: null });
   const siteKey = env.TURNSTILE_SITE_KEY ?? null;
   const ready = siteKey !== null && env.TURNSTILE_SECRET !== undefined;
 
+  // Oldest first, a page at a time: ?after=<id of the last comment already shown>.
+  const after = parseCursor(new URL(request.url).searchParams.get('after'));
+  if (after === undefined) return problem('That is not a place in the comments.', 400);
+
   let comments: PublicComment[] = [];
+  let next: number | null = null;
   try {
     const { results } = await env.COMMENTS_DB.prepare(
       `SELECT id, name, body, created_at FROM comments
-       WHERE slug = ?1 AND status = 'approved' ORDER BY created_at ASC, id ASC LIMIT 200`,
+       WHERE slug = ?1 AND status = 'approved' AND id > ?2 ORDER BY id ASC LIMIT ?3`,
     )
-      .bind(slug)
+      .bind(slug, after ?? 0, PAGE_SIZE + 1)
       .all<PublicRow>();
-    comments = results.map(toPublic);
+    const page = pageOf(results, PAGE_SIZE);
+    comments = page.rows.map(toPublic);
+    next = page.next;
   } catch {
     // The table is not there yet (migration not applied): show no comments and no form.
-    return json({ comments: [], siteKey: null });
+    return json({ comments: [], siteKey: null, next: null });
   }
   const corpus = await readCorpus(env, request);
   const open = corpus?.open === true || env.DEV_SKIP_ACCESS === '1';
-  return json({ comments, siteKey: ready && open ? siteKey : null });
+  return json({ comments, siteKey: ready && open ? siteKey : null, next });
 };
 
 export const onRequestPost: Handler = async ({ request, env, params }) => {
@@ -82,8 +93,9 @@ export const onRequestPost: Handler = async ({ request, env, params }) => {
 
   const declared = Number(request.headers.get('content-length') ?? '0');
   if (declared > MAX_REQUEST_BYTES) return problem('That comment is too big.', 413);
-  const raw = await request.text();
-  if (raw.length > MAX_REQUEST_BYTES) return problem('That comment is too big.', 413);
+  // Content-Length can be missing or false, so the body is also counted as it arrives.
+  const raw = await readBoundedText(request, MAX_REQUEST_BYTES);
+  if (raw === null) return problem('That comment is too big.', 413);
   let body: unknown = null;
   try {
     body = JSON.parse(raw);

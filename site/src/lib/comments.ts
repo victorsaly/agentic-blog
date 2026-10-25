@@ -10,6 +10,8 @@ export const MAX_EMAIL = 254;
 export const MAX_LINKS = 2;
 /** The request is small text; anything bigger than this is refused before it is read. */
 export const MAX_REQUEST_BYTES = 8 * 1024;
+/** How many comments one page of a list holds, for readers and for the studio. */
+export const PAGE_SIZE = 50;
 
 export interface NewComment {
   name: string;
@@ -114,6 +116,30 @@ export function parseId(value: unknown): number | null {
   return Number(value);
 }
 
+/** A page cursor from a URL: absent means "from the start" (null), a bad one is undefined. */
+export function parseCursor(value: string | null): number | null | undefined {
+  return value === null ? null : (parseId(value) ?? undefined);
+}
+
+/**
+ * Rows fetched one past the page size become one page, plus the cursor for the next one (the id of its last
+ * row), or null when nothing more is waiting.
+ */
+export function pageOf<T extends { id: number }>(
+  rows: T[],
+  size: number,
+): { rows: T[]; next: number | null } {
+  if (rows.length <= size) return { rows, next: null };
+  const kept = rows.slice(0, size);
+  return { rows: kept, next: kept.at(-1)?.id ?? null };
+}
+
+/** Comments already on the page first, then any new ones, none twice. */
+export function mergeById<T extends { id: number }>(seen: T[], more: T[]): T[] {
+  const ids = new Set(seen.map((item) => item.id));
+  return [...seen, ...more.filter((item) => !ids.has(item.id))];
+}
+
 /** The studio's only decision is to approve; a refusal is a deletion. */
 export function isApproval(body: unknown): boolean {
   return field(body, 'action') === 'approve';
@@ -130,10 +156,17 @@ function isPublic(row: unknown): row is PublicComment {
   );
 }
 
+function readNext(data: unknown): number | null {
+  const next = field(data, 'next');
+  return typeof next === 'number' && Number.isInteger(next) && next > 0 ? next : null;
+}
+
 export interface CommentsReply {
   comments: PublicComment[];
   /** Turnstile's public key; null means this deployment is not set up to take comments. */
   siteKey: string | null;
+  /** Where the next page starts; null when this was the last one. */
+  next: number | null;
 }
 
 /** The page's read of the public list: whatever is not a well-formed comment is left out. */
@@ -143,6 +176,7 @@ export function readCommentsReply(data: unknown): CommentsReply {
   return {
     comments: Array.isArray(rows) ? rows.filter(isPublic) : [],
     siteKey: typeof siteKey === 'string' && siteKey !== '' ? siteKey : null,
+    next: readNext(data),
   };
 }
 
@@ -156,10 +190,10 @@ function isOwner(row: unknown): row is OwnerComment {
   );
 }
 
-/** The studio's read of its list. */
-export function readOwnerComments(data: unknown): OwnerComment[] {
+/** The studio's read of one page of its list. */
+export function readOwnerPage(data: unknown): { comments: OwnerComment[]; next: number | null } {
   const rows = field(data, 'comments');
-  return Array.isArray(rows) ? rows.filter(isOwner) : [];
+  return { comments: Array.isArray(rows) ? rows.filter(isOwner) : [], next: readNext(data) };
 }
 
 /** A row from D1 as the public may see it. The email is dropped here, in one place. */

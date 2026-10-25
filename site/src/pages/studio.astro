@@ -54,16 +54,7 @@ const waiting = waitingForReview(thoughts, versions, sources);
     <ReviewList client:load waiting={waiting} />
   </section>
 
-  <section class="review" aria-labelledby="comments-label">
-    <h2 class="label" id="comments-label">Comments waiting</h2>
-    <CommentsReview client:visible status="pending" />
-  </section>
-
-  <section class="review" aria-labelledby="comments-shown-label">
-    <h2 class="label" id="comments-shown-label">Comments showing</h2>
-    <p class="small quiet">Approved by mistake? Delete it here and it leaves the post at once.</p>
-    <CommentsReview client:visible status="approved" />
-  </section>
+  <CommentsReview client:visible />
 
   <p class="small quiet">
     Signed in as {settings.site.author}. This page is behind Cloudflare Access and is never indexed.
