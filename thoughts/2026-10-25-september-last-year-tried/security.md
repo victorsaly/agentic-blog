@@ -1,9 +1,9 @@
 ---
 why: >
-  Nothing leaves for other people's data until it has been checked against
-  written rules. This is the publish check for "Same idea, a year later", across
-  the three versions, the sources and the structure, plus the npm audit as it
-  stands today.
+  This is the publish check for "Same idea, a year later". It looks for data
+  about people other than Victor, and for secrets, tokens and internal URLs, in
+  the three versions, the sources and the structure. It also records the weekly
+  dependency audit so that nothing is lost between the two jobs.
 checked: 2026-10-25T00:00:00.000Z
 verdict: pass
 held: []
@@ -11,22 +11,27 @@ held: []
 
 # Security check: "Same idea, a year later"
 
-## Publish check
+## Result
 
-I scanned the linkedin, short and long versions, the sources and the structure. I looked for full names with a private detail, emails, phone numbers, addresses, dates of birth, employers with a role, children with a school, health details and financial details. I also looked for secrets, tokens and internal URLs.
+Nothing to hold. No passage in any file breaks a rule. No passages were given to me as kept by the blogger, so there is no "Kept by the blogger" list.
 
-Nothing to hold.
+## What I checked
 
-- **The son.** He appears only as "my son", with no name, age, school or health detail. The only thing said about him is that the game idea was his. That is the same level of detail Victor already shares in his own public posts. The versions also leave out the family-feedback part, as Victor asked. The long version's change notes say this only as "to avoid privacy issues" and give no detail.
-- **Other people.** No other private individual is named in any file. Claude, Copilot and the models are products, not people.
-- **Links.** Every URL is a public page: the GitHub repos and pull request #106, the DEV Community posts, Wikipedia, GitHub Docs, the SWE-bench page and the how-it-works page on blog.victorsaly.com. None carries a token, a key or a private address.
-- **The "12-year-olds" in the sources file.** This comes from the game's README and describes the game's audience. It is not a statement about Victor's son.
+Files: `versions/linkedin.md`, `versions/long.md`, `versions/short.md`, `sources`, `structure`.
 
-## npm audit
+- **People other than Victor.** The only other person is "my son". He has no name, no school, no age, no health detail and no other private detail in the post. The family-feedback part was left out at Victor's request, and I found no trace of it in any version.
+- **Public figures and organisations.** GitHub, Copilot, Claude and Anthropic appear only as products and companies, in public context. That is fine.
+- **Emails, phone numbers, addresses, dates of birth, employers with a role, financial details.** None found.
+- **Secrets, tokens, internal URLs.** None found. Every URL is public: `github.com/victorsaly/...`, `blog.victorsaly.com/...`, `dev.to/victorsaly/...`, Wikipedia, GitHub Docs and swebench.com. The one internal-looking path, `../origin/transcript.md`, is a repo-relative path in front matter and not a link to a private system.
 
-The audit lists five dependencies with an advisory. It gives only severity and "fix available". It does not give the fix version, whether the fix is a patch, minor or major, or an advisory link. I have not guessed any of these.
+## For Victor to know (not findings)
 
-| Dependency | Severity | Fix |
+- The `sources` file quotes the game repository's README as describing the game for "12-year-olds". That describes the game's target audience and is not a statement about your son. It is in the sources file, not in the post. If the post ever quotes it, check that it doesn't read as his age.
+- The `sources` file links to your own public DEV Community posts about the voice memo. They are yours and public, so there is no issue. Those posts may mention your son, and I only saw their titles and dates, not their text. Reread them before the post links to them, in case they say more about him than you want to point readers to.
+
+## Dependencies (weekly audit)
+
+| Package | Severity | Fix |
 |---|---|---|
 | vite | high | available |
 | zod | high | available |
@@ -34,8 +39,6 @@ The audit lists five dependencies with an advisory. It gives only severity and "
 | katex | low | available |
 | mermaid | low | available |
 
-Next steps:
+The audit output gives only the severity and "fix available". It does not give the advisory links, the fix versions or whether each fix is a patch, minor or major. I have not guessed them. Opening the pull requests needs that detail from the full `npm audit` output. The two high ones, vite and zod, should go first. Any major bump needs a line explaining what changes.
 
-- The weekly run should open one pull request per dependency, starting with vite and zod. Each pull request needs the version bump and the advisory link, which I cannot fill in from this output.
-- If any of these fixes turns out to be a major bump, its pull request must say what changes.
-- None of these advisories affects the content of this post, so they do not change the verdict.
+None of these pull requests holds up this post.
