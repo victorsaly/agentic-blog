@@ -19,6 +19,7 @@ describe('waitingForReview', () => {
         { slug: '2026-10-22-a', leaf: 'es', kind: 'language', reviewed: false },
       ],
       [{ slug: '2026-10-23-b', reviewed: false }],
+      [],
     );
     expect(list).toEqual([
       {
@@ -50,6 +51,7 @@ describe('waitingForReview', () => {
         thoughts,
         [{ slug: '2026-10-23-b', leaf: 'short', kind: 'short', reviewed: true }],
         [{ slug: '2026-10-23-b', reviewed: true }],
+        [{ slug: '2026-10-23-b', leaf: 'short', reviewed: true, audio: '/a.mp3' }],
       ),
     ).toEqual([]);
   });
@@ -60,6 +62,7 @@ describe('waitingForReview', () => {
         [{ slug: '2026-10-24-c', title: 'Draft', date: new Date('2026-10-24'), draft: true }],
         [{ slug: '2026-10-24-c', leaf: 'short', kind: 'short', reviewed: false }],
         [{ slug: '2026-10-24-c', reviewed: false }],
+        [],
       ),
     ).toEqual([
       {
@@ -73,20 +76,64 @@ describe('waitingForReview', () => {
       },
     ]);
   });
+
+  it('lists an unreviewed recording with its audio, since the post will not play it yet', () => {
+    expect(
+      waitingForReview(
+        thoughts,
+        [{ slug: '2026-10-23-b', leaf: 'short', kind: 'short', reviewed: true }],
+        [{ slug: '2026-10-23-b', reviewed: false }],
+        [
+          { slug: '2026-10-23-b', leaf: 'short', reviewed: false, audio: '/_astro/short.mp3' },
+          { slug: '2026-10-22-a', leaf: 'short', reviewed: false },
+        ],
+      ),
+    ).toEqual([
+      {
+        slug: '2026-10-23-b',
+        title: 'Newer',
+        draft: false,
+        waiting: [
+          {
+            file: 'thoughts/2026-10-23-b/voice/short.md',
+            name: 'The idea, read aloud',
+            listen: '/_astro/short.mp3',
+          },
+          { file: 'thoughts/2026-10-23-b/sources.md', name: 'The sources' },
+        ],
+      },
+      {
+        slug: '2026-10-22-a',
+        title: 'Older',
+        draft: false,
+        waiting: [{ file: 'thoughts/2026-10-22-a/voice/short.md', name: 'The idea, read aloud' }],
+      },
+    ]);
+  });
 });
 
 describe('readReviewRequest', () => {
-  it('takes versions and sources of a thought, and nothing else', () => {
+  it('takes versions, recordings and sources of a thought, and nothing else', () => {
     expect(
       readReviewRequest({
-        files: ['thoughts/2026-10-23-b/versions/short.md', 'thoughts/2026-10-23-b/sources.md'],
+        files: [
+          'thoughts/2026-10-23-b/versions/short.md',
+          'thoughts/2026-10-23-b/voice/short.md',
+          'thoughts/2026-10-23-b/sources.md',
+        ],
       }),
     ).toEqual({
       ok: true,
-      files: ['thoughts/2026-10-23-b/sources.md', 'thoughts/2026-10-23-b/versions/short.md'],
+      files: [
+        'thoughts/2026-10-23-b/sources.md',
+        'thoughts/2026-10-23-b/versions/short.md',
+        'thoughts/2026-10-23-b/voice/short.md',
+      ],
     });
     for (const bad of [
       'thoughts/2026-10-23-b/origin/text.md',
+      'thoughts/2026-10-23-b/voice/short.mp3',
+      'thoughts/2026-10-23-b/diagram/diagrams.md',
       'thoughts/2026-10-23-b/structure.md',
       'thoughts/2026-10-23-b/versions/../origin/text.md',
       'settings.yml',

@@ -68,14 +68,19 @@ export function ReviewList({ waiting }: ReviewListProps): React.JSX.Element {
   };
 
   if (all.length === 0)
-    return <p className="quiet">Nothing. Every version and every list of sources has been read.</p>;
+    return (
+      <p className="quiet">
+        Nothing. Every version, every recording and every list of sources has been read.
+      </p>
+    );
 
   return (
     <div className="review-list">
       <p className="quiet">
         Readers see each of these versions with a &ldquo;Not reviewed yet&rdquo; tag; unreviewed
-        sources stay hidden. Tick what you have read and mark it reviewed: a pull request is opened,
-        and merging it takes the tag off.
+        sources stay hidden, and an unreviewed recording is not played on the post, so listen to it
+        here. Tick what you have read or heard and mark it reviewed: a pull request is opened, and
+        merging it puts each one on the post.
       </p>
       {waiting.map((t) => (
         <fieldset key={t.slug} className="thought">
@@ -103,6 +108,16 @@ export function ReviewList({ waiting }: ReviewListProps): React.JSX.Element {
                     <a className="read" href={w.href}>
                       Read it
                     </a>
+                  )}
+                  {w.listen && (
+                    // eslint-disable-next-line jsx-a11y/media-has-caption -- it reads the idea word for word, and the idea is its text
+                    <audio
+                      className="listen"
+                      controls
+                      preload="none"
+                      src={w.listen}
+                      aria-label={`${w.name}, ${t.title}`}
+                    />
                   )}
                 </li>
               );

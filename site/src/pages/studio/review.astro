@@ -62,6 +62,12 @@ const waiting = await loadWaiting();
   .review .read {
     font-size: var(--size-small);
   }
+  /* The player takes its own row under the file it plays, so the row's columns stay as they are. */
+  .review .listen {
+    grid-column: 2 / -1;
+    width: 100%;
+    max-width: var(--measure);
+  }
   .review .actions {
     display: flex;
     flex-wrap: wrap;

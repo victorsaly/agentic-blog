@@ -43,7 +43,7 @@ async function main(): Promise<void> {
     '',
     ...marked.map((f) => `- \`${f}\``),
     '',
-    'Merging takes the "Not reviewed yet" tag off these versions (or shows these sources) on the next deploy.',
+    'Merging takes the "Not reviewed yet" tag off these versions (or shows these sources and plays these recordings) on the next deploy.',
   ].join('\n');
   const output = process.env['GITHUB_OUTPUT'];
   if (output)
