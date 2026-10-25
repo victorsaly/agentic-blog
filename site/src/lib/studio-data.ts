@@ -27,6 +27,17 @@ interface SourcesEntry {
   id: string;
   data: { reviewed: boolean };
 }
+interface VoiceEntry {
+  id: string;
+  data: { audio: string; reviewed: boolean };
+}
+
+// The voice agent's recordings by their path in the thought folder, so an unreviewed one can be heard here.
+const recordings = import.meta.glob<string>('../../../thoughts/*/voice/*.mp3', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+});
 
 async function thoughtEntries(): Promise<ThoughtEntry[]> {
   const entries: unknown = await getCollection('thoughts');
@@ -55,7 +66,15 @@ export function loadWaiting(): Promise<ThoughtWaiting[]> {
       slug: thoughtSlugOf(s.id),
       reviewed: s.data.reviewed,
     }));
-    return waitingForReview(thoughts, versions, sources);
+    const voices = ((await getCollection('voices')) as unknown as VoiceEntry[]).map((v) => {
+      const slug = thoughtSlugOf(v.id);
+      const audio = Object.entries(recordings).find(([path]) =>
+        path.endsWith(`/thoughts/${slug}/voice/${v.data.audio}`),
+      )?.[1];
+      const voice = { slug, leaf: leafOf(v.id), reviewed: v.data.reviewed };
+      return audio ? { ...voice, audio } : voice;
+    });
+    return waitingForReview(thoughts, versions, sources, voices);
   })();
   return waitingOnce;
 }
