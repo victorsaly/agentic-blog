@@ -6,7 +6,7 @@ why: >
   spoken, so the page can light the word being said and the reader can follow, or just listen. It adds
   nothing and rewrites nothing; what is heard is exactly what was approved to be read.
 phase: 5
-reads: [versions/short.md, safety.md, security.md, settings.yml → media.voice_id, voice_speed]
+reads: [versions/short.md, safety.md, security.md, 'settings.yml → media.voice_id, voice_speed']
 writes: [voice/short.mp3, voice/short.json, voice/short.md]
 ---
 
