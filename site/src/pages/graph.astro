@@ -1,0 +1,259 @@
+---
+// Why: the first post promised a blog you can walk, not a feed: me in the middle, the topics around me, the
+// small ideas on the outside, one idea able to sit under two topics, nothing placed by hand. This page
+// draws that from the Small ideas table of every post, so the shape says what the blog is about before a
+// word is read. The picture leads; beside it (under it on a phone) the same graph is a list, which is what
+// the keyboard and a screen reader use. Opening a topic, from either side, darkens its ideas and marks its
+// name in marigold, the one colour, with no script and no motion.
+import { getCollection } from 'astro:content';
+import Page from '../layouts/Page.astro';
+import ListHead from '../components/ListHead.astro';
+import GraphPicture from '../components/GraphPicture.astro';
+import { thoughtSlugOf } from '../lib/content';
+import { graphOf, type GraphPost } from '../lib/graph';
+import { deskLayout, layoutGraph, phoneLayout } from '../lib/graph-layout';
+import { settings } from '../lib/settings';
+import { themeLabel, thoughtsLabel } from '../lib/themes';
+
+// Typed at the boundary: on a fresh checkout Astro has not generated its content types yet when lint runs.
+interface ThoughtEntry {
+  id: string;
+  body?: string;
+  data: { title: string; draft: boolean; themes: string[] };
+}
+
+const entries = (await getCollection('thoughts')) as unknown as ThoughtEntry[];
+const posts: GraphPost[] = entries.map((e) => ({
+  slug: thoughtSlugOf(e.id),
+  title: e.data.title,
+  draft: e.data.draft,
+  body: e.body ?? '',
+}));
+const graph = graphOf(posts, settings.themes);
+const desk = layoutGraph(graph, deskLayout);
+const phone = layoutGraph(graph, phoneLayout);
+
+// A topic has its own page only when a whole post carries it (see topics/[topic].astro).
+const topicPages = new Set(entries.filter((e) => !e.data.draft).flatMap((e) => e.data.themes));
+
+// An idea on two topics is listed under both; its anchor is the first, where the picture's dot leads.
+const anchors = new Map<string, string>();
+for (const t of graph.topics)
+  for (const i of graph.ideas)
+    if (i.topics.includes(t.topic) && !anchors.has(i.id))
+      anchors.set(i.id, `i-${i.id.replace(/[^a-z0-9-]/g, '-')}`);
+const texts = new Map(graph.ideas.map((i) => [i.id, i.text]));
+
+const ideasLabel = (n: number): string => (n === 1 ? 'One small idea' : `${String(n)} small ideas`);
+const postCount = new Set(graph.ideas.map((i) => i.slug)).size;
+const note =
+  graph.ideas.length === 0
+    ? 'Nothing to draw yet: the graph grows from the small ideas in each thought.'
+    : `Me in the middle, the topics around me, every small idea on the outside. ${ideasLabel(graph.ideas.length)} from ${thoughtsLabel(postCount).toLowerCase()}.`;
+
+// One topic at a time is opened: by its address (#t-topic), by pointing at it, or by tabbing through its
+// part of the list. Everything else steps back. Written out per topic, since CSS cannot compare attributes.
+const safe = graph.topics.map((t) => t.topic).filter((t) => /^[a-z0-9-]+$/.test(t));
+const open = (t: string, pointer: boolean): string[] =>
+  pointer
+    ? [`.walk:has([data-topic="${t}"]:hover)`, `.walk:has(#t-${t}:hover)`]
+    : [`.walk:has(#t-${t}:target)`, `.walk:has(#t-${t}:focus-within)`];
+const rules = (pointer: boolean): string =>
+  safe
+    .map((t) => {
+      const on = open(t, pointer);
+      const dim = on.map((s) => `${s} .graph-picture [data-t]:not([data-t~="${t}"])`).join(',');
+      const arc = on.map((s) => `${s} .graph-picture [data-topic="${t}"] .arc`).join(',');
+      const name = on.map((s) => `${s} .graph-picture [data-topic="${t}"] text`).join(',');
+      return `${dim}{opacity:.16}${arc}{stroke-width:var(--rule-heavy)}${name}{stroke:var(--mark);fill:var(--mark-ink)}`;
+    })
+    .join('');
+const css = `${rules(false)}@media (hover:hover) and (pointer:fine){${rules(true)}}`;
+---
+
+<Page
+  title="Graph"
+  description="Every topic the thoughts cover and every small idea in them, drawn as one graph."
+  width="wide"
+>
+  <ListHead label="Graph" title="How the thoughts connect" note={note} />
+  <Fragment set:html={`<style>${css}</style>`} />
+  {
+    graph.ideas.length > 0 && (
+      <div class="frame walk">
+        <figure class="picture">
+          <GraphPicture
+            layout={desk}
+            id="graph-desk"
+            class="desk"
+            anchors={anchors}
+            texts={texts}
+            name={settings.site.author}
+          />
+          <GraphPicture
+            layout={phone}
+            id="graph-phone"
+            class="phone"
+            anchors={anchors}
+            texts={texts}
+            name={settings.site.author}
+          />
+          <figcaption class="small quiet">
+            Each arc is a topic, as long as the ideas it holds. Each dot is a small idea; one that
+            sits between two arcs belongs to both. Pick a topic to see its ideas.
+          </figcaption>
+        </figure>
+
+        <div class="list">
+          {graph.topics.map((t) => (
+            <section id={`t-${t.topic}`} aria-labelledby={`t-${t.topic}-name`}>
+              <h2 id={`t-${t.topic}-name`}>
+                <a href={`#t-${t.topic}`}>
+                  <span class="name">{themeLabel(t.topic)}</span>
+                </a>
+              </h2>
+              <p class="small quiet count">
+                {ideasLabel(t.ideas)}
+                {topicPages.has(t.topic) && (
+                  <>
+                    {' '}
+                    <a href={`/topics/${t.topic}`}>Every thought on it</a>
+                  </>
+                )}
+              </p>
+              <ol class="ideas">
+                {graph.ideas
+                  .filter((i) => i.topics.includes(t.topic))
+                  .map((i) => {
+                    const id = anchors.get(i.id);
+                    const others = i.topics.filter((o) => o !== t.topic);
+                    return (
+                      <li
+                        id={
+                          id !== undefined &&
+                          graph.topics.find((g) => i.topics.includes(g.topic))?.topic === t.topic
+                            ? id
+                            : undefined
+                        }
+                      >
+                        <a href={`/thoughts/${i.slug}`}>{i.text}</a>
+                        <p class="small quiet">
+                          From {i.title}.
+                          {others.length > 0 &&
+                            ` Also under ${others.map(themeLabel).join(' and ')}.`}
+                        </p>
+                      </li>
+                    );
+                  })}
+              </ol>
+            </section>
+          ))}
+        </div>
+      </div>
+    )
+  }
+</Page>
+
+<style>
+  .walk {
+    display: grid;
+    gap: var(--space-5);
+    padding-top: var(--space-5);
+    padding-bottom: var(--space-6);
+  }
+  .picture {
+    margin: 0;
+  }
+  .picture :global(.desk) {
+    display: none;
+  }
+  figcaption {
+    margin-top: var(--space-3);
+    max-width: 50ch;
+  }
+  section {
+    padding-top: var(--space-3);
+    border-top: var(--rule-strong) solid var(--ink);
+  }
+  section + section {
+    margin-top: var(--space-5);
+  }
+  h2 {
+    margin: 0;
+    font-size: var(--size-h2);
+    line-height: var(--leading-tight);
+  }
+  h2 a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+    text-decoration: none;
+  }
+  h2 a:hover .name,
+  h2 a:focus-visible .name {
+    text-decoration: underline;
+    text-decoration-thickness: 0.1em;
+  }
+  section:target .name {
+    background: var(--mark);
+    color: var(--mark-ink);
+    padding: 0.05em 0.2em;
+  }
+  .count {
+    margin: 0 0 var(--space-3);
+  }
+  .count a {
+    margin-left: var(--space-2);
+  }
+  .ideas {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-width: none;
+  }
+  .ideas li {
+    padding-block: var(--space-3);
+    border-top: var(--rule-width) solid var(--rule);
+  }
+  .ideas li:target {
+    border-top-color: var(--ink);
+  }
+  .ideas li:target > a {
+    background: var(--mark);
+    color: var(--mark-ink);
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+  .ideas a {
+    font-size: var(--size-body);
+    line-height: var(--leading-tight);
+  }
+  .ideas p {
+    margin: var(--space-1) 0 0;
+  }
+
+  @media (min-width: 40rem) {
+    .picture :global(.desk) {
+      display: block;
+    }
+    .picture :global(.phone) {
+      display: none;
+    }
+  }
+
+  /* On a desk the picture stays in view while the list scrolls beside it. */
+  @media (min-width: 64rem) {
+    .walk {
+      grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+      align-items: start;
+      gap: var(--space-6);
+    }
+    .picture {
+      position: sticky;
+      top: 6rem;
+    }
+    .picture :global(.desk) {
+      max-height: calc(100svh - 10rem);
+    }
+  }
+</style>
