@@ -12,6 +12,8 @@ export interface Zoom {
   scale?: number;
   /** Open this closed <details> first, so what is inside it can be shown. */
   open?: string;
+  /** Press this button in the frame, as a reader would (Play on the real run). */
+  press?: string;
   /** Jump the page in the frame so this selector sits just under the header. */
   at?: string;
   /** Scroll the page in the frame down by this many pixels, slowly, instead of zooming. */
@@ -121,14 +123,14 @@ export const scenes: Scene[] = [
     path: '/how-it-works',
     caption: 'One job each.',
     captionAt: 1.6,
+    // The real run on /how-it-works, played: the agents start one after another on the studio's route.
     actions: [
-      { t: 0, at: '#tour' },
-      { t: 1.2, zoom: '.tour-route li:nth-child(5)' },
-      { t: 5, open: '#route', zoom: '#route .flow-chart', scale: 1.9 },
+      { t: 0, at: '#run' },
+      { t: 0.4, press: '#run .replay-controls .filled', zoom: '#run .route-replay' },
     ],
     vo: {
       key: 'agents',
-      line: 'Each agent has one job. Versions, drawings, sources. And two that can stop a post, in writing.',
+      line: 'Each agent does one job, and starts by itself when its work is ready. Two can stop a post.',
     },
   },
   {
@@ -152,10 +154,14 @@ export const scenes: Scene[] = [
     dur: 5.5,
     kind: 'page',
     path: '/how-it-works',
-    caption: 'You press publish.',
+    caption: 'You approve it.',
     captionAt: 1.2,
-    actions: [{ t: 0.8, zoom: '.hero-text' }],
-    vo: { key: 'you', line: 'Then it comes back to you. Nothing goes live until you merge it.' },
+    // The same run, finished: the round steps were Victor's calls, the merge last.
+    actions: [
+      { t: 0, at: '#run' },
+      { t: 0.8, zoom: '#run .route-replay' },
+    ],
+    vo: { key: 'you', line: 'You answer, you approve, and nothing goes live until you merge it.' },
   },
   {
     start: 46,

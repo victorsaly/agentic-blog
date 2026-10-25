@@ -1,14 +1,21 @@
 ---
 // Why: this page sells the agentic blog to someone who thinks out loud, and then proves it. It opens with
 // the promise and a print of the blogger, shows a real note beside the message it became (read from the
-// post's own files, so the page cannot tidy the proof), says what changes, and plays the road a thought
-// takes. Everything a sceptic or a builder wants to check (the agents, the route, the files, the sources)
-// sits folded underneath, one layer down, so the pitch stays short and nothing is hidden.
+// post's own files, so the page cannot tidy the proof), then a real thought going down the route as the
+// studio draws it (played from that thought's ledger, so the page cannot tidy the run either), says what
+// changes, and plays the road a thought takes. Everything a sceptic or a builder wants to check (the agents,
+// the route, the files, the sources) sits folded underneath, one layer down, so the pitch stays short and
+// nothing is hidden.
+import { join } from 'node:path';
 import { Image, getImage } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
 import { parse } from 'yaml';
+import { readRuns } from '@roadbook/core/node';
 import Page from '../layouts/Page.astro';
 import FlowChart from '../components/FlowChart.astro';
+import { RouteReplay } from '../islands/RouteReplay';
+import { replayOf } from '../lib/route-replay';
+import project from '../../../roadbook.config';
 import { Tour } from '../islands/Tour';
 import { tour, tourWordsFrom } from '../lib/tour';
 import tourWords from '../lib/tour-words.json';
@@ -77,29 +84,31 @@ const byPhase = Object.entries(phases)
   .map(([n, name]) => ({ n: Number(n), name, agents: roster.filter((a) => a.phase === Number(n)) }))
   .filter((p) => p.agents.length > 0);
 
-const route = `flowchart TD
-  accTitle: The route a thought takes
-  accDescr: From the studio to a pull request, through the interview and structure agents, five makers side by side, two agents that can hold, the voice agent, the publish agent, and a human merge. Feedback after publishing reworks the post, and a pattern of feedback changes the route.
-  S["Studio<br/>voice or text"] -->|"lands as"| O["Pull request: new origin<br/>words exactly as said"]
-  O -->|"agent:interview"| I["interview<br/>asks what is missing"]
-  I -->|"you answer"| ST["structure<br/>message · idea · road"]
-  ST --> C["convert<br/>short · long · LinkedIn"]
-  ST --> IM["image<br/>a linocut print"]
-  ST --> D["diagram<br/>boxes, when earned"]
-  ST --> CI["citations<br/>a door out per claim"]
-  ST --> DR["drilldown<br/>wiki pages"]
-  C --> G{"safety + security<br/>pass or hold"}
-  IM --> G
-  D --> G
-  CI --> G
-  DR --> G
-  G -->|"hold, with a reason"| H["Check fails<br/>until you look"]
-  G -->|"pass"| VO["voice<br/>reads the short version aloud"]
-  VO --> P["publish<br/>one readable pull request"]
-  P --> M(["You merge"])
-  M --> L["Live, with a switch<br/>to the original"]
-  L -.->|"a note about it"| F["feedback<br/>reworks the post"]
-  F -.->|"same note three times"| R["A proposed change<br/>to a prompt or the profile"]`;
+// A real run: the first thought that went the whole route by itself, played from its ledger on the route the
+// studio draws. The route is the workflow in roadbook.config.ts, so the picture changes when the route does.
+const runSlug = '2026-10-25-september-last-year-tried';
+const runLedger = await readRuns(
+  join(process.cwd(), '..', 'thoughts', runSlug),
+  `thoughts/${runSlug}`,
+);
+if (runLedger.issues.length > 0) throw new Error(runLedger.issues.join('\n'));
+const blogPost = project.workflows.find((w) => w.id === 'blog-post');
+if (!blogPost) throw new Error('roadbook.config.ts has no blog-post workflow');
+const person = project.owner.name.split(' ')[0] ?? project.owner.name;
+const replay = replayOf(blogPost, runLedger.runs, person);
+const inWords = (n: number): string =>
+  ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'][n] ??
+  String(n);
+const runMinutes = replay.frames.at(-1)?.minute ?? 0;
+const runHours = Math.floor(runMinutes / 60);
+const runTook = [
+  runHours > 0 ? `${String(runHours)} hour${runHours === 1 ? '' : 's'}` : '',
+  `${String(runMinutes % 60)} minutes`,
+]
+  .filter(Boolean)
+  .join(' ');
+const agentSteps = replay.layout.steps.filter((s) => s.kind === 'agent' || s.kind === 'guard');
+const gateSteps = replay.layout.steps.filter((s) => s.kind === 'gate');
 
 const trail = `flowchart LR
   accTitle: What every post folder holds
@@ -200,6 +209,37 @@ const trailSteps = [
     <div class="actions">
       <a class="control" href={`/thoughts/${proofSlug}`}>Read the post</a>
       <a class="control" href={`/thoughts/${proofSlug}/origin`}>Open the original</a>
+    </div>
+  </section>
+
+  <section class="frame" id="run" aria-labelledby="run-title">
+    <p class="label">A real run</p>
+    <h2 id="run-title">Watch one thought go the whole way</h2>
+    <div class="intro">
+      <p>
+        This is <a href={`/thoughts/${runSlug}`}>Same idea, a year later</a>, the first post that
+        went down the whole route by itself. {agentSteps.length} agents, each one starting as soon as
+        the work it needs is ready. The route stopped {inWords(replay.asked)} times for {person}: to
+        answer the interview, to approve the message, and to approve the merge. Steps that did not
+        finish were run again from where they stopped, without starting over.
+      </p>
+      <p>
+        The picture is the one the studio draws while the agents work, played back from the post's
+        own ledger. Round steps are {person}'s calls.
+      </p>
+    </div>
+    <RouteReplay
+      client:visible
+      layout={replay.layout}
+      frames={replay.frames}
+      label={`The route of “Same idea, a year later”, step by step`}
+      ending={`Finished in ${runTook}: ${inWords(replay.asked)} calls by ${person}, and ${inWords(replay.again)} runs that did not finish, run again. Press Play to watch it from the start.`}
+    />
+    <div class="actions">
+      <a class="control" href={`/thoughts/${runSlug}`}>Read the post</a>
+      <a class="control" href={`${repo}/tree/main/thoughts/${runSlug}/ledger`}
+        >Its ledger, run by run</a
+      >
     </div>
   </section>
 
@@ -336,14 +376,13 @@ const trailSteps = [
       </summary>
       <div class="layer-body">
         <p class="intro">
-          There is no hidden pipeline. Every step is a pull request on GitHub, and each agent is
-          called by a label on it. The route is visible, reversible and written down.
+          There is no hidden pipeline. The route is written down in one file, <a
+            href={`${repo}/blob/main/roadbook.config.ts`}><code>roadbook.config.ts</code></a
+          >, and the picture of <a href="#run">the real run</a> above is drawn from it: {
+            replay.layout.steps.length
+          } steps, {inWords(gateSteps.length)} of them a person's call. Every agent runs on GitHub, on
+          the thought's own pull request, and commits what it made there.
         </p>
-        <FlowChart
-          source={route}
-          caption="Solid arrows are the road to publishing; dotted arrows are what happens after, when you talk back. The diamond is the only place an agent can stop a post, and it says why."
-          steps={tour.map((s) => ({ label: s.name, detail: s.job }))}
-        />
         <table>
           <thead>
             <tr><th scope="col">You do this</th><th scope="col">This happens</th></tr>
@@ -351,33 +390,49 @@ const trailSteps = [
           <tbody>
             <tr>
               <td>Record or paste in the studio</td>
-              <td>A pull request opens with your words, unedited, as the origin</td>
+              <td>
+                A pull request opens with your words, unedited, as the origin, and the interview
+                agent starts on it by itself. While you talk, the studio shows your words as they
+                are heard
+              </td>
             </tr>
             <tr>
-              <td>Add the label <code>agent:&lt;name&gt;</code></td>
-              <td>That one agent runs on that one thought and commits its files to it</td>
+              <td>Nothing: an agent finishes</td>
+              <td>
+                Every step that waits on it starts by itself, once everything it needs is ready and
+                up to date. Where two steps join, the next one waits for both
+              </td>
+            </tr>
+            <tr>
+              <td>Answer the questions, approve the message</td>
+              <td>
+                Each waits in the studio as Needs you, by voice or in writing. Only a person can
+                close it; an agent that tries is refused. Your answer starts the next agents
+              </td>
             </tr>
             <tr>
               <td>An agent holds</td>
               <td>Its reason is committed and the check fails, so nothing merges by accident</td>
             </tr>
             <tr>
-              <td>An agent needs your answer</td>
+              <td>A step does not finish</td>
               <td>
-                A question opens in the thought's record and waits in the studio as Needs you. Only
-                a person can close it; an agent that tries is refused
+                The studio shows where it stopped. Run again starts that one step, not the route
               </td>
             </tr>
             <tr>
               <td>Open the studio</td>
               <td>
-                Every run shows as it happens: running, held, waiting on you or done, and what it
-                cost
+                Every thought's route as it happens: the step working now in marigold and moving,
+                what is waiting on you, and what each run cost
               </td>
             </tr>
             <tr>
-              <td>Merge</td>
-              <td>The post goes live. Nothing else can publish</td>
+              <td>Approve and merge</td>
+              <td>
+                Only once every check has passed and nothing holds. The post goes live, and the
+                ledger records who pressed it. Nothing else can publish
+              </td>
             </tr>
             <tr>
               <td>Record a note about the output</td>
@@ -385,19 +440,21 @@ const trailSteps = [
             </tr>
           </tbody>
         </table>
-        <h3 class="sub">Why labels, and not an automatic chain</h3>
+        <h3 class="sub">Why it runs by itself, and still waits for you</h3>
         <div class="prose">
           <p>
-            An automatic chain is faster, and harder to trust. With a label per agent, every run is
-            a commit you can read, with the agent's name on it and its why at the top of every file
-            it wrote. If one goes wrong you undo that commit and run it again, without starting
-            over.
+            It began with a label per agent, added by hand. That made every run easy to trust and
+            slow to get through. Now each agent starts itself, but nothing else changed: every run
+            is still a commit you can read, with the agent's name on it and its why at the top of
+            every file it wrote, and the route still stops where only you can decide. If a step goes
+            wrong, you run that step again, without starting over. A label still runs any one agent
+            by hand.
           </p>
           <p>
-            The order follows the phases: ask, shape, make, then check and send. The profile agent
-            learns in the background, from your words and from what you change in review; it only
-            ever proposes, as its own pull request. The labels can be added by a schedule later. The
-            last step never changes: a person merges.
+            A run that would take the month past its budget is not started. The profile agent learns
+            in the background, from your words and from what you change in review; it only ever
+            proposes, as its own pull request. The last step never changes: a person approves the
+            merge.
           </p>
         </div>
       </div>
@@ -455,9 +512,10 @@ const trailSteps = [
             <tr>
               <td><code>ledger/</code></td>
               <td>
-                Every run: which agent, how it ended, what it wrote and what it cost. Each entry is
-                chained to the one before, and a check on every pull request refuses one that
-                changes or removes a run already merged
+                Every run: which agent, how it ended, what it wrote and what it cost, and every call
+                a person made: who answered or approved, and when. Each entry is chained to the one
+                before, and a check on every pull request refuses one that changes or removes a run
+                already merged
               </td>
             </tr>
           </tbody>
@@ -520,9 +578,10 @@ const trailSteps = [
               <td><code>sources.md</code>, <code>wiki/</code></td>
             </tr>
             <tr>
-              <td>Workers AI, by Cloudflare</td><td>Turning the voice note into text</td><td
-                >The origin pull request</td
-              >
+              <td>Workers AI, by Cloudflare</td><td
+                >Turning the voice note into text, and showing your words while you talk (Deepgram's
+                Nova-3)</td
+              ><td>The origin pull request</td>
             </tr>
             <tr>
               <td>OpenAI's image model</td><td>The linocut drawings</td><td

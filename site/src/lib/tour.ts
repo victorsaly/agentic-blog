@@ -65,8 +65,8 @@ export const tour: TourStation[] = [
     id: 'structure',
     name: 'Structure',
     who: ['structure'],
-    job: 'Message, idea, road',
-    line: 'The structure agent finds the point. A message in three lines. An idea that fits one screen. And the road, for anyone who wants all of it.',
+    job: 'Message, idea, road; you approve the message',
+    line: 'The structure agent finds the point. A message in three lines. An idea that fits one screen. And the road, for anyone who wants all of it. You approve the message before anything is built on it.',
     print: 'Three stones stacked on a table: small, medium and large.',
     screen:
       "A post's opening: its title, and the message in three lines with its first sentence marked in marigold.",
@@ -74,10 +74,10 @@ export const tour: TourStation[] = [
   },
   {
     id: 'makers',
-    name: 'Five makers, side by side',
-    who: ['convert', 'image', 'diagram', 'citations', 'drilldown'],
-    job: 'Versions, drawings, diagrams, sources, wiki',
-    line: 'Then five agents work side by side. One writes the short and long versions and the LinkedIn post. One draws a linocut print. One draws the diagrams. One finds a source for every claim. One writes a page for each book and person you mention.',
+    name: 'The makers, each when it is ready',
+    who: ['convert', 'image', 'diagram', 'citations', 'seo', 'drilldown'],
+    job: 'Versions, prints, diagrams, sources, search, wiki',
+    line: 'Then the makers start by themselves, each as soon as what it needs is ready. One writes the short and long versions and the LinkedIn post, while one draws a linocut print. Then come the diagrams, a source for every claim, the words search engines read, and a page for each book and person you mention.',
     print:
       'Five hands around one sheet of paper, holding a pen, a carving tool, a ruler, a magnifying glass and a book.',
     screen:
@@ -98,7 +98,7 @@ export const tour: TourStation[] = [
   {
     id: 'publish',
     name: 'Read aloud, then publish',
-    who: ['voice', 'publish', 'seo'],
+    who: ['voice', 'publish'],
     job: 'A voice for the post, one pull request',
     line: "The voice agent reads the short version aloud, word for word, so the post can be heard as well as read. Then the publish agent gathers everything into one pull request: what's new, what changed from your words, and what to check first.",
     print: 'A hand laying a bundle of papers tied with string into a wire tray.',
@@ -108,13 +108,14 @@ export const tour: TourStation[] = [
   },
   {
     id: 'you',
-    name: 'You merge',
+    name: 'You approve',
     who: ['You'],
     job: 'Nothing goes live without you',
-    line: 'Then it comes back to you. You read it, fix what sounds wrong, and merge. Nothing goes live without you.',
+    line: 'Then it comes back to you. The studio shows the whole route, and where each step stands. You read it, fix what sounds wrong, and approve the merge. Nothing goes live without you.',
     print: 'A hand pressing a rubber stamp down onto a sheet of paper.',
-    screen: 'A merged pull request on GitHub from the voice agent, with its why and what changed.',
-    from: 'A merged pull request',
+    screen:
+      "The studio's route for one thought, scrolled to its end: every step done, the round Merge step that was Victor's call, and Published last.",
+    from: 'The studio, a thought’s route',
   },
   {
     id: 'feedback',

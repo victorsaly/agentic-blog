@@ -257,6 +257,13 @@
                   behavior: 'instant',
                 });
             }
+            if (a.press) {
+              // an island ignores a press until it has woken (Astro drops its ssr mark then)
+              const button = () => f.contentDocument?.querySelector(a.press);
+              for (let k = 0; k < 30 && button()?.closest('astro-island[ssr]'); k++)
+                await wait(100);
+              button()?.click();
+            }
             if (a.zoom) zoomInto(f, a.zoom, a.scale);
             if (a.drift) f.contentWindow?.scrollBy({ top: a.drift, behavior: 'smooth' });
           } catch {
