@@ -144,7 +144,7 @@ export function GateAnswer({
         ? ''
         : sending.decision === 'redirected'
           ? 'Sent back. GitHub records it, and the steps before this gate run again with your words.'
-          : merges && sending.decision === 'approved'
+          : merges
             ? 'Sent. GitHub records your approval, waits for the checks, then merges: a few minutes. This page shows the gate closed when it is recorded.'
             : 'Sent. Waiting for GitHub to record it; this page shows the gate closed when it has.';
 
