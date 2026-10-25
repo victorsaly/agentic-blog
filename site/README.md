@@ -31,8 +31,9 @@ The site deploys as a **Worker with static assets** (`site/wrangler.jsonc`), not
    DNS record. Remove any CNAME you added by hand first, or the deploy refuses with a conflict.
 5. **Access**: Zero Trust → Access → Applications → self-hosted, domain `blog.victorsaly.com`, paths
    `/studio` and `/api/*`, policy *Allow* with your email. Nothing else needs a login.
-6. **Comments**: the first deploy creates the D1 database `agentic-blog-comments` (bound as `COMMENTS_DB`).
-   Create the table once, from `site/`: `npx wrangler d1 migrations apply COMMENTS_DB --remote`. Then
+6. **Comments**: the D1 database `agentic-blog-comments` (bound as `COMMENTS_DB`) exists, its id is pinned
+   in `wrangler.jsonc` so the deploy token needs no D1 permission, and its table is in. A later migration
+   is applied by hand, from `site/`: `npx wrangler d1 migrations apply COMMENTS_DB --remote`. Then
    Turnstile: dashboard → Turnstile → add a widget for `blog.victorsaly.com`, put its **site key** in
    `vars.TURNSTILE_SITE_KEY` in `wrangler.jsonc` and run `npx wrangler secret put TURNSTILE_SECRET` with its
    **secret key**. Until both are set the form stays hidden. Every comment waits in `/studio` under
