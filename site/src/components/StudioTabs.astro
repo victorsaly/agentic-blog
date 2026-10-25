@@ -1,0 +1,129 @@
+---
+// Why: the studio's areas are separate pages, and this row is how Victor moves between them. It is drawn
+// like a post's tabs (ruled cells, the open one filled black) so the studio reads as the same site, but each
+// cell is a plain link: every area has its own address, so it works without script, can be bookmarked and
+// linked to, and the keyboard simply tabs along it. The open one says so with aria-current. Nothing moves
+// when an area opens; this row is used many times a day. On a desk the six areas sit in one row; on a phone
+// they fold into two rows of three, so every area stays in sight and the open one is never scrolled away.
+import { studioAreas, type StudioAreaId } from '../lib/studio-areas';
+
+interface Props {
+  current: StudioAreaId;
+}
+
+const { current } = Astro.props;
+
+// Line icons in the text colour, so they invert with it on the open cell.
+const icons: Record<StudioAreaId, string> = {
+  today: '<path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
+  talk: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/>',
+  feedback: '<path d="M4 5h16v11H9l-5 4z"/><path d="M14 8l-3 2.5 3 2.5"/><path d="M11 10.5h5"/>',
+  review: '<rect x="4" y="4" width="16" height="16"/><path d="m8 12 3 3 5-6"/>',
+  comments: '<path d="M3 4h12v9H7l-4 3z"/><path d="M18 8h3v11l-4-3h-6v-3"/>',
+  runs: '<path d="M4 20h16"/><path d="M6 20v-6"/><path d="M11 20V9"/><path d="M16 20V5"/>',
+};
+---
+
+<nav class="studio-tabs" aria-label="Studio">
+  <ul>
+    {
+      studioAreas.map((area) => (
+        <li>
+          <a href={area.href} aria-current={area.id === current ? 'page' : undefined}>
+            <svg
+              class="icon"
+              aria-hidden="true"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linejoin="round"
+              stroke-linecap="round"
+              set:html={icons[area.id]}
+            />
+            <span class="name">{area.name}</span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</nav>
+
+<style>
+  .studio-tabs {
+    margin: 0 0 var(--space-5);
+    border-bottom: var(--rule-width) solid var(--ink);
+  }
+  /* The hairlines between cells are the list's own ink showing through a one-pixel gap. */
+  ul {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--rule-width);
+    background: var(--ink);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-width: none;
+  }
+  @media (min-width: 48rem) {
+    ul {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+  }
+  a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    height: 100%;
+    min-height: 4rem;
+    padding: var(--space-2);
+    background: var(--paper);
+    color: var(--ink);
+    font-size: var(--size-small);
+    text-align: center;
+    text-decoration: none;
+    transition: scale var(--duration-press) var(--ease-out);
+  }
+  @media (min-width: 48rem) {
+    a {
+      flex-direction: row;
+      gap: var(--space-2);
+      min-height: 3.5rem;
+      padding: 0 var(--space-3);
+      font-size: var(--size-body);
+    }
+  }
+  a:focus-visible {
+    outline: var(--focus);
+    outline-offset: calc(var(--focus-offset) * -2);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    a:hover {
+      background: var(--hover);
+    }
+  }
+  a:active {
+    scale: 0.98;
+  }
+  a[aria-current='page'],
+  a[aria-current='page']:hover {
+    background: var(--ink);
+    color: var(--paper);
+    font-weight: 700;
+  }
+  a[aria-current='page']:focus-visible {
+    outline-color: var(--paper);
+  }
+  .icon {
+    flex: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    a {
+      transition: none;
+    }
+  }
+</style>

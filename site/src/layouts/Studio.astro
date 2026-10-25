@@ -1,0 +1,76 @@
+---
+// Why: every studio page is the same private room with a different job in it. This layout gives them one
+// heading, the row of areas, and the sign-in line, and keeps each page out of search engines, so a page only
+// adds what its job needs. It uses the site's full frame: the studio is a workroom, not something to read. Cloudflare Access sits in front of /studio and everything under it, and /api/*.
+import Page from './Page.astro';
+import StudioTabs from '../components/StudioTabs.astro';
+import { settings } from '../lib/settings';
+import { areaFor, studioAreas } from '../lib/studio-areas';
+
+interface Props {
+  description: string;
+}
+
+const { description } = Astro.props;
+const current = areaFor(Astro.url.pathname);
+const area = studioAreas.find((a) => a.id === current);
+const title = current === 'today' || !area ? 'Studio' : `${area.name} · Studio`;
+---
+
+<Page title={title} description={description} noindex={true} width="wide">
+  <div class="frame studio">
+    <p class="label">Studio</p>
+    <StudioTabs current={current} />
+    <slot />
+    <p class="small quiet signed-in">
+      Signed in as {settings.site.author}. This page is behind Cloudflare Access and is never
+      indexed.
+    </p>
+  </div>
+</Page>
+
+<style>
+  /* The studio is a workroom, not a page to read: it takes the whole frame. Prose still keeps its measure. */
+  .studio {
+    padding-top: var(--space-5);
+  }
+  .signed-in {
+    margin-top: var(--space-6);
+  }
+</style>
+
+<style is:global>
+  /* The recorder shows on two areas (a new origin, and talking back), so its look lives with the room. */
+  .recorder {
+    margin: var(--space-4) 0 var(--space-6);
+  }
+  .recorder .big {
+    width: 100%;
+    min-height: calc(var(--tap) * 3);
+    font-size: var(--size-message);
+    font-weight: 700;
+    border-width: 2px;
+  }
+  .recorder .alternative {
+    margin-top: var(--space-2);
+  }
+  .recorder .elapsed {
+    font-size: var(--size-title);
+    font-variant-numeric: tabular-nums;
+    margin: 0 0 var(--space-3);
+  }
+  .recorder .transcript {
+    white-space: pre-wrap;
+  }
+  .recorder .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .recorder form .field + p {
+    margin-top: var(--space-2);
+  }
+  .recorder form .row {
+    margin-top: var(--space-3);
+  }
+</style>
