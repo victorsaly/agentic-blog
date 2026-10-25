@@ -14,9 +14,17 @@ by hand. Start at me and walk outwards, or start at one idea and see what it con
 
 ## Where it stands (25 October 2026)
 
-- **Not started.** Nothing on the site draws a graph. `site/src/pages/index.astro` says "the graph takes
-  over in phase 3"; `site/PRODUCT.md` says "a later phase". This file is that phase.
-- **The data already exists.** Every `structure.md` ends with a `## Small ideas` table: one row per idea,
+- **G1 and G2 are built and live** at `/graph` (#89, #91). Built on top of the plan, at Victor's ask:
+  - Lines are bundled: ideas between two neighbouring topics run into one knot over the gap between arcs.
+  - On a desk, resting on a dot sets the idea's words and its post in the middle and fades other posts.
+  - Topics can carry a reader name (`settings.yml → topic_names`, `lib/topic-name.ts`, #90).
+  - Each idea in the list links to the section of its post that says it (`lib/idea-sections.ts`, #93):
+    matched by words and phrases; when no section is clearly ahead, the link goes to the start of the road.
+    The expected section of every current idea is written out in its test.
+  - No graph library: Sigma, Cytoscape and d3-force need script in the browser, draw on a canvas a screen
+    reader cannot read, move, or give a different picture each run. The layout is our own, at build time.
+- **G3 is open:** whether the graph becomes the home page, after Victor has lived with it.
+- **The data.** Every `structure.md` ends with a `## Small ideas` table: one row per idea,
   its topics in the second column. The structure agent writes it (`agents/structure/PROMPT.md`). Two posts
   today, 27 ideas, five topics.
 - Topics come from `settings.yml → themes`. Reader copy says **Topics**; the field and `lib/themes.ts` keep
@@ -78,6 +86,14 @@ One slice per pull request, in this order. A slice is not done until CI is green
   in place; the critique score does not drop.
 
 ### Later (each needs its own plan before work starts)
+
+**When to start: at about five posts (60 to 70 ideas).** That is where the dots on a phone's ring begin to
+touch (the desk holds about 100). Plan the two rings below then, before the picture gets crowded.
+
+- **Two rings.** The newest posts' ideas on the outer ring, older ones on an inner ring, so the picture
+  holds more and shows where the thinking has moved. The first one to build.
+- **Idea links set by the agent.** The agent that writes the long version records which section holds
+  each small idea, reviewed in its pull request, instead of the site working it out from the words.
 
 - **The graph around a post.** On The road tab, this post's ideas and the other posts that share a topic.
 - **Ideas that recur.** When two posts say the same small idea, one node with two posts. A judgement, so
