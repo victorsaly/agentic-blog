@@ -1,10 +1,11 @@
 ---
 // Why: on a phone the side column falls below every post, so a reader who wants to narrow the list would
 // have to scroll past all of it first. This strip puts the topics under the page heading instead, one ruled
-// row like the home page's band, and only on narrow screens; on a desk the side column does the same job.
+// row like the home page's band, and only once the side column has dropped (base.css, .when-stacked); on a
+// desk the side column does the same job.
 import type { CollectionEntry } from 'astro:content';
+import TopicLink from './TopicLink.astro';
 import { themeCounts } from '../lib/themes';
-import { topicName } from '../lib/topic-name';
 
 interface Props {
   thoughts: CollectionEntry<'thoughts'>[];
@@ -17,17 +18,11 @@ const counts = themeCounts(thoughts.map((t) => t.data.themes));
 
 {
   counts.length > 0 && (
-    <nav class="frame strip" aria-label="Topics">
+    <nav class="frame strip when-stacked" aria-label="Topics">
       <ul>
         {counts.map(([topic, count]) => (
           <li>
-            <a href={`/topics/${topic}`} aria-current={current === topic ? 'page' : undefined}>
-              {topicName(topic)}
-              <span class="quiet">
-                {count}
-                <span class="visually-hidden">{count === 1 ? ' thought' : ' thoughts'}</span>
-              </span>
-            </a>
+            <TopicLink topic={topic} count={count} current={current} />
           </li>
         ))}
       </ul>
@@ -37,7 +32,7 @@ const counts = themeCounts(thoughts.map((t) => t.data.themes));
 
 <style>
   .strip {
-    display: none;
+    margin-top: var(--space-4);
   }
   ul {
     display: flex;
@@ -48,7 +43,7 @@ const counts = themeCounts(thoughts.map((t) => t.data.themes));
     max-width: none;
     border-bottom: var(--rule-width) solid var(--ink);
   }
-  a {
+  ul :global(a) {
     display: inline-flex;
     align-items: center;
     gap: var(--space-1);
@@ -56,17 +51,10 @@ const counts = themeCounts(thoughts.map((t) => t.data.themes));
     padding-right: var(--space-4);
     text-decoration: none;
   }
-  a:hover {
+  ul :global(a:hover) {
     text-decoration: underline;
   }
-  a[aria-current='page'] {
+  ul :global(a[aria-current='page']) {
     font-weight: 700;
-  }
-  /* The same width at which the list pages drop their side column. */
-  @media (max-width: 61rem) {
-    .strip {
-      display: block;
-      margin-top: var(--space-4);
-    }
   }
 </style>

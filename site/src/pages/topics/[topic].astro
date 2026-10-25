@@ -9,7 +9,7 @@ import ListHead from '../../components/ListHead.astro';
 import ThoughtIndex from '../../components/ThoughtIndex.astro';
 import TopicStrip from '../../components/TopicStrip.astro';
 import TopicsAside from '../../components/TopicsAside.astro';
-import { thoughtNumbers } from '../../lib/content';
+import { newestFirst } from '../../lib/content';
 import { themeCounts, thoughtsLabel } from '../../lib/themes';
 import { topicAbout, topicName } from '../../lib/topic-name';
 
@@ -19,9 +19,7 @@ export async function getStaticPaths() {
 }
 
 const { topic } = Astro.params;
-const all = (await getCollection('thoughts', ({ data }) => !data.draft)).sort(
-  (a, b) => b.data.date.getTime() - a.data.date.getTime() || b.id.localeCompare(a.id),
-);
+const all = (await getCollection('thoughts', ({ data }) => !data.draft)).sort(newestFirst);
 const thoughts = all.filter((t) => t.data.themes.includes(topic));
 const label = topicName(topic);
 const about = topicAbout(topic);
@@ -40,15 +38,10 @@ const count = `${thoughtsLabel(thoughts.length)} so far.`;
     note={about ? `${about} ${count}` : count}
   />
   <TopicStrip thoughts={all} current={topic} />
-  <div class="frame body">
+  <div class="frame body with-side">
     <section class="main" aria-labelledby="topic-list">
       <h2 class="label" id="topic-list">Thoughts on {label.toLowerCase()}</h2>
-      <ThoughtIndex
-        thoughts={thoughts}
-        numbers={thoughtNumbers(all)}
-        prints={true}
-        current={topic}
-      />
+      <ThoughtIndex thoughts={thoughts} prints={true} current={topic} />
     </section>
     <TopicsAside thoughts={all} current={topic} />
   </div>
@@ -56,17 +49,9 @@ const count = `${thoughtsLabel(thoughts.length)} so far.`;
 
 <style>
   .body {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 17rem;
-    gap: var(--space-6);
     padding-top: var(--space-5);
   }
   .main {
     min-width: 0;
-  }
-  @media (max-width: 61rem) {
-    .body {
-      grid-template-columns: minmax(0, 1fr);
-    }
   }
 </style>

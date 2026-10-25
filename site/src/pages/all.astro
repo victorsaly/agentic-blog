@@ -9,14 +9,11 @@ import ListHead from '../components/ListHead.astro';
 import ThoughtIndex from '../components/ThoughtIndex.astro';
 import TopicStrip from '../components/TopicStrip.astro';
 import TopicsAside from '../components/TopicsAside.astro';
-import { thoughtNumbers } from '../lib/content';
+import { newestFirst } from '../lib/content';
 import { settings } from '../lib/settings';
 import { thoughtsLabel } from '../lib/themes';
 
-const thoughts = (await getCollection('thoughts', ({ data }) => !data.draft)).sort(
-  (a, b) => b.data.date.getTime() - a.data.date.getTime() || b.id.localeCompare(a.id),
-);
-const numbers = thoughtNumbers(thoughts);
+const thoughts = (await getCollection('thoughts', ({ data }) => !data.draft)).sort(newestFirst);
 const yearOf = (date: Date): string =>
   new Intl.DateTimeFormat('en-GB', { year: 'numeric', timeZone: settings.site.timezone }).format(
     date,
@@ -40,7 +37,7 @@ const showJump = years.length > 1 && thoughts.length >= JUMP_FROM;
     note={`${thoughtsLabel(thoughts.length)}, newest first.`}
   />
   <TopicStrip thoughts={thoughts} />
-  <div class="frame body">
+  <div class="frame body with-side">
     <div class="main">
       {thoughts.length === 0 && <p class="quiet">Nothing published yet.</p>}
       {
@@ -63,7 +60,7 @@ const showJump = years.length > 1 && thoughts.length >= JUMP_FROM;
               {year}
               {years.length > 1 && <span class="quiet">{thoughtsLabel(list.length)}</span>}
             </h2>
-            <ThoughtIndex thoughts={list} numbers={numbers} />
+            <ThoughtIndex thoughts={list} />
           </section>
         ))
       }
@@ -74,9 +71,6 @@ const showJump = years.length > 1 && thoughts.length >= JUMP_FROM;
 
 <style>
   .body {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 17rem;
-    gap: var(--space-6);
     padding-top: var(--space-5);
   }
   .main {
@@ -115,10 +109,5 @@ const showJump = years.length > 1 && thoughts.length >= JUMP_FROM;
     font-weight: 400;
     letter-spacing: 0;
     text-transform: none;
-  }
-  @media (max-width: 61rem) {
-    .body {
-      grid-template-columns: minmax(0, 1fr);
-    }
   }
 </style>

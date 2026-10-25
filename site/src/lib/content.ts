@@ -85,14 +85,14 @@ export function splitFirstSentence(text: string): { first: string; rest: string 
 }
 
 /**
- * Each thought's number, counted from the first one published, so a post keeps its number when newer ones
- * arrive. Same-day thoughts are ordered by their id, the same tie-break the lists use.
+ * Newest first. Thoughts from the same day come in the order they were published, the higher number first,
+ * so a list reads the same way its numbers count down.
  */
-export function thoughtNumbers(
-  thoughts: { id: string; data: { date: Date } }[],
-): Map<string, number> {
-  const oldestFirst = [...thoughts].sort(
-    (a, b) => a.data.date.getTime() - b.data.date.getTime() || a.id.localeCompare(b.id),
+export function newestFirst(
+  a: { data: { date: Date; number?: number | undefined } },
+  b: { data: { date: Date; number?: number | undefined } },
+): number {
+  return (
+    b.data.date.getTime() - a.data.date.getTime() || (b.data.number ?? 0) - (a.data.number ?? 0)
   );
-  return new Map(oldestFirst.map((t, i) => [t.id, i + 1]));
 }

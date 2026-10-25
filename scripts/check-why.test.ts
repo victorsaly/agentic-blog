@@ -1,7 +1,7 @@
 // Why: the why-check guards every build; it needs its own tests so a change to it cannot silently let
 // files through without a why, or start rejecting files that are fine.
 import { describe, expect, it } from 'vitest';
-import { checkFrontMatter } from './check-why.js';
+import { checkFrontMatter, checkNumbers } from './check-why.js';
 
 const why = 'why: This file exists so the test can show a good why passing the check.';
 
@@ -63,5 +63,44 @@ describe('checkFrontMatter', () => {
     const messages = checkFrontMatter('thoughts/x/versions/short.md', source).map((p) => p.message);
     expect(messages.some((m) => m.startsWith('converted_from'))).toBe(true);
     expect(messages.some((m) => m.startsWith('converted_by'))).toBe(true);
+  });
+});
+
+describe('checkNumbers', () => {
+  const thought = (file: string, extra: Record<string, unknown>) => ({
+    file,
+    data: {
+      why: 'This thought exists so the test can show how numbers are checked.',
+      title: file,
+      date: '2026-10-23',
+      language: 'en',
+      themes: ['accountability'],
+      message: 'A message.',
+      origins: ['origin/text.md'],
+      ...extra,
+    },
+  });
+
+  it('accepts published thoughts with their own numbers, and a draft without one', () => {
+    const thoughts = [
+      thought('a', { number: 1 }),
+      thought('b', { number: 2 }),
+      thought('c', { draft: true }),
+    ];
+    expect(checkNumbers(thoughts)).toEqual([]);
+  });
+
+  it('refuses a published thought without a number and says which one is free', () => {
+    const problems = checkNumbers([thought('a', { number: 1 }), thought('b', {})]);
+    expect(problems).toEqual([
+      { file: 'b', message: 'number: a published thought needs a number; the next free one is 2' },
+    ]);
+  });
+
+  it("refuses two thoughts with the same number, so a new one can never take an old one's", () => {
+    const problems = checkNumbers([thought('a', { number: 1 }), thought('b', { number: 1 })]);
+    expect(problems).toEqual([
+      { file: 'b', message: "number: 1 is already a's; the next free one is 2" },
+    ]);
   });
 });

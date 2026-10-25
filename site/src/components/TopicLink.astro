@@ -1,0 +1,23 @@
+---
+// Why: the topics strip on a phone and the side column on a desk offer the same links, so one link says a
+// topic's name, how many thoughts carry it (with its unit, for a screen reader) and whether you are on it.
+// A fix to what a reader hears is then made once. Each list lays the links out in its own way.
+import { topicName } from '../lib/topic-name';
+
+interface Props {
+  topic: string;
+  count: number;
+  /** The topic page you are on, if any. */
+  current?: string | undefined;
+}
+
+const { topic, count, current } = Astro.props;
+---
+
+<a href={`/topics/${topic}`} aria-current={current === topic ? 'page' : undefined}>
+  <span class="name">{topicName(topic)}</span>
+  <span class="quiet">
+    {count}
+    <span class="visually-hidden">{count === 1 ? ' thought' : ' thoughts'}</span>
+  </span>
+</a>

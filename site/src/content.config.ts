@@ -10,16 +10,23 @@ const language = z.string().min(2).max(5);
 
 const thoughts = defineCollection({
   loader: glob({ pattern: '*/structure.md', base: '../thoughts' }),
-  schema: z.object({
-    why,
-    title: z.string().min(1).max(120),
-    date: z.coerce.date(),
-    language,
-    themes: z.array(z.string().min(1)).min(1),
-    message: z.string().min(1).max(400),
-    origins: z.array(z.string().min(1)).min(1),
-    draft: z.boolean().default(false),
-  }),
+  schema: z
+    .object({
+      why,
+      title: z.string().min(1).max(120),
+      date: z.coerce.date(),
+      // Given once, when the thought is published; check:why keeps it unique and says which one is free.
+      number: z.number().int().positive().optional(),
+      language,
+      themes: z.array(z.string().min(1)).min(1),
+      message: z.string().min(1).max(400),
+      origins: z.array(z.string().min(1)).min(1),
+      draft: z.boolean().default(false),
+    })
+    .refine((data) => data.draft || data.number !== undefined, {
+      message: 'a published thought needs a number',
+      path: ['number'],
+    }),
 });
 
 const versions = defineCollection({

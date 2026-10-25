@@ -3,6 +3,7 @@ why: >
   I cut the repeated circling on "what we reward" and the social media and call centre comparison, and kept the landing: think first, keep your identity, humans decide. The last lines about the Kurzweil book and the prompt reply are garbled and stop without the reply, so I left them out and did not finish them. The interview is unanswered, so nothing here comes from outside the note.
 title: What counts as evidence of competence
 date: 2026-10-23
+number: 2
 language: en
 themes:
   - ai-changing-work

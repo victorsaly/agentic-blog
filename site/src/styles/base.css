@@ -58,6 +58,29 @@ main.wide {
   padding-inline: var(--pad);
 }
 
+/* A wide list page: the list, and a 17rem side column beside it on a desk. At 61rem the side column drops
+   below the list, and what must stay in reach before the list (the topics strip) shows in its place. One
+   breakpoint for all three, so the strip and the side column can never both show, or both hide. */
+.with-side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 17rem;
+  gap: var(--space-6);
+}
+.when-stacked {
+  display: none;
+}
+@media (max-width: 61rem) {
+  .with-side {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .when-stacked {
+    display: block;
+  }
+  .when-beside {
+    display: none;
+  }
+}
+
 h1,
 h2,
 h3 {

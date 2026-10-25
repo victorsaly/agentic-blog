@@ -27,6 +27,8 @@ export const structureFrontMatter = z.object({
   why: whySchema,
   title: z.string().min(1).max(120),
   date: isoDate,
+  // Shown beside the title on every list; given once, when the thought is published, and never changed.
+  number: z.number().int().positive().optional(),
   language: z.string().min(2).max(5),
   themes: z.array(z.string().min(1)).min(1),
   message: z.string().min(1).max(400),

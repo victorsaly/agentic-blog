@@ -1,40 +1,45 @@
 ---
 // Why: every list of thoughts on the site (home, the archive, a topic page) is this one ruled index, so a
-// reader learns one row and reads it everywhere: the thought's number, kept from the day it was published,
-// then the title as the one marigold mark, the message, and under it the date and the thought's topics as
-// links. A topic page adds each post's linocut print, beside the text on a desk and above it on a phone.
-// The number stays quiet so the title leads; spacing and ink rules only, no cards.
+// reader learns one row and reads it everywhere: the thought's number, written in its front matter the day
+// it was published, then the title as the one marigold mark, the message, and under it the date and the
+// thought's topics as links. A topic page adds each post's linocut print, beside the text on a desk and above
+// it on a phone. The number stays quiet so the title leads, and a screen reader hears it as "Thought 12",
+// since the list is not counted from one. Spacing and ink rules only, no cards.
 import type { CollectionEntry } from 'astro:content';
 import { Image } from 'astro:assets';
 import { formatDate, thoughtSlugOf } from '../lib/content';
-import { coversBySlug } from '../lib/covers';
+import { coversBySlug, type Cover } from '../lib/covers';
 import { settings } from '../lib/settings';
 import { topicName } from '../lib/topic-name';
 
 interface Props {
   thoughts: CollectionEntry<'thoughts'>[];
-  /** Each thought's number, from thoughtNumbers over every published thought. */
-  numbers: Map<string, number>;
   /** Show each post's cover print (the topic pages). */
   prints?: boolean;
   /** The topic page this list is on: left out of each post's topic links, since you are there. */
   current?: string;
 }
 
-const { thoughts, numbers, prints = false, current } = Astro.props;
-const covers = await coversBySlug();
+const { thoughts, prints = false, current } = Astro.props;
+const covers = prints ? await coversBySlug() : new Map<string, Cover>();
 ---
 
-<ol class:list={['index', { prints }]}>
+<ul class="index">
   {
     thoughts.map((t) => {
       const slug = thoughtSlugOf(t.id);
-      const cover = prints ? covers.get(slug) : undefined;
+      const n = t.data.number;
+      // The schema refuses a published thought without a number; a draft that slips into a list must not
+      // borrow a made-up one.
+      if (n === undefined)
+        throw new Error(`${slug} is listed but has no number; run npm run check:why`);
+      const cover = covers.get(slug);
       const others = t.data.themes.filter((topic) => topic !== current);
       return (
-        <li>
-          <span class="n" aria-hidden="true">
-            {String(numbers.get(t.id) ?? '').padStart(2, '0')}
+        <li class:list={{ 'has-print': cover !== undefined }}>
+          <span class="n">
+            <span aria-hidden="true">{String(n).padStart(2, '0')}</span>
+            <span class="visually-hidden">Thought {n}</span>
           </span>
           {cover && (
             <a class="print" href={`/thoughts/${slug}`} tabindex="-1" aria-hidden="true">
@@ -69,7 +74,7 @@ const covers = await coversBySlug();
       );
     })
   }
-</ol>
+</ul>
 
 <style>
   .index {
@@ -87,7 +92,7 @@ const covers = await coversBySlug();
     padding-block: var(--space-4);
     border-bottom: var(--rule-width) solid var(--ink);
   }
-  .prints li {
+  .has-print {
     grid-template-columns: 3rem 13rem minmax(0, 1fr);
     grid-template-areas: 'n print text';
     align-items: start;
@@ -100,7 +105,7 @@ const covers = await coversBySlug();
     font-variant-numeric: tabular-nums;
     color: var(--quiet);
   }
-  .prints .n {
+  .has-print .n {
     padding-top: 0.6rem;
   }
   .print {
@@ -152,13 +157,12 @@ const covers = await coversBySlug();
   }
 
   @media (max-width: 40rem) {
-    li,
-    .prints li {
+    li {
       grid-template-columns: 2.25rem minmax(0, 1fr);
       grid-template-areas: 'n text';
       gap: var(--space-2) var(--space-3);
     }
-    .prints li {
+    .has-print {
       grid-template-areas:
         'n print'
         '. text';
