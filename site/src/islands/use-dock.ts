@@ -23,6 +23,8 @@ export interface Dock {
 export function useDock(name: 'ask' | 'search'): Dock {
   const dialog = useRef<HTMLDialogElement | null>(null);
   const trigger = useRef<HTMLElement | null>(null);
+  // What had focus when the panel opened (a button in the page, not only the header's), to go back to.
+  const opener = useRef<HTMLElement | null>(null);
   const [isOpen, setOpen] = useState(false);
 
   const close = useCallback(
@@ -33,7 +35,10 @@ export function useDock(name: 'ask' | 'search'): Dock {
       setOpen(false);
       if (document.documentElement.getAttribute('data-dock') === name)
         document.documentElement.removeAttribute('data-dock');
-      if (returnFocus) trigger.current?.focus();
+      // Back to where the reader was, without moving the page under them.
+      const back = opener.current?.isConnected ? opener.current : trigger.current;
+      if (returnFocus) back?.focus({ preventScroll: true });
+      opener.current = null;
     },
     [name],
   );
@@ -43,6 +48,8 @@ export function useDock(name: 'ask' | 'search'): Dock {
     if (!d) return;
     dispatchEvent(new CustomEvent('dock:open', { detail: name }));
     if (!d.open) {
+      const active = document.activeElement;
+      opener.current = active instanceof HTMLElement && active !== document.body ? active : null;
       if (matchMedia(NARROW).matches) d.showModal();
       else d.show();
     }

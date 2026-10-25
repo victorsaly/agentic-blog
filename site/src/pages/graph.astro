@@ -53,8 +53,6 @@ const phone = layoutGraph(graph, phoneLayout, settings.topic_names);
 // A topic has its own page only when a whole post carries it (see topics/[topic].astro).
 const topicPages = new Set(entries.filter((e) => !e.data.draft).flatMap((e) => e.data.themes));
 
-const texts = new Map(graph.ideas.map((i) => [i.id, i.text]));
-
 // Where each idea's link lands: its section of the long version, with the address the post page gives that
 // heading; the whole piece (#road) when no section is clearly the one; the post itself when it has no road.
 const longs = ((await getCollection('versions')) as unknown as VersionEntry[]).filter(
@@ -82,10 +80,21 @@ const ideasLabel = (n: number): string => (n === 1 ? 'One small idea' : `${Strin
 // A topic shows its first ideas; the rest wait behind one control, so a long topic is not a wall of links.
 const shown = 3;
 const postCount = new Set(graph.ideas.map((i) => i.slug)).size;
+// The note says how to read the picture, and its shape in words, for a reader who cannot see it.
+const biggest = graph.topics[0];
+const sharedCount = graph.ideas.filter((i) => i.topics.length > 1).length;
 const note =
   graph.ideas.length === 0
     ? 'Nothing to draw yet: the graph grows from the small ideas in each thought.'
-    : `Me in the middle, the topics around me, every small idea on the outside. ${ideasLabel(graph.ideas.length)} from ${thoughtsLabel(postCount).toLowerCase()}.`;
+    : [
+        `Each arc is a topic, each dot one small idea: ${ideasLabel(graph.ideas.length).toLowerCase()} from ${thoughtsLabel(postCount).toLowerCase()}.`,
+        biggest ? `${topicName(biggest.topic)} holds the most.` : '',
+        sharedCount > 0
+          ? `${sharedCount === 1 ? 'One sits' : `${String(sharedCount)} sit`} under two topics at once.`
+          : '',
+      ]
+        .filter((line) => line !== '')
+        .join(' ');
 
 // One topic at a time is opened: by its address (#t-topic), by pointing at it, or by tabbing through its
 // part of the list. Everything else steps back. Written out per topic, since CSS cannot compare attributes.
@@ -155,40 +164,30 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
   description="Every topic the thoughts cover and every small idea in them, drawn as one graph."
   width="wide"
 >
-  <ListHead label="Graph" title="How the thoughts connect" note={note} />
+  <ListHead label="Graph" title="How the thoughts connect" note={note} compact />
   <Fragment set:html={`<style>${css}</style>`} />
   {
     graph.ideas.length > 0 && (
       <div class="frame walk">
         <div class="picture">
           <p class="how">
-            <span class="pointer">
-              Point at a dot to read its idea, click it to keep it. Pick a topic to light up its
-              ideas.
-            </span>
-            <span class="touch">Tap a topic to jump to its ideas.</span>
+            <span class="pointer">Point at a dot to read it, click to keep it.</span>
+            <span class="touch">Tap a topic to see its ideas.</span>
           </p>
-          <form class="find" role="search">
-            <label for="find-idea">Find an idea</label>
-            <input
-              id="find-idea"
-              type="search"
-              autocomplete="off"
-              placeholder="a word, like note"
-            />
-            <p class="small quiet found" aria-live="polite" data-found />
-          </form>
-          <figure id="graph">
+          <figure
+            id="graph"
+            tabindex="-1"
+            aria-label={`A graph of ${String(graph.topics.length)} topics and ${ideasLabel(graph.ideas.length).toLowerCase()}; the same is listed beside it.`}
+          >
             <div class="stage">
               <GraphPicture
                 layout={desk}
                 id="graph-desk"
                 class="desk"
                 hrefs={hrefs}
-                texts={texts}
                 name={settings.site.author}
               />
-              <div class="pin" hidden data-pin>
+              <div class="pin" hidden data-pin role="region" aria-label="The idea you kept">
                 <p class="pin-text" data-pin-text />
                 <p class="small quiet" data-pin-from />
                 <p class="pin-actions">
@@ -209,23 +208,38 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
               id="graph-phone"
               class="phone"
               hrefs={hrefs}
-              texts={texts}
               name={settings.site.author}
             />
-            <figcaption class="small quiet" aria-hidden="true">
-              Each arc is a topic; the more small ideas it holds, the longer it is. Each dot is a
-              small idea, and a dot in the gap between two arcs belongs to both.
+            <figcaption class="small quiet">
+              The more small ideas a topic holds, the longer its arc. A dot in the gap between two
+              arcs belongs to both.
             </figcaption>
           </figure>
         </div>
 
         <div class="list">
+          <form class="find" role="search" hidden>
+            <label for="find-idea">Find an idea</label>
+            <span class="find-row">
+              <input
+                id="find-idea"
+                type="search"
+                autocomplete="off"
+                placeholder="a word, like note"
+              />
+              <button type="button" class="control" data-find-clear hidden>
+                Clear
+              </button>
+            </span>
+            <p class="small quiet found" aria-live="polite" data-found />
+          </form>
+          <p class="none" hidden data-none />
           {graph.topics.map((t) => {
             const ideas = graph.ideas.filter((i) => i.topics.includes(t.topic));
             const item = (i: (typeof ideas)[number]) => {
               const others = i.topics.filter((o) => o !== t.topic);
               return (
-                <li data-item={i.id}>
+                <li data-item={i.id} data-thought={i.title}>
                   <a href={hrefs.get(i.id) ?? `/thoughts/${i.slug}`}>{i.text}</a>
                   <p class="small quiet from">
                     From the thought “{i.title}”.
@@ -233,7 +247,7 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
                       ` Also under ${others.map((o) => topicName(o)).join(' and ')}.`}
                   </p>
                   <p class="actions">
-                    <button type="button" class="ask-idea" data-ask-idea={i.id}>
+                    <button type="button" class="ask-idea" data-ask-idea={i.id} hidden>
                       Ask about this
                     </button>
                   </p>
@@ -289,27 +303,31 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
     padding-top: var(--space-5);
     padding-bottom: var(--space-6);
   }
+  /* The picture chooses its drawing by its own width, not the window's: when the chat docks beside the page
+     and the column narrows, it turns to the phone drawing, whose names stay large, instead of shrinking. */
   .picture {
     margin: 0;
+    container-type: inline-size;
   }
   .picture :global(.desk) {
     display: none;
   }
   /* On a phone the picture takes the whole width of the screen, so its names can be read; its own margin
      keeps them off the edge. */
-  .picture :global(.phone) {
-    width: calc(100% + 2 * var(--pad));
-    max-width: none;
-    margin-inline: calc(-1 * var(--pad));
+  @media (max-width: 40rem) {
+    .picture :global(.phone) {
+      width: calc(100% + 2 * var(--pad));
+      max-width: none;
+      margin-inline: calc(-1 * var(--pad));
+    }
   }
   figure {
     margin: 0;
     scroll-margin-top: 6rem;
   }
   .how {
-    margin: 0 0 var(--space-4);
+    margin: 0 0 var(--space-3);
     max-width: 50ch;
-    font-weight: 700;
   }
   .how .touch {
     display: none;
@@ -335,13 +353,33 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
   .find label {
     font-weight: 700;
   }
+  .find-row {
+    display: flex;
+    gap: var(--space-2);
+  }
   .find input {
+    flex: 1;
+    min-width: 0;
     font: inherit;
     min-height: var(--tap);
     padding: 0 var(--space-3);
     border: var(--rule-width) solid var(--ink);
     background: var(--paper);
     color: var(--ink);
+  }
+  /* The quiet ink, which holds 7:1 in light and dark; the browser's grey falls under 4.5 on charcoal. */
+  .find input::placeholder {
+    color: var(--quiet);
+    opacity: 1;
+  }
+  /* The house Clear control replaces the browser's own blue cross. */
+  .find input::-webkit-search-cancel-button {
+    display: none;
+  }
+  .none {
+    margin: 0 0 var(--space-4);
+    font-size: var(--size-body);
+    font-weight: 700;
   }
   .found {
     margin: 0;
@@ -358,9 +396,17 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
   .walk[data-filtering] :global(.graph-picture .edges [data-i]:not([data-match])) {
     opacity: 0.16;
   }
-  .ideas mark {
+  /* The marks are made by the script, so the rule must reach elements Astro never scoped. */
+  .ideas :global(mark) {
     background: var(--mark);
     color: var(--mark-ink);
+  }
+  /* In the picture a matching dot carries the one colour too, so a match can be found among the faded. */
+  .walk[data-filtering] :global(.graph-picture [data-idea][data-match] circle:not(.hit)) {
+    fill: var(--mark);
+    stroke: var(--ink);
+    stroke-width: 1px;
+    vector-effect: non-scaling-stroke;
   }
   /* The words of a kept idea, set over the middle of the ring with the two things a reader can do next. */
   .stage {
@@ -496,7 +542,7 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
     margin: var(--space-1) 0 0;
   }
 
-  @media (min-width: 40rem) {
+  @container (min-width: 35rem) {
     .picture :global(.desk) {
       display: block;
     }
@@ -537,19 +583,30 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
   const form = document.querySelector<HTMLFormElement>('.find');
   const input = document.querySelector<HTMLInputElement>('#find-idea');
   const found = document.querySelector<HTMLElement>('[data-found]');
+  const none = document.querySelector<HTMLElement>('[data-none]');
+  const clear = document.querySelector<HTMLButtonElement>('[data-find-clear]');
+  // Without the script the find box would do nothing, so it shows only now.
+  if (form) form.hidden = false;
   const rows = [...document.querySelectorAll<HTMLLIElement>('.list [data-item]')];
   const sections = [...document.querySelectorAll<HTMLElement>('.list > section')];
   const pictures = [...document.querySelectorAll<SVGSVGElement>('.graph-picture')];
 
-  // Every idea once, with its words and its post as the list gives them (a shared idea has two rows).
+  // Every idea once, with its words and the thought it comes from (a shared idea has a row per topic).
   const texts = new Map<string, string>();
-  const froms = new Map<string, string>();
+  const thoughts = new Map<string, string>();
   for (const li of rows) {
     const id = li.dataset.item ?? '';
     if (id === '' || texts.has(id)) continue;
     texts.set(id, li.querySelector('a')?.textContent?.trim() ?? '');
-    froms.set(id, li.querySelector('.from')?.textContent?.trim().replace(/\s+/g, ' ') ?? '');
+    thoughts.set(id, li.dataset.thought ?? '');
   }
+  // The topics' reader names, as the list's headings give them.
+  const topicNames = new Map(
+    sections.map((s) => [
+      s.id.replace(/^t-/, ''),
+      s.querySelector('.name')?.textContent?.trim() ?? '',
+    ]),
+  );
   const all = [...texts].map(([id, text]) => ({ id, text }));
 
   // Find.
@@ -607,6 +664,12 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
         : hits.size === 0
           ? `No small idea says “${query.trim()}”.`
           : `${String(hits.size)} of ${String(all.length)} small ideas.`;
+    // With nothing found the list column would be empty; say so there, at full size, with a way out.
+    if (none) {
+      none.hidden = !(on && hits.size === 0);
+      none.textContent = `No small idea says “${query.trim()}”. Try a shorter word, or clear the box.`;
+    }
+    if (clear) clear.hidden = !on;
   }
   form?.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -614,9 +677,16 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
   input?.addEventListener('input', () => {
     applyFilter(input.value);
   });
+  clear?.addEventListener('click', () => {
+    if (!input) return;
+    input.value = '';
+    applyFilter('');
+    input.focus();
+  });
   if (input && input.value !== '') applyFilter(input.value);
 
   // Keep.
+  const figure = document.querySelector<HTMLElement>('#graph');
   const stage = document.querySelector<HTMLElement>('.stage');
   const panel = document.querySelector<HTMLElement>('[data-pin]');
   const pinText = panel?.querySelector<HTMLElement>('[data-pin-text]');
@@ -625,6 +695,8 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
   const pinAsk = panel?.querySelector<HTMLButtonElement>('[data-ask-idea]');
   const pinClose = panel?.querySelector<HTMLButtonElement>('[data-pin-close]');
   let kept: SVGAElement | null = null;
+  // Where the reader was before keeping an idea, so letting go returns them there.
+  let before: HTMLElement | null = null;
 
   // The panel sits over the middle of the ring, however the picture is sized: the picture's own (0, 0).
   function place(): void {
@@ -638,8 +710,20 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
     panel.style.width = `${String(Math.round(Number(svg.dataset.inner ?? 0) * matrix.a))}px`;
   }
   function unpin(): void {
+    const was = kept;
     kept?.removeAttribute('data-pinned');
     kept = null;
+    // Focus inside the panel goes back to the same idea in the list (a shared idea is listed under each of
+    // its topics, and some sit in a closed "Show all"), not to the dot, which is hidden from assistive tech;
+    // else to where the reader was, if that was more than the page itself; else to the picture.
+    if (was && panel?.contains(document.activeElement)) {
+      const rows = document.querySelectorAll<HTMLAnchorElement>(
+        `.list [data-item="${CSS.escape(was.dataset.idea ?? '')}"] a`,
+      );
+      const row = [...rows].find((a) => a.checkVisibility());
+      const back = before && before !== document.body && before.isConnected ? before : null;
+      (row ?? back ?? figure)?.focus({ preventScroll: true });
+    }
     for (const picture of pictures) {
       picture.classList.remove('pinned');
       picture.removeAttribute('data-pinned-post');
@@ -652,6 +736,7 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
       return;
     }
     unpin();
+    before = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const id = dot.dataset.idea ?? '';
     kept = dot;
     dot.setAttribute('data-pinned', '');
@@ -659,7 +744,10 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
     picture?.classList.add('pinned');
     picture?.setAttribute('data-pinned-post', dot.dataset.p ?? '');
     if (pinText) pinText.textContent = texts.get(id) ?? '';
-    if (pinFrom) pinFrom.textContent = froms.get(id) ?? '';
+    // Said from the dot's own data, so a shared idea names both its topics.
+    const under = (dot.dataset.t ?? '').split(' ').map((t) => topicNames.get(t) ?? t);
+    if (pinFrom)
+      pinFrom.textContent = `From the thought “${thoughts.get(id) ?? ''}”. Under ${under.join(' and ')}.`;
     if (pinRead) pinRead.href = dot.getAttribute('href') ?? '#graph';
     if (pinAsk) pinAsk.dataset.askIdea = id;
     if (panel) panel.hidden = false;
@@ -668,33 +756,68 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
   }
   for (const dot of document.querySelectorAll<SVGAElement>('.graph-picture a[data-idea]')) {
     dot.addEventListener('click', (event) => {
+      // A click with a modifier, or not the main button, does what a link does: a new tab, a new window.
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0)
+        return;
       event.preventDefault();
       pin(dot);
     });
   }
   pinClose?.addEventListener('click', unpin);
+  // One Escape closes one thing: the chat, when it is open, takes it first.
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && kept) unpin();
+    if (event.key !== 'Escape' || !kept || event.defaultPrevented) return;
+    if (document.documentElement.hasAttribute('data-dock')) return;
+    unpin();
   });
   // The picture changes size with the window, and when the chat docks beside the page; the panel follows.
   if (stage)
     new ResizeObserver(() => {
-      if (kept) place();
+      if (!kept) return;
+      // The column narrowed to the phone drawing: the kept dot is no longer drawn, so let it go.
+      if (kept.closest('svg')?.checkVisibility() !== true) unpin();
+      else place();
     }).observe(stage);
 
-  // Ask. The chat lives in the header; when it is closed (the site not yet public), the buttons go.
+  // Ask. The chat lives in the header; the buttons show only when it is there and the script runs. Each
+  // says which idea it asks about, so a screen reader does not hear thirty-six identical buttons.
   const chat = document.querySelector('.ask-open') !== null;
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-ask-idea]')) {
+    // No chat (a private build): no button asks it, the kept panel's included.
     if (!chat) {
       button.hidden = true;
       continue;
     }
+    const named = (): void => {
+      const text = texts.get(button.dataset.askIdea ?? '') ?? '';
+      if (text) button.setAttribute('aria-label', `Ask about this: ${text}`);
+    };
+    named();
+    button.hidden = false;
     button.addEventListener('click', () => {
       const text = texts.get(button.dataset.askIdea ?? '') ?? '';
       if (text === '') return;
+      // The chat docks beside the page and the picture narrows; a kept idea lets go rather than be squeezed.
+      unpin();
       dispatchEvent(
         new CustomEvent('ask:open', { detail: { question: `Tell me more about this: “${text}”` } }),
       );
+    });
+    // The kept panel's button changes idea each time; only that change renames it (watching every attribute
+    // would loop, since naming it is itself one).
+    if (button.closest('[data-pin]'))
+      new MutationObserver(named).observe(button, { attributeFilter: ['data-ask-idea'] });
+  }
+
+  // "Back to the graph" keeps the topic the reader opened lit: it scrolls to the picture without
+  // changing the address, so #t-topic still names the topic, and takes the keyboard there too, so the next
+  // Tab starts from the picture and not from the bottom of the topic just left.
+  for (const back of document.querySelectorAll<HTMLAnchorElement>('.back a')) {
+    back.addEventListener('click', (event) => {
+      if (!figure) return;
+      event.preventDefault();
+      figure.scrollIntoView({ block: 'start' });
+      figure.focus({ preventScroll: true });
     });
   }
 </script>

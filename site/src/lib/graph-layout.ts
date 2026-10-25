@@ -176,7 +176,7 @@ function tipOf(text: string, title: string, o: LayoutOptions): Tip {
   const wrapped = wrapLabel(text, chars);
   const lines = wrapped.length > 6 ? [...wrapped.slice(0, 5), `${wrapped[5] ?? ''}…`] : wrapped;
   const fromSize = o.tipSize * 0.75;
-  const from = wrapLabel(`From ${title}`, Math.floor(chars / 0.75));
+  const from = wrapLabel(`From the thought “${title}”`, Math.floor(chars / 0.75));
   const lineHeight = o.tipSize * 1.25;
   const fromHeight = fromSize * 1.3;
   const height = lines.length * lineHeight + fromSize * 0.8 + from.length * fromHeight;
