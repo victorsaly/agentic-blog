@@ -48,6 +48,7 @@ permissions:
 concurrency:
   group: agents-${{ github.event.pull_request.number || inputs.thought }}
   cancel-in-progress: false
+  queue: max
 
 jobs:
   run:
