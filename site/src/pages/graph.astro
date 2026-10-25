@@ -2,7 +2,7 @@
 // Why: the first post promised a blog you can walk, not a feed: me in the middle, the topics around me, the
 // small ideas on the outside, one idea able to sit under two topics, nothing placed by hand. This page
 // draws that from the Small ideas table of every post, so the shape says what the blog is about before a
-// word is read. The picture leads; beside it (under it on a phone) the same graph is a list, which is what
+// word is read. One plain line above it says what to do with it. The picture leads; beside it (under it on a phone) the same graph is a list, which is what
 // the keyboard and a screen reader use. Opening a topic, from either side, darkens its ideas and marks its
 // name in marigold, the one colour, with no script and no motion. Each idea in the list links to the
 // section of its post that says it, or to the start of the whole piece when no section is clearly the one.
@@ -50,12 +50,6 @@ const phone = layoutGraph(graph, phoneLayout, settings.topic_names);
 // A topic has its own page only when a whole post carries it (see topics/[topic].astro).
 const topicPages = new Set(entries.filter((e) => !e.data.draft).flatMap((e) => e.data.themes));
 
-// An idea on two topics is listed under both; its anchor is the first, where the picture's dot leads.
-const anchors = new Map<string, string>();
-for (const t of graph.topics)
-  for (const i of graph.ideas)
-    if (i.topics.includes(t.topic) && !anchors.has(i.id))
-      anchors.set(i.id, `i-${i.id.replace(/[^a-z0-9-]/g, '-')}`);
 const texts = new Map(graph.ideas.map((i) => [i.id, i.text]));
 
 // Where each idea's link lands: its section of the long version, with the address the post page gives that
@@ -82,6 +76,8 @@ const hrefs = new Map(
 );
 
 const ideasLabel = (n: number): string => (n === 1 ? 'One small idea' : `${String(n)} small ideas`);
+// A topic shows its first ideas; the rest wait behind one control, so a long topic is not a wall of links.
+const shown = 3;
 const postCount = new Set(graph.ideas.map((i) => i.slug)).size;
 const note =
   graph.ideas.length === 0
@@ -107,7 +103,7 @@ const rules = (pointer: boolean): string =>
       const on = openBy(t, pointer);
       const dim = on.map((s) => `${s} .graph-picture [data-t]:not([data-t~="${t}"])`).join(',');
       const arc = on.map((s) => `${s} .graph-picture [data-topic="${t}"] .arc`).join(',');
-      const name = on.map((s) => `${s} .graph-picture [data-topic="${t}"] text`).join(',');
+      const name = on.map((s) => `${s} .graph-picture [data-topic="${t}"] .name`).join(',');
       return `${dim}{opacity:.16}${arc}{stroke-width:var(--rule-heavy)}${name}{stroke:var(--mark);fill:var(--mark-ink)}`;
     })
     .join('');
@@ -128,7 +124,16 @@ const pointing =
         `.graph-picture:has([data-idea][data-p="${p}"]:hover) [data-p]:not([data-p="${p}"]){opacity:.16}`,
     )
     .join('');
-const css = `@media (hover:none),(pointer:coarse){${rules(false)}}@media (hover:hover) and (pointer:fine){${rules(true)}${pointing}}`;
+// Tabbing to an idea in the list sets its words in the middle of the picture, as pointing at its dot does.
+const focusing =
+  graph.ideas
+    .filter((i) => /^[a-z0-9:-]+$/.test(i.id))
+    .map(
+      (i) =>
+        `.walk:has([data-item="${i.id}"] a:focus-visible) .graph-picture [data-for="${i.id}"]{visibility:visible}`,
+    )
+    .join('') + '.walk:has(.ideas a:focus-visible) .has-tips .core{visibility:hidden}';
+const css = `${focusing}@media (hover:none),(pointer:coarse){${rules(false)}}@media (hover:hover) and (pointer:fine){${rules(true)}${pointing}}`;
 ---
 
 <Page
@@ -141,73 +146,87 @@ const css = `@media (hover:none),(pointer:coarse){${rules(false)}}@media (hover:
   {
     graph.ideas.length > 0 && (
       <div class="frame walk">
-        <figure class="picture">
-          <GraphPicture
-            layout={desk}
-            id="graph-desk"
-            class="desk"
-            anchors={anchors}
-            texts={texts}
-            name={settings.site.author}
-          />
-          <GraphPicture
-            layout={phone}
-            id="graph-phone"
-            class="phone"
-            anchors={anchors}
-            texts={texts}
-            name={settings.site.author}
-          />
-          <figcaption class="small quiet">
-            Each arc is a topic, as long as the ideas it holds. Each dot is a small idea; one that
-            sits between two arcs belongs to both. Pick a topic to see its ideas.
-          </figcaption>
-        </figure>
+        <div class="picture">
+          <p class="how">
+            <span class="pointer">
+              Point at a dot to read its idea. Pick a topic to light up its ideas.
+            </span>
+            <span class="touch">Tap a topic to jump to its ideas.</span>
+          </p>
+          <figure id="graph">
+            <GraphPicture
+              layout={desk}
+              id="graph-desk"
+              class="desk"
+              hrefs={hrefs}
+              texts={texts}
+              name={settings.site.author}
+            />
+            <GraphPicture
+              layout={phone}
+              id="graph-phone"
+              class="phone"
+              hrefs={hrefs}
+              texts={texts}
+              name={settings.site.author}
+            />
+            <figcaption class="small quiet" aria-hidden="true">
+              Each arc is a topic; the more small ideas it holds, the longer it is. Each dot is a
+              small idea, and a dot in the gap between two arcs belongs to both.
+            </figcaption>
+          </figure>
+        </div>
 
         <div class="list">
-          {graph.topics.map((t) => (
-            <section id={`t-${t.topic}`} aria-labelledby={`t-${t.topic}-name`}>
-              <h2 id={`t-${t.topic}-name`}>
-                <a href={`#t-${t.topic}`}>
-                  <span class="name">{topicName(t.topic)}</span>
-                </a>
-              </h2>
-              <p class="small quiet count">
-                {ideasLabel(t.ideas)}
+          {graph.topics.map((t) => {
+            const ideas = graph.ideas.filter((i) => i.topics.includes(t.topic));
+            const item = (i: (typeof ideas)[number]) => {
+              const others = i.topics.filter((o) => o !== t.topic);
+              return (
+                <li data-item={i.id}>
+                  <a href={hrefs.get(i.id) ?? `/thoughts/${i.slug}`}>{i.text}</a>
+                  <p class="small quiet">
+                    From the thought “{i.title}”.
+                    {others.length > 0 &&
+                      ` Also under ${others.map((o) => topicName(o)).join(' and ')}.`}
+                  </p>
+                </li>
+              );
+            };
+            return (
+              <section id={`t-${t.topic}`} aria-labelledby={`t-${t.topic}-name`}>
+                <h2 id={`t-${t.topic}-name`}>
+                  <a href={`#t-${t.topic}`}>
+                    <span class="name">{topicName(t.topic)}</span>
+                  </a>
+                </h2>
+                <p class="small quiet count">
+                  {ideasLabel(t.ideas)}
+                  {!topicPages.has(t.topic) && ', so far only inside thoughts about other topics'}.
+                </p>
                 {topicPages.has(t.topic) && (
-                  <>
-                    {' '}
-                    <a href={`/topics/${t.topic}`}>Every thought on it</a>
-                  </>
+                  <p class="every">
+                    <a href={`/topics/${t.topic}`}>Every thought on {topicName(t.topic)}</a>
+                  </p>
                 )}
-              </p>
-              <ol class="ideas">
-                {graph.ideas
-                  .filter((i) => i.topics.includes(t.topic))
-                  .map((i) => {
-                    const id = anchors.get(i.id);
-                    const others = i.topics.filter((o) => o !== t.topic);
-                    return (
-                      <li
-                        id={
-                          id !== undefined &&
-                          graph.topics.find((g) => i.topics.includes(g.topic))?.topic === t.topic
-                            ? id
-                            : undefined
-                        }
-                      >
-                        <a href={hrefs.get(i.id) ?? `/thoughts/${i.slug}`}>{i.text}</a>
-                        <p class="small quiet">
-                          From {i.title}.
-                          {others.length > 0 &&
-                            ` Also under ${others.map((o) => topicName(o)).join(' and ')}.`}
-                        </p>
-                      </li>
-                    );
-                  })}
-              </ol>
-            </section>
-          ))}
+                <ol class="ideas">{ideas.slice(0, shown).map(item)}</ol>
+                {ideas.length > shown && (
+                  <details>
+                    <summary>
+                      <span class="more">Show all {ideas.length} ideas</span>
+                      <span class="less">Show fewer</span>
+                    </summary>
+                    <ol class="ideas" start={shown + 1}>
+                      {ideas.slice(shown).map(item)}
+                    </ol>
+                  </details>
+                )}
+                <p class="back">
+                  <a href="#graph">Back to the graph</a>
+                </p>
+              </section>
+            );
+          })}
         </div>
       </div>
     )
@@ -226,6 +245,33 @@ const css = `@media (hover:none),(pointer:coarse){${rules(false)}}@media (hover:
   }
   .picture :global(.desk) {
     display: none;
+  }
+  /* On a phone the picture takes the whole width of the screen, so its names can be read; its own margin
+     keeps them off the edge. */
+  .picture :global(.phone) {
+    width: calc(100% + 2 * var(--pad));
+    max-width: none;
+    margin-inline: calc(-1 * var(--pad));
+  }
+  figure {
+    margin: 0;
+    scroll-margin-top: 6rem;
+  }
+  .how {
+    margin: 0 0 var(--space-4);
+    max-width: 50ch;
+    font-weight: 700;
+  }
+  .how .touch {
+    display: none;
+  }
+  @media (hover: none), (pointer: coarse) {
+    .how .pointer {
+      display: none;
+    }
+    .how .touch {
+      display: inline;
+    }
   }
   figcaption {
     margin-top: var(--space-3);
@@ -260,10 +306,17 @@ const css = `@media (hover:none),(pointer:coarse){${rules(false)}}@media (hover:
     padding: 0.05em 0.2em;
   }
   .count {
-    margin: 0 0 var(--space-3);
+    margin: 0;
   }
-  .count a {
-    margin-left: var(--space-2);
+  .every {
+    margin: 0 0 var(--space-2);
+  }
+  .every a,
+  .back a,
+  summary {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
   }
   .ideas {
     list-style: none;
@@ -275,18 +328,37 @@ const css = `@media (hover:none),(pointer:coarse){${rules(false)}}@media (hover:
     padding-block: var(--space-3);
     border-top: var(--rule-width) solid var(--rule);
   }
-  .ideas li:target {
-    border-top-color: var(--ink);
-  }
-  .ideas li:target > a {
-    background: var(--mark);
-    color: var(--mark-ink);
-    box-decoration-break: clone;
-    -webkit-box-decoration-break: clone;
-  }
+  /* Two or three lines of link a row: open spacing and a thin line under the words, so a block of links
+     does not read as stripes; the line thickens under the one being pointed at. */
   .ideas a {
     font-size: var(--size-body);
-    line-height: var(--leading-tight);
+    line-height: var(--leading);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.25em;
+  }
+  .ideas a:hover,
+  .ideas a:focus-visible {
+    text-decoration-thickness: 0.1em;
+  }
+  summary {
+    cursor: pointer;
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.25em;
+    border-top: var(--rule-width) solid var(--rule);
+    width: 100%;
+    list-style: none;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  details[open] .more,
+  details:not([open]) .less {
+    display: none;
+  }
+  .back {
+    margin: var(--space-2) 0 0;
   }
   .ideas p {
     margin: var(--space-1) 0 0;
@@ -313,7 +385,11 @@ const css = `@media (hover:none),(pointer:coarse){${rules(false)}}@media (hover:
       top: 6rem;
     }
     .picture :global(.desk) {
-      max-height: calc(100svh - 10rem);
+      max-height: calc(100svh - 14rem);
+    }
+    /* The picture stays beside the list on a desk, so there is nothing to go back to. */
+    .back {
+      display: none;
     }
   }
 </style>

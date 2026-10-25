@@ -43,6 +43,25 @@ const graph = graphOf(
 const angleOf = (topic: { start: number; end: number }): number => (topic.start + topic.end) / 2;
 const norm = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
 
+/** The points an SVG path passes through: pairs of numbers, and for an arc only its end point. */
+const pointsOf = (d: string): [number, number][] => {
+  const tokens = d.match(/[A-Z]|-?\d+(\.\d+)?/g) ?? [];
+  const points: [number, number][] = [];
+  let command = '';
+  for (let i = 0; i < tokens.length;) {
+    const token = tokens[i] ?? '';
+    if (/[A-Z]/.test(token)) {
+      command = token;
+      i += 1;
+      continue;
+    }
+    if (command === 'A') i += 5;
+    points.push([Number(tokens[i]), Number(tokens[i + 1])]);
+    i += 2;
+  }
+  return points;
+};
+
 describe('ringOrder', () => {
   it('starts from the biggest topic and puts topics that share ideas side by side', () => {
     const order = ringOrder(graph);
@@ -117,14 +136,34 @@ describe('layoutGraph', () => {
         }
       });
 
-      it('joins every idea to each of its topics, and every topic to the middle', () => {
+      it('joins every idea to each of its topics, and draws no line through the middle', () => {
         for (const idea of layout.ideas) {
           const reached = layout.edges.filter((e) => e.idea === idea.id).flatMap((e) => e.topics);
           for (const t of idea.topics) expect(reached, `${idea.id} → ${t}`).toContain(t);
         }
-        const toMiddle = layout.edges.filter((e) => e.idea === undefined && e.topics.length === 1);
-        for (const t of layout.topics)
-          expect(toMiddle.some((e) => e.topics[0] === t.topic)).toBe(true);
+        // Every point a line passes through stays outside the space kept for the mark and the words.
+        for (const e of layout.edges) {
+          for (const [x, y] of pointsOf(e.d)) {
+            expect(Math.hypot(x, y), e.d).toBeGreaterThan(options.topicRadius * 0.9);
+          }
+        }
+      });
+
+      it('leaves a gap of at least one idea between any two arcs', () => {
+        const slot = (2 * Math.PI) / (layout.ideas.length + layout.topics.length);
+        const arcs = [...layout.topics].sort((p, q) => norm(p.start) - norm(q.start));
+        arcs.forEach((p, i) => {
+          const q = arcs[(i + 1) % arcs.length];
+          if (q === undefined || q === p) return;
+          const between = (((q.start - p.end) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+          expect(between, `${p.topic} → ${q.topic}`).toBeGreaterThan(slot * 0.9);
+        });
+      });
+
+      it('writes the count of each topic under its name, and ticks both ends of its arc', () => {
+        expect(topic('ai-changing-work').count).toBe('7 ideas');
+        expect(topic('apps-and-workflows').count).toBe('1 idea');
+        for (const p of layout.topics) expect(p.ticks.match(/M/g)).toHaveLength(2);
       });
 
       it('bundles ideas between two neighbouring topics into one knot', () => {

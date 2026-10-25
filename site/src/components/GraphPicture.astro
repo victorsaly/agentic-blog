@@ -1,9 +1,12 @@
 ---
 // Why: the picture half of /graph. It draws a layout the page has already computed: the mark in the middle,
 // each topic as an arc in the strong rule weight with its name outside, each small idea as a dot, and the
-// hairlines between them. It is hidden from screen readers and from the tab order because the list beside
-// it says the same thing in words; a pointer can still use it, a topic to open its ideas, a dot to find its
-// idea in the list. Strokes keep their weight at any size, so the rules match the rest of the page.
+// hairlines between them. Each arc is ticked at both ends and carries its count, so the topics read as
+// topics before anyone points at them. It is hidden from screen readers and from the tab order because the
+// list beside it says the same thing in words; a pointer can still use it, a topic to open its ideas, a dot
+// (on a desk, where its words show on pointing) to go to the paragraph that says it. On a phone the dots
+// are marks only: too small to tap, and the list holds the same links. Strokes keep their weight at any
+// size, so the rules match the rest of the page.
 import markRaw from '../assets/logo/mark.svg?raw';
 import type { GraphLayout } from '../lib/graph-layout';
 
@@ -11,14 +14,14 @@ interface Props {
   layout: GraphLayout;
   /** Two pictures share the page (desk and phone), so each needs its own id for the mark's mask. */
   id: string;
-  /** Where each idea is in the list: the first topic it is listed under. */
-  anchors: Map<string, string>;
+  /** Where each idea's link lands: the section of its post that says it. */
+  hrefs: Map<string, string>;
   texts: Map<string, string>;
   name: string;
   class?: string;
 }
 
-const { layout, id, anchors, texts, name, class: className } = Astro.props;
+const { layout, id, hrefs, texts, name, class: className } = Astro.props;
 const o = layout.options;
 
 // The mark is drawn in currentColor; its mask gets an id of this picture's own.
@@ -30,8 +33,9 @@ const markInner = markRaw
   .replaceAll('agentic-blog-hollow', `${id}-hollow`);
 const markWidth = o.coreRadius * 1.3;
 const markHeight = (markWidth * 414) / 563;
-const showName = o.coreRadius > 60;
-const markY = showName ? -markHeight * 0.75 : -markHeight / 2;
+// Your name sits under the mark at every size, so "me in the middle" points at a name, not only a logo.
+const nameSize = Math.min(o.fontSize * 0.8, o.topicRadius * 0.27);
+const markY = -(markHeight + nameSize * 1.2) / 2;
 ---
 
 <svg
@@ -41,16 +45,7 @@ const markY = showName ? -markHeight * 0.75 : -markHeight / 2;
   focusable="false"
 >
   <g class="edges">
-    {
-      layout.edges.map((e) => (
-        <path
-          d={e.d}
-          data-t={e.topics.join(' ')}
-          data-p={e.post}
-          class={e.spoke ? 'spoke' : undefined}
-        />
-      ))
-    }
+    {layout.edges.map((e) => <path d={e.d} data-t={e.topics.join(' ')} data-p={e.post} />)}
   </g>
   <g class="topics">
     {
@@ -58,8 +53,9 @@ const markY = showName ? -markHeight * 0.75 : -markHeight / 2;
         <a href={`#t-${t.topic}`} tabindex="-1" data-topic={t.topic} data-t={t.topic}>
           <path class="hit" d={t.arc} />
           <path class="arc" d={t.arc} />
+          <path class="tick" d={t.ticks} />
           <path class="leader" d={t.leader} />
-          <text text-anchor={t.anchor} font-size={o.fontSize}>
+          <text class="name" text-anchor={t.anchor} font-size={o.fontSize}>
             {t.lines.map((line, i) => (
               <tspan
                 x={t.anchor === 'start' ? t.box.x0 : t.anchor === 'end' ? t.box.x1 : t.x}
@@ -69,25 +65,40 @@ const markY = showName ? -markHeight * 0.75 : -markHeight / 2;
               </tspan>
             ))}
           </text>
+          <text
+            class="count"
+            text-anchor={t.anchor}
+            x={t.anchor === 'start' ? t.box.x0 : t.anchor === 'end' ? t.box.x1 : t.x}
+            y={t.countBaseline}
+            font-size={o.fontSize * o.countScale}
+          >
+            {t.count}
+          </text>
         </a>
       ))
     }
   </g>
   <g class="ideas">
     {
-      layout.ideas.map((i) => (
-        <a
-          href={`#${anchors.get(i.id) ?? ''}`}
-          tabindex="-1"
-          data-t={i.topics.join(' ')}
-          data-p={i.post}
-          data-idea={i.id}
-        >
-          {i.tip === undefined && <title>{texts.get(i.id)}</title>}
-          <circle class="hit" cx={i.x} cy={i.y} r={o.dot * 2.6} />
-          <circle cx={i.x} cy={i.y} r={o.dot} />
-        </a>
-      ))
+      layout.ideas.map((i) =>
+        i.tip ? (
+          <a
+            href={hrefs.get(i.id) ?? `/thoughts/${i.post}`}
+            tabindex="-1"
+            data-t={i.topics.join(' ')}
+            data-p={i.post}
+            data-idea={i.id}
+          >
+            <circle class="hit" cx={i.x} cy={i.y} r={o.dot * 2.6} />
+            <circle cx={i.x} cy={i.y} r={o.dot} />
+          </a>
+        ) : (
+          <g data-t={i.topics.join(' ')} data-p={i.post}>
+            <title>{texts.get(i.id)}</title>
+            <circle cx={i.x} cy={i.y} r={o.dot} />
+          </g>
+        ),
+      )
     }
   </g>
   <a class="core" href="/how-it-works" tabindex="-1">
@@ -104,17 +115,9 @@ const markY = showName ? -markHeight * 0.75 : -markHeight / 2;
       stroke-linejoin="round"
       set:html={markInner}
     />
-    {
-      showName && (
-        <text
-          text-anchor="middle"
-          y={markY + markHeight + o.fontSize * 1.1}
-          font-size={o.fontSize * 0.8}
-        >
-          {name}
-        </text>
-      )
-    }
+    <text text-anchor="middle" y={markY + markHeight + nameSize * 1.15} font-size={nameSize}>
+      {name}
+    </text>
   </a>
   <g class="tips">
     {
@@ -167,6 +170,12 @@ const markY = showName ? -markHeight * 0.75 : -markHeight / 2;
     stroke-width: 28px;
     vector-effect: non-scaling-stroke;
   }
+  .tick {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: var(--rule-strong);
+    vector-effect: non-scaling-stroke;
+  }
   .leader {
     fill: none;
     stroke: var(--ink);
@@ -183,6 +192,10 @@ const markY = showName ? -markHeight * 0.75 : -markHeight / 2;
   }
   .ideas circle:not(.hit) {
     fill: var(--ink);
+  }
+  .count {
+    fill: var(--quiet);
+    font-weight: 400;
   }
   .ideas .hit {
     stroke: none;
@@ -202,8 +215,7 @@ const markY = showName ? -markHeight * 0.75 : -markHeight / 2;
   }
   @media (hover: hover) and (pointer: fine) {
     /* Only a picture that has words to show clears the middle for them. */
-    .has-tips:has(.ideas a:hover) .core,
-    .has-tips:has(.ideas a:hover) .spoke {
+    .has-tips:has(.ideas a:hover) .core {
       visibility: hidden;
     }
     .ideas a:hover circle:not(.hit) {
