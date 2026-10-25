@@ -105,9 +105,16 @@ jobs:
           fi
 
       # The voice agent sets the reading's pace with ffmpeg, which GitHub's runner image no longer carries.
+      # Without its recommended extras, and without rebuilding the manual pages after (which alone can take
+      # minutes on these runners); it says what it is doing, and it never waits more than a few minutes.
       - name: Install ffmpeg for the voice agent
         if: steps.pick.outputs.agent == 'voice'
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+        timeout-minutes: 4
+        run: |
+          sudo rm -f /var/lib/man-db/auto-update
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          ffmpeg -version | head -1
 
       - name: Run the agent
         id: agent
