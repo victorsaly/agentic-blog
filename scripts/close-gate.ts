@@ -8,18 +8,21 @@
 // "start" output, which the workflow starts on the same branch): the steps after the gate, or, when Victor
 // sent it back, the steps before it, which then run again with his words.
 //   PAYLOAD='{"run":…,"thought":…,"decision":…,"words":…,"by":…}' npx tsx scripts/close-gate.ts
+import { execFile } from 'node:child_process';
 import { appendFile, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
+import { promisify } from 'node:util';
 import { Ledger, closeGate, stepsBefore, stepsToStart } from '@roadbook/core';
 import project from '../roadbook.config';
 import { extendRun, readRuns } from '@roadbook/core/node';
 import { liveFromEnv } from '../agents/_lib/live';
-import matter from 'gray-matter';
 import {
   answerFileFor,
   answerOrigin,
   closeGatePayload,
   nextNumber,
+  numberOf,
+  numbersFromGrep,
   publishedStructure,
   publishesOnClose,
 } from './gate-answer';
@@ -57,18 +60,21 @@ if (file !== null) {
 }
 
 // Approving the merge gate publishes the thought: its pull request carries it out of draft with the next free
-// number, so merging it is what puts it live. The numbers are read on main and on the gate's branch, so a
-// branch made before another thought went out never takes that one's number.
+// number, so merging it is what puts it live. The numbers are read on main, on the gate's branch, and on every
+// other branch fetched into it: a thought approved but not merged yet holds its number, so a second approval
+// before the first merge takes the next one, and a branch made before another thought went out never takes
+// that one's.
 let number: number | null = null;
 if (publishesOnClose(closing.node, payload.decision)) {
   const path = join(thoughtDir, 'structure.md');
   const main = resolve(import.meta.dirname, '..');
-  const taken = (await Promise.all([numbersIn(root), numbersIn(main)])).flat();
+  const taken = (
+    await Promise.all([numbersIn(root), numbersIn(main), numbersOnBranches(root)])
+  ).flat();
   const published = publishedStructure(await readFile(path, 'utf8'), nextNumber(taken));
   if (published !== null) {
     await writeFile(path, published, 'utf8');
-    const given: unknown = matter(published).data['number'];
-    number = typeof given === 'number' ? given : null;
+    number = numberOf(published);
   }
 }
 
@@ -118,9 +124,41 @@ async function numbersIn(checkout: string): Promise<number[]> {
       .filter((slug) => slug !== payload.thought)
       .map(async (slug) => {
         const source = await readFile(join(dir, slug, 'structure.md'), 'utf8').catch(() => '');
-        const given: unknown = matter(source).data['number'];
-        return typeof given === 'number' ? [given] : [];
+        const given = numberOf(source);
+        return given === null ? [] : [given];
       }),
   );
   return found.flat();
+}
+
+/**
+ * The numbers on every branch fetched into this checkout (the gates workflow fetches them all), in one grep.
+ * None when nothing was fetched or nothing matched; a line in a body that looks like a number only leaves a gap.
+ * The branches are named by their commits, so a name git cannot resolve never hides the rest; any other git
+ * failure stops the gate, since guessing "no numbers" could give one twice.
+ */
+async function numbersOnBranches(checkout: string): Promise<number[]> {
+  const git = promisify(execFile);
+  const opts = { cwd: checkout, maxBuffer: 16 * 1024 * 1024 };
+  const listed = await git('git', ['for-each-ref', '--format=%(objectname)', 'refs/remotes'], opts);
+  const commits = [...new Set(listed.stdout.split('\n').filter((sha) => sha !== ''))];
+  if (commits.length === 0) return [];
+  const grep = [
+    'grep',
+    '-E',
+    '^number:[[:space:]]*[0-9]+',
+    ...commits,
+    '--',
+    'thoughts/*/structure.md',
+  ];
+  const output = await git('git', grep, opts).then(
+    (r) => r.stdout,
+    (error: unknown) => {
+      // git grep exits 1 when nothing matches; that is no numbers, not a failure.
+      if (typeof error === 'object' && error !== null && 'code' in error && error.code === 1)
+        return '';
+      throw error;
+    },
+  );
+  return numbersFromGrep(output, payload.thought);
 }

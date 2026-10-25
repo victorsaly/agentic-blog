@@ -35,6 +35,10 @@ jobs:
           path: target
           # Pushes made with GitHub's own token never start CI; BOT_TOKEN pushes as a person.
           token: ${{ secrets.BOT_TOKEN || github.token }}
+      # Every branch's tip, so a number given to a post approved but not merged yet is never given again.
+      - name: Fetch every branch
+        working-directory: target
+        run: git fetch --quiet --depth=1 origin '+refs/heads/*:refs/remotes/origin/*'
       - uses: actions/setup-node@v5
         with:
           node-version-file: .node-version

@@ -10,6 +10,8 @@ import {
   answerOrigin,
   closeGatePayload,
   nextNumber,
+  numberOf,
+  numbersFromGrep,
   publishedStructure,
   publishesOnClose,
 } from './gate-answer';
@@ -124,5 +126,26 @@ describe('approving the merge gate', () => {
     expect(
       publishedStructure(draft.replace('draft: true', 'number: 2\ndraft: false'), 3),
     ).toBeNull();
+  });
+
+  it('publishes a draft written with CRLF line endings, and keeps them', () => {
+    const crlf = draft.replaceAll('\n', '\r\n');
+    const published = publishedStructure(crlf, 4);
+    expect(published).toBe(crlf.replace('draft: true', 'number: 4\r\ndraft: false'));
+    expect(numberOf(published ?? '')).toBe(4);
+  });
+
+  it('counts the numbers held on other branches, never the thought being published', () => {
+    const output = [
+      'refs/remotes/origin/main:thoughts/2026-10-23-a/structure.md:number: 1',
+      'refs/remotes/origin/main:thoughts/2026-10-23-b/structure.md:number: 2',
+      'refs/remotes/origin/interview/2026-10-26-c:thoughts/2026-10-26-c/structure.md:number: 3',
+      'refs/remotes/origin/gate/2026-10-27-d-ab12:thoughts/2026-10-27-d/structure.md:number: 9',
+      'refs/remotes/origin/main:thoughts/2026-10-23-a/versions/long.md:number: 40',
+      '',
+    ].join('\n');
+    expect(numbersFromGrep(output, '2026-10-27-d')).toEqual([1, 2, 3]);
+    // Approved on its branch, not merged: the next approval elsewhere goes past it.
+    expect(nextNumber(numbersFromGrep(output, '2026-10-28-e'))).toBe(10);
   });
 });
