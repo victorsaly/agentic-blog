@@ -6,6 +6,7 @@ import { settings } from '../lib/settings';
 import { cleanPath } from '../lib/meta';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import StudioHeader from '../components/StudioHeader.astro';
 
 interface Props {
   title: string;
@@ -21,6 +22,8 @@ interface Props {
   width?: 'measure' | 'wide';
   /** On a post: its title, which the header shows once the page title has scrolled away. */
   reading?: string;
+  /** "studio" swaps the reader's header and footer for the workroom's own slim header. */
+  room?: 'reader' | 'studio';
 }
 
 const {
@@ -33,6 +36,7 @@ const {
   jsonLd,
   width = 'measure',
   reading,
+  room = 'reader',
 } = Astro.props;
 // The address the page is served at: the build writes .html files, the site serves them without.
 const canonical = new URL(cleanPath(Astro.url.pathname), Astro.site);
@@ -97,11 +101,11 @@ const fullTitle = title === settings.site.name ? title : `${title} — ${setting
   </head>
   <body>
     <a class="skip" href="#content">Skip to content</a>
-    <Header reading={reading} />
+    {room === 'studio' ? <StudioHeader /> : <Header reading={reading} />}
     <main id="content" tabindex="-1" class={width}>
       <slot />
     </main>
-    <Footer />
+    {room === 'reader' && <Footer />}
     <script is:inline>
       // A search result opens its page with the words to mark; Pagefind's highlighter marks them there.
       if (new URLSearchParams(location.search).has('highlight')) {

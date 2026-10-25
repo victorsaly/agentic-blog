@@ -45,3 +45,34 @@ export function pipelineOf(
 export function inOrder(agents: readonly PipelineAgent[]): PipelineAgent[] {
   return [...agents].sort((a, b) => a.phase - b.phase || a.name.localeCompare(b.name));
 }
+
+export interface Standing {
+  /** Held: a guard stopped it. Stopped: an agent did not finish. Moving: agents ran, none stopped. */
+  state: 'held' | 'stopped' | 'moving' | 'untouched';
+  /** The agent that held or did not finish, first in working order. */
+  at: string | null;
+  /** The latest run on the thought. */
+  last: { agent: string; on: string } | null;
+  ran: number;
+  of: number;
+}
+
+/** Where one thought stands, in a line: what stops it (if anything), its latest run, how many agents ran. */
+export function standingOf(row: PipelineRow, agents: readonly PipelineAgent[]): Standing {
+  const cells = row.cells.map((cell, i) => ({ cell, agent: agents[i]?.name ?? '' }));
+  const ran = cells.filter((c) => c.cell !== null);
+  const held = ran.find((c) => c.cell?.ended === 'held');
+  const stopped = ran.find((c) => c.cell?.ended === 'failed');
+  // The latest day wins; on the same day, the agent later in working order ran later.
+  const latest = ran.reduce<(typeof ran)[number] | null>(
+    (best, c) => (best === null || (c.cell?.on ?? '') >= (best.cell?.on ?? '') ? c : best),
+    null,
+  );
+  return {
+    state: held ? 'held' : stopped ? 'stopped' : ran.length > 0 ? 'moving' : 'untouched',
+    at: held?.agent ?? stopped?.agent ?? null,
+    last: latest?.cell ? { agent: latest.agent, on: latest.cell.on } : null,
+    ran: ran.length,
+    of: agents.length,
+  };
+}

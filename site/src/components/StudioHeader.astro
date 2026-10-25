@@ -1,0 +1,72 @@
+---
+// Why: the studio is a private workroom, not a page to read, so it does not wear the reader's header (search,
+// ask, the font and theme switches) or the footer: the work starts at the top, and a keyboard reaches the
+// studio's own tabs in a few presses. It keeps the site's name, in the same ink, so it is plainly the same
+// place, says which room this is, and who is in it. The name comes from Cloudflare Access when the page is
+// opened (Access answers /cdn-cgi/access/get-identity for whoever it let in); where Access is not in front,
+// as in local development, the line says so instead of naming anyone.
+import { settings } from '../lib/settings';
+---
+
+<header class="studio-header">
+  <div class="frame bar">
+    <a class="name" href="/">
+      <span class="block" aria-hidden="true"></span>
+      {settings.site.name}
+    </a>
+    <span class="room">Studio</span>
+    <span class="who small quiet" data-signed-in>Private, behind Cloudflare Access</span>
+  </div>
+</header>
+
+<script>
+  const who = document.querySelector<HTMLElement>('[data-signed-in]');
+  fetch('/cdn-cgi/access/get-identity', { credentials: 'same-origin' })
+    .then((response) => (response.ok ? response.json() : null))
+    .then((data: unknown) => {
+      const email =
+        typeof data === 'object' && data !== null ? (data as { email?: unknown }).email : null;
+      if (who && typeof email === 'string') who.textContent = `Signed in as ${email}`;
+    })
+    .catch(() => {
+      /* no Access in front (local development): the line stays as it is */
+    });
+</script>
+
+<style>
+  .studio-header {
+    border-bottom: var(--rule-width) solid var(--ink);
+  }
+  .bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-3);
+    padding-block: var(--space-2);
+  }
+  .name {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-height: var(--tap);
+    font-size: 1.375rem;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .block {
+    width: 14px;
+    height: 14px;
+    background: var(--ink);
+  }
+  .room {
+    font-size: var(--size-label);
+    font-weight: 700;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+  }
+  .who {
+    margin-left: auto;
+    overflow-wrap: anywhere;
+  }
+</style>
