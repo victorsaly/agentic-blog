@@ -574,6 +574,12 @@ const pad = (n: number): string => String(n).padStart(2, '0');
     margin-inline: calc(-1 * var(--space-2));
     padding-inline: var(--space-2);
   }
+  @media (min-width: 64.0625rem) {
+    .fold .ways {
+      padding-block: var(--space-2);
+      scroll-padding-block: var(--space-2);
+    }
+  }
   .fold .up {
     flex: none;
   }
