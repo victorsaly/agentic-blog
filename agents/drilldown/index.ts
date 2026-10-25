@@ -3,7 +3,7 @@
 import { readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import matter from 'gray-matter';
-import { fencedFiles, kebab, readIfPresent, userMessage } from '../_lib/generic.js';
+import { IN_THE_REPLY, fencedFiles, kebab, readIfPresent, userMessage } from '../_lib/generic.js';
 import type { AgentRun, OutputFile } from '../_lib/types.js';
 
 export const run: AgentRun = async (ctx) => {
@@ -25,7 +25,7 @@ export const run: AgentRun = async (ctx) => {
       long_version: readIfPresent(ctx, 'versions/long.md'),
       existing_pages: existing.length > 0 ? existing.join('\n') : 'none',
     },
-    `Today is ${ctx.today}. The thought slug is ${ctx.thought.slug}. Write the wiki pages as the prompt describes, each in its own fenced block. If no book or person needs a page, reply with the single word NONE.`,
+    `Today is ${ctx.today}. The thought slug is ${ctx.thought.slug}. Write the wiki pages as the prompt describes, each in its own fenced block. If no book or person needs a page, reply with the single word NONE. ${IN_THE_REPLY}`,
   );
   const reply = await ctx.ask(message, { webSearch: { maxUses: 8 }, maxOutputTokens: 12000 });
 

@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   fencedFiles,
+  askForFile,
   fileFromReply,
   kebab,
   readOrigin,
@@ -132,5 +133,35 @@ describe('fileFromReply', () => {
   it('is null when there is no front matter with a why', () => {
     expect(fileFromReply('I could not check the page.')).toBeNull();
     expect(fileFromReply('---\ntitle: no why\n---\nBody')).toBeNull();
+  });
+});
+
+describe('askForFile', () => {
+  const file = '---\nwhy: because it exists\n---\n\nBody.';
+  const asking = (reply: string) => {
+    const asked: string[] = [];
+    const ctx = {
+      agent: 'citations',
+      ask: (message: string) => {
+        asked.push(message);
+        return Promise.resolve(reply);
+      },
+    } as unknown as AgentContext;
+    return { ctx, asked };
+  };
+
+  it('tells a model that searches to put the file in its reply, not in the sandbox', async () => {
+    const { ctx, asked } = asking(file);
+    await askForFile(ctx, 'Write it.', 'sources.md', { webSearch: { maxUses: 2 } });
+    expect(asked[0]).toContain('Do not save files with code execution');
+    await askForFile(ctx, 'Write it.', 'seo.md');
+    expect(asked[1]).toBe('Write it.');
+  });
+
+  it('says what the model replied instead when there is no file', async () => {
+    const { ctx } = asking("I've written `sources.md`. Seven of the nine rows have a door out.");
+    await expect(askForFile(ctx, 'Write it.', 'sources.md')).rejects.toThrow(
+      /it said: "I've written `sources.md`/,
+    );
   });
 });

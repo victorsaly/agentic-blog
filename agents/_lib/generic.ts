@@ -71,6 +71,13 @@ export function userMessage(sections: Record<string, string | undefined>, task: 
   return [...parts, '', task.trim()].join('\n\n');
 }
 
+/**
+ * Said with every ask that searches the web. The search tool comes with a code sandbox, and a model left to
+ * itself may save the file there and reply only that it has: the file never reaches the blog.
+ */
+export const IN_THE_REPLY =
+  'Put everything you write in your reply itself. Do not save files with code execution: anything saved there stays in the sandbox and never reaches the blog.';
+
 /** Asks once and expects the whole reply to be one Markdown file with front matter. */
 export async function askForFile(
   ctx: AgentContext,
@@ -78,9 +85,16 @@ export async function askForFile(
   path: string,
   options?: AskOptions,
 ): Promise<OutputFile> {
-  const reply = await ctx.ask(message, options);
+  const asked = options?.webSearch
+    ? `${message}\n\nReply with the whole file, front matter first. ${IN_THE_REPLY}`
+    : message;
+  const reply = await ctx.ask(asked, options);
   const content = fileFromReply(reply);
-  if (content === null) throw new Error(`${ctx.agent} replied without front matter for ${path}`);
+  // What it said instead goes in the error (and so the ledger), so a failure explains itself.
+  if (content === null)
+    throw new Error(
+      `${ctx.agent} replied without front matter for ${path}; it said: "${reply.trim().slice(0, 160)}"`,
+    );
   return { path, content };
 }
 
