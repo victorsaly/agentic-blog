@@ -23,21 +23,25 @@ Generated on 24 October 2026.
 | Credits         | 2,948 for all twenty takes (1,474 for the ten kept)                                             |
 | ElevenLabs flow | "Agentic blog — how it works tour" (`e1pFLtDxeRpoN5rpC0VZ`); take 2 of each clip is still there |
 
+`publish.mp3` was made again on 25 October 2026, when the voice agent joined that station: same voice and
+model, one take, through the ElevenLabs API (`text-to-speech`, `mp3_44100_128`) with the key in
+`site/.env.local`, and checked by transcribing it back (`scribe_v1`) against the line, word for word.
+
 One clip per station, named by the station's `id`. The exact words of every clip are the `line` of that
 station in [`site/src/lib/tour.ts`](../site/src/lib/tour.ts); the page shows the same text as the caption.
 
-| File            | Length | Credits |
-| --------------- | ------ | ------- |
-| `studio.mp3`    | 11.1 s | 170     |
-| `origin.mp3`    | 8.1 s  | 127     |
-| `interview.mp3` | 8.1 s  | 125     |
-| `structure.mp3` | 11.0 s | 138     |
-| `makers.mp3`    | 17.4 s | 240     |
-| `gates.mp3`     | 16.2 s | 188     |
-| `publish.mp3`   | 8.6 s  | 126     |
-| `you.mp3`       | 7.4 s  | 104     |
-| `feedback.mp3`  | 10.7 s | 162     |
-| `close.mp3`     | 7.4 s  | 94      |
+| File            | Length | Credits   |
+| --------------- | ------ | --------- |
+| `studio.mp3`    | 11.1 s | 170       |
+| `origin.mp3`    | 8.1 s  | 127       |
+| `interview.mp3` | 8.1 s  | 125       |
+| `structure.mp3` | 11.0 s | 138       |
+| `makers.mp3`    | 17.4 s | 240       |
+| `gates.mp3`     | 16.2 s | 188       |
+| `publish.mp3`   | 16.0 s | see below |
+| `you.mp3`       | 7.4 s  | 104       |
+| `feedback.mp3`  | 10.7 s | 162       |
+| `close.mp3`     | 7.4 s  | 94        |
 
 ## The pitch video (`scripts/pitch/audio/`)
 

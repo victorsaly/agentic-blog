@@ -52,7 +52,7 @@ const byPhase = Object.entries(phases)
 
 const route = `flowchart TD
   accTitle: The route a thought takes
-  accDescr: From the studio to a pull request, through the interview and structure agents, five makers side by side, two agents that can hold, the publish agent, and a human merge. Feedback after publishing reworks the post, and a pattern of feedback changes the route.
+  accDescr: From the studio to a pull request, through the interview and structure agents, five makers side by side, two agents that can hold, the voice agent, the publish agent, and a human merge. Feedback after publishing reworks the post, and a pattern of feedback changes the route.
   S["Studio<br/>voice or text"] -->|"lands as"| O["Pull request: new origin<br/>words exactly as said"]
   O -->|"agent:interview"| I["interview<br/>asks what is missing"]
   I -->|"you answer"| ST["structure<br/>message · idea · road"]
@@ -67,7 +67,8 @@ const route = `flowchart TD
   CI --> G
   DR --> G
   G -->|"hold, with a reason"| H["Check fails<br/>until you look"]
-  G -->|"pass"| P["publish<br/>one readable pull request"]
+  G -->|"pass"| VO["voice<br/>reads the short version aloud"]
+  VO --> P["publish<br/>one readable pull request"]
   P --> M(["You merge"])
   M --> L["Live, with a switch<br/>to the original"]
   L -.->|"a note about it"| F["feedback<br/>reworks the post"]
@@ -75,13 +76,14 @@ const route = `flowchart TD
 
 const trail = `flowchart LR
   accTitle: What every post folder holds
-  accDescr: The origin feeds the structure; the structure feeds the versions and the image; the versions feed the sources and the road; feedback notes rework the versions.
+  accDescr: The origin feeds the structure; the structure feeds the versions and the image; the versions feed the sources and the road; feedback notes rework the versions; every agent run on the thought is written to its ledger.
   O["origin/<br/>your words, never edited"] --> S["structure.md<br/>the point, cut three ways"]
   S --> V["versions/<br/>short · long · LinkedIn<br/>each with its why"]
   S --> IMG["image/<br/>the print and its prompt"]
   V --> SRC["sources.md<br/>every claim, every link"]
   V --> RD["road.md<br/>who ran, in what order,<br/>told what"]
-  FB["feedback/<br/>your notes on the output"] -.-> V`;
+  FB["feedback/<br/>your notes on the output"] -.-> V
+  O -.->|"every run on it"| LG["ledger/<br/>each run, chained,<br/>never rewritten"]`;
 
 const trailSteps = [
   { label: 'origin/', detail: 'your words, never edited' },
@@ -92,6 +94,7 @@ const trailSteps = [
     detail: 'every claim’s link; who ran, in what order, told what',
   },
   { label: 'feedback/', detail: 'your notes on the output, which rework the versions' },
+  { label: 'ledger/', detail: 'every run on the thought, chained, never rewritten' },
 ];
 ---
 
@@ -184,6 +187,8 @@ const trailSteps = [
           <li>A blank page, an evening, and a post that sounds like everyone else's.</li>
           <li>Readers can't tell what you said from what a tool added.</li>
           <li>A claim with nothing behind it.</li>
+          <li>Older posts sink, and nobody sees how the ideas connect.</li>
+          <li>Readers who would rather listen can't.</li>
         </ul>
       </div>
       <div class="side after">
@@ -193,6 +198,11 @@ const trailSteps = [
           <li>A post in your own voice, learned from your own words.</li>
           <li>A switch to the original on every post, and a note on every change.</li>
           <li>Every claim with a source, checked before it goes out.</li>
+          <li>
+            Every small idea on <a href="/graph">one graph</a>, each linked to the paragraph that
+            says it.
+          </li>
+          <li>A post you can listen to, the words lighting up as they are said.</li>
         </ul>
       </div>
     </div>
@@ -323,6 +333,20 @@ const trailSteps = [
               <td>Its reason is committed and the check fails, so nothing merges by accident</td>
             </tr>
             <tr>
+              <td>An agent needs your answer</td>
+              <td>
+                A question opens in the thought's record and waits in the studio as Needs you. Only
+                a person can close it; an agent that tries is refused
+              </td>
+            </tr>
+            <tr>
+              <td>Open the studio</td>
+              <td>
+                Every run shows as it happens: running, held, waiting on you or done, and what it
+                cost
+              </td>
+            </tr>
+            <tr>
               <td>Merge</td>
               <td>The post goes live. Nothing else can publish</td>
             </tr>
@@ -358,7 +382,8 @@ const trailSteps = [
       <div class="layer-body">
         <p class="intro">
           A post is a folder, not just a page. Everything an agent read, wrote or was told is in it,
-          each file with a reason at the top.
+          each file with a reason at the top. Every run is also written to the thought's ledger, and
+          a post the agents have worked on ends with a short "How this was made" read from it.
         </p>
         <FlowChart
           source={trail}
@@ -398,6 +423,14 @@ const trailSteps = [
             <tr
               ><td><code>feedback/</code></td><td>What you asked to change after reading it</td></tr
             >
+            <tr>
+              <td><code>ledger/</code></td>
+              <td>
+                Every run: which agent, how it ended, what it wrote and what it cost. Each entry is
+                chained to the one before, and a check on every pull request refuses one that
+                changes or removes a run already merged
+              </td>
+            </tr>
           </tbody>
         </table>
         <a class="control" href={`${repo}/tree/main/thoughts/${proofSlug}`}
@@ -414,7 +447,9 @@ const trailSteps = [
       <div class="layer-body">
         <p class="intro">
           Your words are the only facts a post starts from. Everything else it leans on is listed
-          here.
+          here. Every call to a paid service is priced before it is made: a model with no known
+          price is refused, each agent has a budget per run, and the studio shows the month's spend
+          against the budget.
         </p>
         <table>
           <thead>
@@ -446,8 +481,9 @@ const trailSteps = [
             </tr>
             <tr>
               <td>Claude, by Anthropic</td>
-              <td>The thinking agents, and a review of every drawing</td>
-              <td><code>road.md</code>, <code>settings.yml</code></td>
+              <td>The thinking agents, a review of every drawing, and the answers in the Ask box</td
+              >
+              <td><code>ledger/</code>, <code>settings.yml</code></td>
             </tr>
             <tr>
               <td>The web, through Claude's search</td>
@@ -465,18 +501,24 @@ const trailSteps = [
               >
             </tr>
             <tr>
-              <td>ElevenLabs</td><td>The voice on the tour</td><td
-                ><code>docs/audio-sources.md</code></td
-              >
+              <td>ElevenLabs</td><td
+                >The voice that reads each post aloud, and the voice on the tour</td
+              ><td><code>settings.yml</code>, <code>docs/audio-sources.md</code></td>
             </tr>
             <tr>
-              <td>Cloudflare</td><td>Hosting, the audio store, the studio's sign-in</td><td
-                ><code>site/wrangler.toml</code></td
-              >
+              <td>Cloudflare</td><td
+                >Hosting, the audio store, the studio's sign-in, the database for comments and live
+                runs, and the spam check on comments</td
+              ><td><code>site/wrangler.toml</code></td>
             </tr>
             <tr>
               <td>GitHub</td><td>Every pull request and every agent run</td><td
                 >The repository's history</td
+              >
+            </tr>
+            <tr>
+              <td>The price list</td><td>What each model call costs, before it is made</td><td
+                ><code>agents/_lib/prices.ts</code></td
               >
             </tr>
           </tbody>
