@@ -14,6 +14,7 @@ test-results/
 
 # Local only: reference photos for the image agent, never committed (the repo is public).
 .private/
+.pr-shots/
 
 # Impeccable critique snapshots and review screenshots: local working files, regenerated each run
 .impeccable/

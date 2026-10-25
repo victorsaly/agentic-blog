@@ -30,6 +30,7 @@
     "pitch:voice": "tsx --env-file=site/.env.local scripts/pitch/voice.ts",
     "tour:voice": "tsx --env-file=site/.env.local scripts/tour-voice.ts",
     "tour:screens": "tsx scripts/tour-screens.ts",
+    "pr:shots": "tsx scripts/pr-shots.ts",
     "pitch": "tsx scripts/pitch/record.ts"
   },
   "devDependencies": {
