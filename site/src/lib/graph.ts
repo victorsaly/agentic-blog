@@ -43,38 +43,58 @@ interface Row {
 }
 
 const heading = /^##\s+Small ideas\s*$/i;
-const separator = /^\|?[\s:|-]+\|?$/;
+const unescapedPipe = /(?<!\\)\|/;
+const delimiter = /^:?-+:?$/;
 
-/** The cells of one table row, with escaped pipes kept as text. */
+/** The cells of one table row, outer pipes optional, with escaped pipes kept as text. */
 function cellsOf(line: string): string[] {
-  const inner = line.trim().replace(/^\|/, '').replace(/\|$/, '');
-  return inner.split(/(?<!\\)\|/).map((cell) => cell.trim().replace(/\\\|/g, '|'));
+  const inner = line
+    .trim()
+    .replace(/^\|/, '')
+    .replace(/(?<!\\)\|$/, '');
+  return inner.split(unescapedPipe).map((cell) => cell.trim().replace(/\\\|/g, '|'));
 }
 
 /**
- * The rows of a post's "## Small ideas" table. A post without the section has no small ideas; a row
- * without an idea or a topic, or with a topic not in `known`, throws naming the file and the row.
+ * The rows of a post's "## Small ideas" table: exactly two columns, idea and topics (the structure agent's
+ * contract). A post without the section has no small ideas. A header or separator that is not two columns,
+ * a row with more or fewer cells, no idea, no topic, or a topic not in `known` throws naming the file and
+ * the row, so no row is ever dropped quietly.
  */
 export function smallIdeasOf(body: string, known: readonly string[], file: string): Row[] {
   const lines = body.split('\n');
   const start = lines.findIndex((line) => heading.test(line.trim()));
   if (start === -1) return [];
 
+  // Every line under the heading with a pipe in it is a table row, with or without outer pipes.
   const section: string[] = [];
   for (const line of lines.slice(start + 1)) {
     if (/^#{1,2}\s/.test(line)) break;
-    if (line.trim().startsWith('|')) section.push(line);
+    if (unescapedPipe.test(line)) section.push(line);
   }
 
   // The first row is the header and the second the separator; neither is an idea.
-  const [, rule, ...bodyRows] = section;
-  if (rule !== undefined && !separator.test(rule.trim())) {
-    throw new Error(`${file}: the Small ideas table has no separator row under its header`);
+  const [header, rule, ...bodyRows] = section;
+  if (header === undefined) return [];
+  if (cellsOf(header).length !== 2) {
+    throw new Error(`${file}: the Small ideas table needs two columns, Idea and Themes`);
+  }
+  const ruleCells = rule === undefined ? [] : cellsOf(rule);
+  if (ruleCells.length !== 2 || !ruleCells.every((cell) => delimiter.test(cell))) {
+    throw new Error(
+      `${file}: the Small ideas table has no two-column separator row under its header`,
+    );
   }
 
   return bodyRows.map((line, index) => {
     const where = `${file}, small idea ${String(index + 1)}`;
-    const [text = '', topicCell = ''] = cellsOf(line);
+    const cells = cellsOf(line);
+    if (cells.length !== 2) {
+      throw new Error(
+        `${where}: the row has ${String(cells.length)} cells, not 2 (escape a pipe in an idea as \\|)`,
+      );
+    }
+    const [text = '', topicCell = ''] = cells;
     if (text.length === 0) throw new Error(`${where}: the row has no idea in its first column`);
     const topics = [
       ...new Set(

@@ -1,7 +1,7 @@
 // Why: the graph is drawn from these nodes and edges with nothing placed by hand, so a misread table would
 // put an idea under the wrong topic on the page. The real posts are read here too, so a table the structure
 // agent writes in a new shape fails a test before it fails a build.
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
@@ -55,6 +55,28 @@ describe('smallIdeasOf', () => {
       '"Lonely idea" has no topic',
     );
   });
+
+  it('reads rows without outer pipes, so a mixed table loses no row', () => {
+    const rows = smallIdeasOf(table('| One | credibility |\nTwo | accountability'), known, 'f');
+    expect(rows.map((r) => r.text)).toEqual(['One', 'Two']);
+    expect(() =>
+      smallIdeasOf(table('| One | credibility |\nTwo | crediblity'), known, 'f'),
+    ).toThrow('small idea 2: "crediblity" is not a topic');
+  });
+
+  it('refuses a row with an extra column instead of dropping it', () => {
+    expect(() => smallIdeasOf(table('| One | credibility | accountability |'), known, 'f')).toThrow(
+      'small idea 1: the row has 3 cells, not 2',
+    );
+  });
+
+  it('refuses a separator that is not two delimiter cells', () => {
+    const tableWith = (rule: string) =>
+      `## Small ideas\n\n| Idea | Themes |\n${rule}\n| One | credibility |\n`;
+    for (const rule of ['| --- |', '| | |', '| One | credibility |']) {
+      expect(() => smallIdeasOf(tableWith(rule), known, 'f')).toThrow('two-column separator');
+    }
+  });
 });
 
 describe('graphOf', () => {
@@ -96,8 +118,9 @@ describe('the real posts', () => {
   const settings = parse(
     readFileSync(fileURLToPath(new URL('../../../settings.yml', import.meta.url)), 'utf8'),
   ) as { themes: string[] };
+  // A new origin lands as a folder with only origin/ in it; structure.md comes later, from an agent.
   const posts: GraphPost[] = readdirSync(thoughts, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
+    .filter((d) => d.isDirectory() && existsSync(`${thoughts}${d.name}/structure.md`))
     .map((d) => {
       const raw = readFileSync(`${thoughts}${d.name}/structure.md`, 'utf8');
       const [, front = '', body = ''] = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(raw) ?? [];
