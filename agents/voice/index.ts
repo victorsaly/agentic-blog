@@ -18,7 +18,7 @@ import {
   wordCount,
   wordsFromClock,
 } from './script.js';
-import { quickenWithFfmpeg, type Quicken } from './tempo.js';
+import { hasFfmpeg, quickenWithFfmpeg, type Quicken } from './tempo.js';
 
 export const SOURCE = 'versions/short.md';
 export const MANIFEST = 'voice/short.md';
@@ -126,6 +126,11 @@ export function makeRun(deps: VoiceDeps): AgentRun {
         files: [],
       };
 
+    // A quicker reading is made with ffmpeg after the voice is paid for, so it must be there first.
+    if (speed !== 1 && deps.quicken === undefined && !(await hasFfmpeg()))
+      throw new Error(
+        `ffmpeg is not installed here, and a reading at ${String(speed)}× pace needs it; nothing was spent`,
+      );
     const spoken = deps.synthesise
       ? await deps.synthesise(text, voice)
       : await ctx.speak(text, { id: voice.id, model: voice.model });
