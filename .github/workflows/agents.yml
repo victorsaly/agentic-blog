@@ -1,17 +1,24 @@
 # Why: agents live where the content lives. Add the label `agent:<name>` to a pull request (or run the
 # workflow by hand with a thought slug) and that one agent runs on that one thought, writing its files to
 # the branch so the pull request shows the diff. Nothing merges by itself; a held result fails the check.
+# The run goes on by itself: a done agent starts the steps after it on the same branch (run-agent, sent
+# here again), and so does a gate when Victor closes it (gates.yml), up to the next gate.
 name: Agents
 # Names every run "agent:<name> · <thought or branch>", so the studio's Agents area can say which agent
 # worked on which thought without opening the run.
 run-name: >-
   ${{ github.event_name == 'workflow_dispatch'
   && format('agent:{0} · {1}', inputs.agent, inputs.thought)
+  || github.event_name == 'repository_dispatch'
+  && format('agent:{0} · {1}', github.event.client_payload.agent, github.event.client_payload.thought)
   || format('{0} · {1}', github.event.label.name, github.head_ref) }}
 
 on:
   pull_request:
     types: [labeled]
+  # Sent by a done agent or a closed gate for the next step, with the branch to run on.
+  repository_dispatch:
+    types: [run-agent]
   workflow_dispatch:
     inputs:
       agent:
@@ -47,19 +54,21 @@ permissions:
 # One writer per branch at a time, so two labels, or an agent and a gate closing (gates.yml uses the same
 # key), never race to push to the same branch.
 concurrency:
-  group: agents-${{ github.head_ref || github.ref_name }}
+  group: agents-${{ github.head_ref || github.event.client_payload.branch || github.ref_name }}
   cancel-in-progress: false
   queue: max
 
 jobs:
   run:
     name: Run one agent on one thought
-    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.label.name, 'agent:')
+    if: >-
+      github.event_name == 'workflow_dispatch' || github.event_name == 'repository_dispatch' ||
+      startsWith(github.event.label.name, 'agent:')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ github.head_ref || github.ref }}
+          ref: ${{ github.head_ref || github.event.client_payload.branch || github.ref }}
           # The full history, so main is there to diff against when working out the thought.
           fetch-depth: 0
           # Pushes made with GitHub's own token never start CI, so the pull request would show checks from
@@ -74,8 +83,8 @@ jobs:
         id: pick
         env:
           LABEL: ${{ github.event.label.name }}
-          INPUT_AGENT: ${{ github.event.inputs.agent }}
-          INPUT_THOUGHT: ${{ github.event.inputs.thought }}
+          INPUT_AGENT: ${{ github.event.inputs.agent || github.event.client_payload.agent }}
+          INPUT_THOUGHT: ${{ github.event.inputs.thought || github.event.client_payload.thought }}
           HEAD_REF: ${{ github.head_ref }}
         run: |
           if [ -n "$INPUT_AGENT" ]; then
@@ -139,6 +148,16 @@ jobs:
           git commit -m "$title" -m "$RESULT"
           git push
 
+      # The run goes on: each step the runner named as next starts on this branch, queued behind this job.
+      - name: Start what comes next
+        if: steps.agent.outputs.code == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESULT: ${{ steps.agent.outputs.result }}
+          BRANCH: ${{ github.head_ref || github.event.client_payload.branch || github.ref_name }}
+          THOUGHT: ${{ steps.pick.outputs.thought }}
+        run: node scripts/start-next.mjs
+
       - name: Remove the trigger label
         if: github.event_name == 'pull_request'
         env:
@@ -151,8 +170,16 @@ jobs:
           echo "::error::The ${{ steps.pick.outputs.agent }} agent held this post. Read its file in the pull request before merging."
           exit 1
 
+      # At the monthly cap the run waits (the project's atCap is "queue"): nothing was spent or written.
+      - name: Say the run waits for the monthly cap
+        if: steps.agent.outputs.code == '5'
+        run: |
+          echo "::warning::The ${{ steps.pick.outputs.agent }} agent waits: this month's runs have reached the cap in roadbook.config.ts. Nothing was spent. Run it again next month, or raise the cap."
+
       - name: Fail if the agent failed
-        if: steps.agent.outputs.code != '0' && steps.agent.outputs.code != '3'
+        if: >-
+          steps.agent.outputs.code != '0' && steps.agent.outputs.code != '3' &&
+          steps.agent.outputs.code != '5'
         run: |
           echo "::error::The ${{ steps.pick.outputs.agent }} agent exited ${{ steps.agent.outputs.code }}. Its ledger records why."
           exit 1

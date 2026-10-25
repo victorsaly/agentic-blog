@@ -1,7 +1,7 @@
 // Why: a gate that opens too early asks Victor about work that is not finished; one that opens twice asks
 // him the same question twice; one that never opens leaves the thought stuck with nobody told.
 import { describe, expect, it } from 'vitest';
-import { closeGate, gatesToOpen } from './gates.js';
+import { closeGate, gatesToOpen, sentBackTo, stepsBefore, stepsToStart } from './gates.js';
 import { Ledger, type EventBody } from './ledger.js';
 import type { WorkflowInput } from './schema.js';
 
@@ -142,5 +142,54 @@ describe('closeGate', () => {
     expect(reason(closeGate(closed.events, { decision: 'answered', words: 'again', by }))).toMatch(
       /already closed/,
     );
+  });
+});
+
+describe('the run goes on', () => {
+  const closedGate = (node: string) =>
+    run(
+      { type: 'node.state', node, from: 'idle', to: 'needs-you' },
+      { type: 'node.state', node, from: 'needs-you', to: 'done' },
+    );
+
+  it('starts every step after a closed gate', async () => {
+    expect(
+      stepsToStart(workflow, 'answers', [await ran('interview'), await closedGate('answers')]),
+    ).toEqual(['convert', 'image']);
+  });
+
+  it('starts nothing after a gate still waiting, or a step that did not finish', async () => {
+    expect(stepsToStart(workflow, 'answers', [await opened('answers')])).toEqual([]);
+    expect(stepsToStart(workflow, 'interview', [await ran('interview', 'held')])).toEqual([]);
+  });
+
+  it('never starts a gate, and never starts a step that is running already', async () => {
+    const both = [await closedGate('answers'), await ran('convert')];
+    expect(stepsToStart(workflow, 'convert', both)).toEqual([]);
+    const running = await run({ type: 'node.state', node: 'image', from: 'idle', to: 'running' });
+    expect(stepsToStart(workflow, 'answers', [await closedGate('answers'), running])).toEqual([
+      'convert',
+    ]);
+  });
+
+  it('runs the steps before a gate again when it is sent back', () => {
+    expect(stepsBefore(workflow, 'look')).toEqual(['convert', 'image']);
+    expect(stepsBefore(workflow, 'answers')).toEqual(['interview']);
+  });
+
+  it('hands the sent-back words to the step before the gate, once', async () => {
+    const said = await run(
+      { type: 'node.state', node: 'answers', from: 'idle', to: 'needs-you' },
+      {
+        type: 'feedback.given',
+        node: 'answers',
+        kind: 'redirect',
+        words: 'Not this.',
+        by: 'owner',
+      },
+    );
+    expect(sentBackTo(workflow, 'interview', [await ran('interview'), said])).toBe('Not this.');
+    expect(sentBackTo(workflow, 'convert', [await ran('interview'), said])).toBeNull();
+    expect(sentBackTo(workflow, 'interview', [said, await ran('interview')])).toBeNull();
   });
 });

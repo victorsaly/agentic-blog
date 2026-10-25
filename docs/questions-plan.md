@@ -131,6 +131,14 @@ file is never needed: an existing `origin/answers.md` is refused, never overwrit
 
 ### Slice 8c: the run goes on
 
+**8c-1 built** (`feat/questions-8c`): `stepsToStart`, `stepsBefore` and `sentBackTo` in
+`packages/core/src/gates.ts`; the runner names the steps that start next and hands an agent Victor's
+words when he sent back the gate after it (structure uses them); `agents.yml` takes `run-agent` with a
+branch and starts what comes next after a done run (`scripts/start-next.mjs`); `gates.yml` starts what comes
+after a closed gate, or the steps before it when it was sent back. The monthly cap is checked before any
+spend (`agents/_lib/budget.ts`): at the cap the run waits (exit 5), never runs on credit. **8c-2 next**: the
+studio's "Run an agent" control.
+
 - After `gate.closed`, `gates.yml` sends `repository_dispatch` `run-agent` for each agent directly after
   the gate. `agents.yml` gains that trigger and checks out the branch it is given. `redirected` on
   `message` starts structure again with the words.

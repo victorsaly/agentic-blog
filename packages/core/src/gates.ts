@@ -3,7 +3,8 @@
 // workflow and the ledger alone, so the runner can open each as a run that waits and the owner sees the
 // question where they already look. A gate opens only when everything before it is done, and never twice
 // while it is still waiting. Closing one is checked here too: only an open gate, only by a person, and only
-// with a decision that answers what it asked. It takes the workflow as written in the project file. Pure, so the rule is
+// with a decision that answers what it asked. And once a step is done, which steps start next: the run goes
+// on by itself, from the workflow and the ledger alone, up to the next gate. It takes the workflow as written in the project file. Pure, so the rule is
 // tested here.
 import { isPerson, type EventBody, type LedgerEvent, type NodeState } from './ledger.js';
 import type { WorkflowInput } from './schema.js';
@@ -116,4 +117,62 @@ export function closeGate(
       { type: 'node.state', node, from: 'needs-you', to: 'done' },
     ],
   };
+}
+
+/**
+ * The agents and guards that start now that `finished` is done (a step, or a gate that was closed): each one
+ * directly after it whose other recorded steps before it are done too, so a join waits for its last input.
+ * One already running is not started again. `runs` are every run on the item, oldest first.
+ */
+export function stepsToStart(
+  workflow: WorkflowInput,
+  finished: string,
+  runs: readonly { events: readonly LedgerEvent[] }[],
+): string[] {
+  const states = statesOf(runs);
+  if (states.get(finished) !== 'done') return [];
+  const recorded = (id: string): boolean => {
+    const node = workflow.nodes[id];
+    return node !== undefined && !['input', 'tool', 'branch'].includes(node.kind);
+  };
+  return Object.entries(workflow.nodes).flatMap(([id, node]) => {
+    const after = node.after ?? [];
+    if ((node.kind !== 'agent' && node.kind !== 'guard') || !after.includes(finished)) return [];
+    if (states.get(id) === 'running') return [];
+    return after.every((before) => !recorded(before) || states.get(before) === 'done') ? [id] : [];
+  });
+}
+
+/** The steps a gate looks at: what runs again when its owner sends it back. */
+export function stepsBefore(workflow: WorkflowInput, gate: string): string[] {
+  return (workflow.nodes[gate]?.after ?? []).filter((id) => {
+    const kind = workflow.nodes[id]?.kind;
+    return kind === 'agent' || kind === 'guard';
+  });
+}
+
+/**
+ * What the owner last said when sending back a gate directly after `step`, if it came after that step's
+ * latest run: the words that step is asked to take into account when it runs again. Null when none.
+ */
+export function sentBackTo(
+  workflow: WorkflowInput,
+  step: string,
+  runs: readonly { events: readonly LedgerEvent[] }[],
+): string | null {
+  const gates = new Set(
+    Object.entries(workflow.nodes)
+      .filter(([, n]) => n.kind === 'gate' && (n.after ?? []).includes(step))
+      .map(([id]) => id),
+  );
+  let words: string | null = null;
+  for (const run of runs)
+    for (const event of run.events) {
+      // A run of the step itself, after the words, has already had them.
+      if (event.type === 'node.state' && event.node === step && event.to === 'running')
+        words = null;
+      if (event.type === 'feedback.given' && event.kind === 'redirect' && gates.has(event.node))
+        words = event.words;
+    }
+  return words;
 }
