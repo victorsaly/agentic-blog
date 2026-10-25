@@ -26,7 +26,9 @@ import {
   publishedStructure,
   publishesOnClose,
 } from './gate-answer';
+import { claimNumber, claimsIn } from './claim-number';
 
+const git = promisify(execFile);
 const root = resolve(process.env['CONTENT_ROOT'] ?? resolve(import.meta.dirname, '..'));
 const payload = closeGatePayload.parse(JSON.parse(process.env['PAYLOAD'] ?? 'null'));
 const thoughtDir = join(root, 'thoughts', payload.thought);
@@ -63,18 +65,31 @@ if (file !== null) {
 // number, so merging it is what puts it live. The numbers are read on main, on the gate's branch, and on every
 // other branch fetched into it: a thought approved but not merged yet holds its number, so a second approval
 // before the first merge takes the next one, and a branch made before another thought went out never takes
-// that one's.
+// that one's. Two approvals at the same moment cannot both win either: the number is claimed by pushing the
+// tag number/N to NUMBER_REMOTE (the gates workflow sets it), a push git refuses when the tag is there, and
+// the one refused takes the next. A thought that already claimed one, in a run that failed later, keeps it.
 let number: number | null = null;
 if (publishesOnClose(closing.node, payload.decision)) {
   const path = join(thoughtDir, 'structure.md');
-  const main = resolve(import.meta.dirname, '..');
-  const taken = (
-    await Promise.all([numbersIn(root), numbersIn(main), numbersOnBranches(root)])
-  ).flat();
-  const published = publishedStructure(await readFile(path, 'utf8'), nextNumber(taken));
-  if (published !== null) {
-    await writeFile(path, published, 'utf8');
-    number = numberOf(published);
+  const source = await readFile(path, 'utf8');
+  // Only a draft is given a number; one already out keeps its own and claims nothing.
+  if (publishedStructure(source, 1) !== null) {
+    const main = resolve(import.meta.dirname, '..');
+    const claims = await claimsIn(root);
+    const taken = [
+      ...(await Promise.all([numbersIn(root), numbersIn(main), numbersOnBranches(root)])).flat(),
+      ...claims.filter((c) => c.thought !== payload.thought).map((c) => c.number),
+    ];
+    const remote = process.env['NUMBER_REMOTE'];
+    const given =
+      numberOf(source) ??
+      claims.find((c) => c.thought === payload.thought)?.number ??
+      (remote ? await claimNumber(root, remote, payload.thought, taken) : nextNumber(taken));
+    const published = publishedStructure(source, given);
+    if (published !== null) {
+      await writeFile(path, published, 'utf8');
+      number = numberOf(published);
+    }
   }
 }
 
@@ -138,7 +153,6 @@ async function numbersIn(checkout: string): Promise<number[]> {
  * failure stops the gate, since guessing "no numbers" could give one twice.
  */
 async function numbersOnBranches(checkout: string): Promise<number[]> {
-  const git = promisify(execFile);
   const opts = { cwd: checkout, maxBuffer: 16 * 1024 * 1024 };
   const listed = await git('git', ['for-each-ref', '--format=%(objectname)', 'refs/remotes'], opts);
   const commits = [...new Set(listed.stdout.split('\n').filter((sha) => sha !== ''))];

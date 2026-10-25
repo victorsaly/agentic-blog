@@ -113,3 +113,17 @@ export function numbersFromGrep(output: string, except: string): number[] {
     return found && found[1] !== except ? [Number(found[2])] : [];
   });
 }
+
+/** A number claimed for a thought: the tag `number/N` on the remote, its message the thought's slug. */
+export interface Claim {
+  number: number;
+  thought: string;
+}
+
+/** The claims in `git for-each-ref --format='%(refname:strip=3) %(contents:subject)' refs/tags/number`. */
+export function claimsFrom(output: string): Claim[] {
+  return output.split('\n').flatMap((line) => {
+    const found = /^(\d+) (\S+)\s*$/.exec(line);
+    return found ? [{ number: Number(found[1]), thought: found[2] ?? '' }] : [];
+  });
+}

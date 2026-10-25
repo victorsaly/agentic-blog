@@ -35,10 +35,13 @@ jobs:
           path: target
           # Pushes made with GitHub's own token never start CI; BOT_TOKEN pushes as a person.
           token: ${{ secrets.BOT_TOKEN || github.token }}
-      # Every branch's tip, so a number given to a post approved but not merged yet is never given again.
-      - name: Fetch every branch
+      # Every branch's tip and every number already claimed, so a number given to a post approved but not
+      # merged yet is never given again.
+      - name: Fetch every branch and claimed number
         working-directory: target
-        run: git fetch --quiet --depth=1 origin '+refs/heads/*:refs/remotes/origin/*'
+        run: >-
+          git fetch --quiet --depth=1 origin '+refs/heads/*:refs/remotes/origin/*'
+          '+refs/tags/number/*:refs/tags/number/*'
       - uses: actions/setup-node@v5
         with:
           node-version-file: .node-version
@@ -50,6 +53,8 @@ jobs:
           # Through the environment, never pasted into the script: it carries Victor's own words.
           PAYLOAD: ${{ toJSON(github.event.client_payload) }}
           CONTENT_ROOT: target
+          # Where a number is claimed, as the tag number/N, before it is written in the post.
+          NUMBER_REMOTE: origin
           STUDIO_URL: ${{ vars.STUDIO_URL }}
           STUDIO_ACCESS_CLIENT_ID: ${{ secrets.STUDIO_ACCESS_CLIENT_ID }}
           STUDIO_ACCESS_CLIENT_SECRET: ${{ secrets.STUDIO_ACCESS_CLIENT_SECRET }}

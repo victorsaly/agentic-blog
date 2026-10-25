@@ -8,6 +8,7 @@ import { originFrontMatter, structureFrontMatter } from './content-schema';
 import {
   answerFileFor,
   answerOrigin,
+  claimsFrom,
   closeGatePayload,
   nextNumber,
   numberOf,
@@ -147,5 +148,16 @@ describe('approving the merge gate', () => {
     expect(numbersFromGrep(output, '2026-10-27-d')).toEqual([1, 2, 3]);
     // Approved on its branch, not merged: the next approval elsewhere goes past it.
     expect(nextNumber(numbersFromGrep(output, '2026-10-28-e'))).toBe(10);
+  });
+});
+
+describe('the numbers claimed as tags', () => {
+  it('reads each tag as its number and the thought that claimed it', () => {
+    expect(
+      claimsFrom('3 2026-10-25-september-last-year-tried\n4 2026-10-26-b\n\nnot-a-claim\n'),
+    ).toEqual([
+      { number: 3, thought: '2026-10-25-september-last-year-tried' },
+      { number: 4, thought: '2026-10-26-b' },
+    ]);
   });
 });
