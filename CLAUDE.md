@@ -56,6 +56,8 @@ npm run agent -- <name> <thought-slug>   # run one agent locally
 - Tests with Vitest next to the code (`*.test.ts`). Test behaviour, not implementation.
 - Commits: Conventional Commits (`feat:`, `fix:`, `content:`, `agent:`, `chore:`). One concern per PR.
 - No new dependency without a line in the PR saying why and what it replaces.
+- A PR that changes what a reader or the studio shows has before-and-after screenshots, desk and phone:
+  `npm run pr:shots -- --pr <n> --page /path --part name=.selector --publish` (details in the PR template).
 
 ## Design rules
 
