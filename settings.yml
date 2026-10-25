@@ -28,6 +28,9 @@ topics: # one plain line per theme, shown on the Topics page and on each topic's
   scalable-secure: Building systems that grow without breaking and keep people's data safe.
   apps-and-workflows: The apps and the small workflows that get real work done.
 
+topic_names: # how a topic is written for readers, where its tag alone reads wrong
+  scalable-secure: Scalable and secure
+
 depths: # the three reading depths, in order
   - message
   - idea

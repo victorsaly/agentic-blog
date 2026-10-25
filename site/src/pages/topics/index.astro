@@ -7,7 +7,8 @@ import { getCollection } from 'astro:content';
 import Page from '../../layouts/Page.astro';
 import ListHead from '../../components/ListHead.astro';
 import { settings } from '../../lib/settings';
-import { themeCounts, themeLabel, thoughtsLabel } from '../../lib/themes';
+import { themeCounts, thoughtsLabel } from '../../lib/themes';
+import { topicName } from '../../lib/topic-name';
 
 const all = await getCollection('thoughts', ({ data }) => !data.draft);
 const topics = themeCounts(all.map((t) => t.data.themes));
@@ -36,7 +37,7 @@ const note =
               <li>
                 <h3>
                   <a href={`/topics/${topic}`}>
-                    <mark>{themeLabel(topic)}</mark>
+                    <mark>{topicName(topic)}</mark>
                   </a>
                 </h3>
                 <p class="small quiet count">{thoughtsLabel(count)}</p>

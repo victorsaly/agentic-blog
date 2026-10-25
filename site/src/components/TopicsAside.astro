@@ -5,7 +5,8 @@
 // topic page, and the feed. Ruled rows, the same as the home page's. On a phone the topics move to the strip
 // under the heading (TopicStrip), so here they show on a desk only.
 import type { CollectionEntry } from 'astro:content';
-import { themeCounts, themeLabel } from '../lib/themes';
+import { themeCounts } from '../lib/themes';
+import { topicName } from '../lib/topic-name';
 
 interface Props {
   thoughts: CollectionEntry<'thoughts'>[];
@@ -27,7 +28,7 @@ const counts = themeCounts(thoughts.map((t) => t.data.themes));
           {counts.map(([topic, count]) => (
             <li>
               <a href={`/topics/${topic}`} aria-current={current === topic ? 'page' : undefined}>
-                <span class="name">{themeLabel(topic)}</span>
+                <span class="name">{topicName(topic)}</span>
                 <span class="quiet">
                   {count}
                   <span class="visually-hidden">{count === 1 ? ' thought' : ' thoughts'}</span>

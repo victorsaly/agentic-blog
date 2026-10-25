@@ -1,8 +1,13 @@
 // Why: the theme list in settings.yml is the classification every post is tagged with. These helpers turn
 // the tags into the counts and labels the theme navigation shows, and are tested without a build.
 
-/** "ai-changing-work" → "AI changing work". Known initialisms stay in capitals. */
-export function themeLabel(theme: string): string {
+/**
+ * "ai-changing-work" → "AI changing work". Known initialisms stay in capitals. A name given in `names`
+ * (settings.yml topic_names) wins, for a tag that cannot say it alone: "scalable-secure" is "Scalable and secure".
+ */
+export function themeLabel(theme: string, names: Readonly<Record<string, string>> = {}): string {
+  const named = names[theme];
+  if (named !== undefined) return named;
   const words = theme
     .split('-')
     .map((w) => (['ai', 'ui', 'api'].includes(w) ? w.toUpperCase() : w));
