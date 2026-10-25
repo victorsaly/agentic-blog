@@ -90,7 +90,8 @@ export async function askForFile(
  */
 export function fileFromReply(reply: string): string | null {
   for (const candidate of [unfence(reply), reply]) {
-    const start = candidate.search(/^---\r?\nwhy:/m);
+    // The front matter normally opens a line; a reply glued together without a line break still counts.
+    const start = candidate.search(/^---\r?\nwhy:|(?<!-)---\r?\nwhy:/m);
     if (start >= 0) return candidate.slice(start).trim();
   }
   return null;

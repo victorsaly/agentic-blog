@@ -38,6 +38,26 @@ describe('claudeAdapter', () => {
     });
   });
 
+  it('starts a new paragraph where a search came between two pieces of text, and joins cited pieces', async () => {
+    vi.stubEnv('ANTHROPIC_API_KEY', 'key');
+    create.mockResolvedValueOnce({
+      stop_reason: 'end_turn',
+      content: [
+        { type: 'text', text: "I'll look for sources." },
+        { type: 'server_tool_use', id: 's1', name: 'web_search', input: { query: 'q' } },
+        { type: 'web_search_tool_result', tool_use_id: 's1', content: [] },
+        { type: 'text', text: '---\nwhy: the sources\n---\n\nA claim' },
+        { type: 'text', text: ', cited.' },
+      ],
+      usage: { input_tokens: 100, output_tokens: 20 },
+    });
+    const adapter = claudeAdapter('writer', { kind: 'claude' });
+    const reply = await adapter.write?.({ system: 's', user: 'u', maxOutputTokens: 100 });
+    expect(reply?.text).toBe(
+      "I'll look for sources.\n\n---\nwhy: the sources\n---\n\nA claim, cited.",
+    );
+  });
+
   it('lets a first-round failure through as it is, since nothing was billed', async () => {
     vi.stubEnv('ANTHROPIC_API_KEY', 'key');
     create.mockRejectedValueOnce(new Error('bad key'));
