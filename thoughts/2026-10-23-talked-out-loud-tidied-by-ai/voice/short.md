@@ -15,7 +15,7 @@ text_sha256: c3caef70292ab50db57afdb5480e50288c4effc5af984d9a6eba4625c5e6d1c3
 words: 215
 seconds: 104.08
 made: '2026-10-25'
-reviewed: false
+reviewed: true
 ---
 
 Every post on this blog starts as a voice note. I talk into my phone, badly, and that recording is kept exactly as it was spoken. It is the origin, and it is never edited.
