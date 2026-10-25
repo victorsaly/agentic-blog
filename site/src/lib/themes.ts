@@ -15,6 +15,17 @@ export function themeLabel(theme: string, names: Readonly<Record<string, string>
   return [first.charAt(0).toUpperCase() + first.slice(1), ...rest].join(' ');
 }
 
+/**
+ * The one plain line saying what a theme is about (settings.yml topics), or undefined when there is none.
+ * Like a name, only a line set in settings counts: "constructor" must not find one on Object.prototype.
+ */
+export function themeAbout(
+  theme: string,
+  abouts: Readonly<Record<string, string>> = {},
+): string | undefined {
+  return Object.hasOwn(abouts, theme) ? abouts[theme] : undefined;
+}
+
 /** 1 → "One thought", 12 → "12 thoughts": a count a screen reader says with its unit. */
 export function thoughtsLabel(count: number): string {
   return count === 1 ? 'One thought' : `${String(count)} thoughts`;
