@@ -15,7 +15,7 @@ text_sha256: e3698c1efdf69771fbf0bbde8ac8d812f71a8abf213ea5c2e2d00b7d4eb7064f
 words: 211
 seconds: 96
 made: '2026-10-24'
-reviewed: false
+reviewed: true
 ---
 
 We hide AI-assisted work as if it were cheating. I see it as a better way of producing results.
