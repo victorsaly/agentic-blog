@@ -46,6 +46,7 @@ const SITE_SUGGESTIONS = [
   'What is this blog about, in one minute?',
   'Which post should I read first?',
   'How does AI help write these posts?',
+  'What do the sources behind the posts say?',
 ];
 const POST_SUGGESTIONS = [
   'What is the point of this post?',
