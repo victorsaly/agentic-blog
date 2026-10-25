@@ -1,8 +1,8 @@
 // Why: Today is where Victor sees everything waiting on him, and the agents can wait on him too: a guard's
 // hold that still stands (the latest run of that agent on that thought held the post), and a run that asked
 // him something. Read live from the page's one feed, so a hold raised on his computer a minute ago is here
-// now. Each opens on its run's timeline. When the runs cannot be read it says so, rather than reading as
-// nothing waiting; only the count line is announced.
+// now. A question opens where it is answered; a hold opens on its run's timeline. When the runs cannot be
+// read it says so, rather than reading as nothing waiting; only the count line is announced.
 import { agentName, durationOf } from '../lib/agent-runs';
 import { waitingOnVictor } from '../lib/run-board';
 import { useRunsFeed } from './runs-feed';
@@ -59,7 +59,7 @@ export function AgentsWaiting({ titles }: AgentsWaitingProps): React.JSX.Element
                 <span className="small quiet">asked {durationOf(run.updatedAt, now)} ago</span>
               </span>
               <span className="links small">
-                <a href={timeline(run.id)}>Timeline</a>
+                <a href={timeline(run.id)}>Answer</a>
               </span>
             </li>
           ))}

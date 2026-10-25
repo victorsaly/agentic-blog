@@ -195,4 +195,63 @@ const title = current === 'today' || !area ? 'Studio' : `${area.name} · Studio`
     color: var(--quiet);
     font-weight: 400;
   }
+
+  /* Markdown read in the studio (an agent's file, an answer before it is sent) reads like the site: the
+     measure, hairlines between table rows, a strong rule beside a quote. Never decoration. */
+  .studio .markdown {
+    max-width: var(--measure);
+  }
+  .studio .markdown > :first-child {
+    margin-top: 0;
+  }
+  .studio .markdown h2,
+  .studio .markdown h3,
+  .studio .markdown h4 {
+    font-size: var(--size-body);
+    margin: var(--space-4) 0 var(--space-2);
+  }
+  .studio .markdown blockquote {
+    margin: var(--space-3) 0;
+    padding-left: var(--space-3);
+    border-left: var(--rule-strong) solid var(--ink);
+  }
+  /* A fenced block keeps every space, so a diagram drawn in text stays aligned; it scrolls, never wraps. */
+  .studio .markdown pre {
+    overflow-x: auto;
+    max-width: 100%;
+    padding: var(--space-2) 0;
+    font-size: var(--size-small);
+    line-height: 1.4;
+  }
+  .studio .markdown pre:focus-visible {
+    outline: var(--focus);
+    outline-offset: var(--focus-offset);
+  }
+  .studio .markdown-table {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+  .studio .markdown-table:focus-visible {
+    outline: var(--focus);
+    outline-offset: var(--focus-offset);
+  }
+  .studio .markdown table {
+    border-collapse: collapse;
+    font-size: var(--size-small);
+  }
+  .studio .markdown th,
+  .studio .markdown td {
+    padding: var(--space-1) var(--space-2);
+    border-bottom: var(--rule-width) solid var(--rule);
+    text-align: left;
+    vertical-align: top;
+  }
+  .studio .markdown thead th {
+    border-bottom: var(--rule-strong) solid var(--ink);
+  }
+  .recorder .preview {
+    padding: var(--space-3);
+    border: var(--rule-width) solid var(--ink);
+    max-width: var(--measure);
+  }
 </style>

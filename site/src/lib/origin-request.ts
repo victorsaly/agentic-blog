@@ -16,7 +16,7 @@ export interface OriginRequest {
 export type Parsed = { ok: true; value: OriginRequest } | { ok: false; error: string };
 
 const SLUG = /^\d{4}-\d{2}-\d{2}-[a-z0-9-]+$/;
-const SAFE_KEY = /^(origin|feedback)\/[A-Za-z0-9-]+\.(webm|m4a|mp3|wav|ogg)$/;
+const SAFE_KEY = /^(origin|feedback|answer)\/[A-Za-z0-9-]+\.(webm|m4a|mp3|wav|ogg)$/;
 
 /** A long voice note runs to a few thousand words; this is far above that and well under GitHub's limit. */
 export const MAX_TEXT_LENGTH = 50_000;

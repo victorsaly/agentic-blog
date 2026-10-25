@@ -1,0 +1,78 @@
+# Why: a gate closes in git, so the record stays where every other record is. When Victor answers or approves
+# a gate in the studio, the studio sends close-gate with his decision and the Access email he is signed in
+# with; this workflow writes it on the branch of the gate's pull request (scripts/close-gate.ts), so the
+# pull request shows the answer beside the questions. A gate whose run is already on main gets a pull request
+# of its own. Nothing merges by itself.
+name: Close a gate
+run-name: >-
+  gate · ${{ github.event.client_payload.decision }} · ${{ github.event.client_payload.thought }}
+
+on:
+  repository_dispatch:
+    types: [close-gate]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+# One writer per branch at a time, shared with the agents workflow (the same key), so a gate closing and an
+# agent writing never push to the same branch at once.
+concurrency:
+  group: agents-${{ github.event.client_payload.branch || github.event.repository.default_branch }}
+  cancel-in-progress: false
+
+jobs:
+  close:
+    name: Record the decision on the gate's branch
+    runs-on: ubuntu-latest
+    steps:
+      # The tools come from main, so a gate branch made before they existed is still closed with them; the
+      # gate's branch is checked out apart, in target/, and only its content is changed.
+      - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.client_payload.branch || github.event.repository.default_branch }}
+          path: target
+          # Pushes made with GitHub's own token never start CI; BOT_TOKEN pushes as a person.
+          token: ${{ secrets.BOT_TOKEN || github.token }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+      - run: npm ci --no-audit --no-fund
+
+      - name: Close the gate
+        id: close
+        env:
+          # Through the environment, never pasted into the script: it carries Victor's own words.
+          PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+          CONTENT_ROOT: target
+          STUDIO_URL: ${{ vars.STUDIO_URL }}
+          STUDIO_ACCESS_CLIENT_ID: ${{ secrets.STUDIO_ACCESS_CLIENT_ID }}
+          STUDIO_ACCESS_CLIENT_SECRET: ${{ secrets.STUDIO_ACCESS_CLIENT_SECRET }}
+        run: npx tsx scripts/close-gate.ts
+
+      - name: Commit on the gate's branch
+        if: github.event.client_payload.branch != ''
+        working-directory: target
+        env:
+          TITLE: ${{ steps.close.outputs.title }}
+          BODY: ${{ steps.close.outputs.body }}
+        run: |
+          git config user.name "agentic-blog[bot]"
+          git config user.email "agentic-blog[bot]@users.noreply.github.com"
+          git add -A thoughts
+          git commit -m "$TITLE" -m "$BODY"
+          git push
+
+      - name: Open a pull request for a gate already on main
+        if: github.event.client_payload.branch == ''
+        uses: peter-evans/create-pull-request@v8
+        with:
+          path: target
+          token: ${{ secrets.BOT_TOKEN || github.token }}
+          branch: ${{ steps.close.outputs.branch }}
+          title: ${{ steps.close.outputs.title }}
+          body: ${{ steps.close.outputs.body }}
+          labels: gate
+          commit-message: ${{ steps.close.outputs.title }}
+          delete-branch: true

@@ -5,7 +5,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { Ledger, hashOf } from '../ledger.js';
-import { isLedgerPath, readRuns, runId, saveRun, verifyRunText } from './ledger-files.js';
+import {
+  extendRun,
+  isLedgerPath,
+  readRuns,
+  runId,
+  saveRun,
+  verifyRunText,
+} from './ledger-files.js';
 
 async function finishedRun(): Promise<Ledger> {
   const ledger = new Ledger();
@@ -79,6 +86,68 @@ describe('verifyRunText', () => {
       't/ledger/a.jsonl has no t/ledger/a.head. Fix: restore the head from git.',
     ]);
     expect(await verifyRunText('t/ledger/a', null, JSON.stringify(ledger.head))).toHaveLength(1);
+  });
+});
+
+describe('extendRun', () => {
+  it('carries a saved run on, and the result still verifies', async () => {
+    const dir = await thoughtWithRuns('20261025T120000Z-answers-aaaa');
+    const [saved] = (await readRuns(dir)).runs;
+    if (!saved) throw new Error('no run');
+    const last = saved.events.at(-1);
+    const ledger = await Ledger.resume(saved.events, {
+      count: saved.events.length,
+      hash: last?.hash ?? '',
+    });
+    await ledger.append({
+      type: 'gate.closed',
+      node: 'answers',
+      decision: 'answered',
+      by: 'owner',
+    });
+    await extendRun(dir, saved.id, ledger);
+    const { runs, issues } = await readRuns(dir);
+    expect(issues).toEqual([]);
+    expect(runs[0]?.events).toHaveLength(saved.events.length + 1);
+  });
+
+  it('refuses to carry on a saved run that was cut short or changed, and writes nothing', async () => {
+    const id = '20261025T120000Z-answers-aaaa';
+    const dir = await thoughtWithRuns(id);
+    const [saved] = (await readRuns(dir)).runs;
+    if (!saved) throw new Error('no run');
+    const last = saved.events.at(-1);
+    const ledger = await Ledger.resume(saved.events, {
+      count: saved.events.length,
+      hash: last?.hash ?? '',
+    });
+    await ledger.append({
+      type: 'gate.closed',
+      node: 'answers',
+      decision: 'answered',
+      by: 'owner',
+    });
+    // Cut the saved file to its first event: every hash still matches the new run, but the head says more.
+    const file = join(dir, 'ledger', `${id}.jsonl`);
+    const cut = (await readFile(file, 'utf8')).split('\n').slice(0, 1).join('\n');
+    await writeFile(file, `${cut}\n`);
+    await expect(extendRun(dir, id, ledger)).rejects.toThrow(/does not verify/);
+    expect(await readFile(file, 'utf8')).toBe(`${cut}\n`);
+  });
+
+  it('refuses a run that is not the saved one carried on, and writes nothing', async () => {
+    const dir = await thoughtWithRuns('20261025T120000Z-answers-aaaa');
+    const other = new Ledger();
+    await other.append({
+      type: 'run.started',
+      workflow: 'blog-post',
+      origin: 'elsewhere',
+      by: 'local',
+    });
+    await expect(extendRun(dir, '20261025T120000Z-answers-aaaa', other)).rejects.toThrow(
+      /not the start/,
+    );
+    expect((await readRuns(dir)).issues).toEqual([]);
   });
 });
 

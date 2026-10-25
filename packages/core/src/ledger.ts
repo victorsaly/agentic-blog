@@ -197,7 +197,7 @@ export class Ledger {
   static async resume(
     events: readonly LedgerEvent[],
     head: LedgerHead,
-    options: { now?: () => Date } = {},
+    options: { now?: () => Date; onAppend?: AppendListener } = {},
   ): Promise<Ledger> {
     const broken = await Ledger.verify(events, head);
     if (broken !== null)

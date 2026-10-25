@@ -5,7 +5,10 @@
 // Nothing said or written is lost by one press: Discard asks again when there is something to lose, and
 // leaving the page while recording asks the browser to check first. A level line shows the microphone is
 // hearing. Opened with ?start=1 (the overview's Say it), it starts recording at once. Only a short status
-// line is announced to a screen reader, not every change on screen.
+// line is announced to a screen reader, not every change on screen. A gate's answer uses it too (mode
+// answer, with deliver): the words go to the gate instead of a pull request of their own, and before sending
+// they are shown as they will read, Markdown and all.
+import { Markdown } from './Markdown';
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { MicIcon } from './MicIcon';
 
@@ -17,7 +20,7 @@ type Phase =
   | { kind: 'ready'; key: string; transcript: string }
   | { kind: 'sending'; key: string; transcript: string }
   | { kind: 'writing'; text: string; sending: boolean }
-  | { kind: 'sent'; prUrl: string }
+  | { kind: 'sent'; prUrl: string | null }
   | { kind: 'failed'; message: string; retry?: () => void };
 
 interface UploadResponse {
@@ -32,9 +35,66 @@ interface OriginResponse {
   prUrl: string;
 }
 
+/** What was said or written, handed to whoever takes it instead of the origin pull request. */
+export type Delivery =
+  { medium: 'voice'; key: string; transcript: string } | { medium: 'text'; transcript: string };
+
+type Mode = 'origin' | 'feedback' | 'answer';
+
+/** The words each mode uses, in one place. */
+const copy: Record<
+  Mode,
+  {
+    title: string;
+    write: string;
+    send: string;
+    sending: string;
+    textLabel: string;
+    textHint: string;
+    sent: string;
+    again: string;
+  }
+> = {
+  origin: {
+    title: 'Say it',
+    write: 'Write or paste it instead',
+    send: 'Make it an origin',
+    sending: 'Opening the pull request…',
+    textLabel: 'The words, as they are',
+    textHint:
+      'Write it here, or paste a transcript from somewhere else. It is kept exactly as it is, typos and all, and marked as text rather than a recording.',
+    sent: 'an origin, word for word',
+    again: 'Say another',
+  },
+  feedback: {
+    title: 'Say what is wrong',
+    write: 'Write it instead',
+    send: 'Send the feedback',
+    sending: 'Opening the pull request…',
+    textLabel: 'What is wrong with the output',
+    textHint: 'Say what went down the wrong road, not which sentences to change.',
+    sent: 'feedback on that thought',
+    again: 'Say more',
+  },
+  answer: {
+    title: 'Say your answers',
+    write: 'Write them instead',
+    send: 'Send answers',
+    sending: 'Sending…',
+    textLabel: 'Your answers, in your own words',
+    textHint:
+      'Kept exactly as written, as an origin beside the first one. Markdown is fine; Preview shows how it reads.',
+    sent: 'answers',
+    again: 'Answer again',
+  },
+};
+
 export interface RecorderProps {
-  /** 'origin' records a thought; 'feedback' records a note about an output and needs the thought slug. */
-  mode: 'origin' | 'feedback';
+  /** 'origin' records a thought; 'feedback' records a note about an output and needs the thought slug;
+   * 'answer' answers a gate, and needs deliver. */
+  mode: Mode;
+  /** Takes the words instead of the origin pull request; returns the pull request to link to, if any. */
+  deliver?: (words: Delivery) => Promise<string | null>;
   thoughtSlug?: string;
   /** Told whether something said or written is in hand (not yet sent or discarded), so a parent can hold
    * still around it, as the feedback page does with its choice of thought. */
@@ -122,7 +182,14 @@ function formatElapsed(since: number, now: number): string {
   return `${minutes}:${seconds}`;
 }
 
-export function Recorder({ mode, thoughtSlug, onBusyChange }: RecorderProps): React.JSX.Element {
+export function Recorder({
+  mode,
+  thoughtSlug,
+  deliver,
+  onBusyChange,
+}: RecorderProps): React.JSX.Element {
+  const words = copy[mode];
+  const [preview, setPreview] = useState(false);
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
   const busy = phase.kind !== 'idle' && phase.kind !== 'sent';
   useEffect(() => {
@@ -281,24 +348,32 @@ export function Recorder({ mode, thoughtSlug, onBusyChange }: RecorderProps): Re
     const { key, transcript } = phase;
     setPhase({ kind: 'sending', key, transcript });
     try {
+      if (deliver) {
+        setPhase({ kind: 'sent', prUrl: await deliver({ medium: 'voice', key, transcript }) });
+        return;
+      }
       const body = JSON.stringify({ key, transcript, mode, thought: thoughtSlug ?? null });
       const { prUrl } = await postJson<OriginResponse>('/api/origin', body, 'application/json');
       setPhase({ kind: 'sent', prUrl });
     } catch (error) {
       setPhase({
         kind: 'failed',
-        message: `The pull request did not open: ${reasonOf(error)}. The words are kept; try again.`,
+        message: `${deliver ? 'It was not sent' : 'The pull request did not open'}: ${reasonOf(error)}. The words are kept; try again.`,
         retry: () => {
           void send();
         },
       });
     }
-  }, [mode, phase, thoughtSlug]);
+  }, [deliver, mode, phase, thoughtSlug]);
 
   const sendText = useCallback(
     async (text: string) => {
       setPhase({ kind: 'writing', text, sending: true });
       try {
+        if (deliver) {
+          setPhase({ kind: 'sent', prUrl: await deliver({ medium: 'text', transcript: text }) });
+          return;
+        }
         const body = JSON.stringify({
           medium: 'text',
           transcript: text,
@@ -310,21 +385,22 @@ export function Recorder({ mode, thoughtSlug, onBusyChange }: RecorderProps): Re
       } catch (error) {
         setPhase({
           kind: 'failed',
-          message: `The pull request did not open: ${reasonOf(error)}. The words are kept; try again.`,
+          message: `${deliver ? 'It was not sent' : 'The pull request did not open'}: ${reasonOf(error)}. The words are kept; try again.`,
           retry: () => {
             void sendText(text);
           },
         });
       }
     },
-    [mode, thoughtSlug],
+    [deliver, mode, thoughtSlug],
   );
 
-  const title = mode === 'origin' ? 'Say it' : 'Say what is wrong';
-  const writeLabel = mode === 'origin' ? 'Write or paste it instead' : 'Write it instead';
-  const sendLabel = mode === 'origin' ? 'Make it an origin' : 'Send the feedback';
+  const title = words.title;
+  const writeLabel = words.write;
+  const sendLabel = words.send;
   const toIdle = (): void => {
     setConfirmingDiscard(false);
+    setPreview(false);
     setPhase({ kind: 'idle' });
   };
   // A second press on Discard when there is something to lose; the first only asks.
@@ -351,7 +427,11 @@ export function Recorder({ mode, thoughtSlug, onBusyChange }: RecorderProps): Re
   return (
     <section className="recorder">
       <p className="visually-hidden" role="status">
-        {spoken[phase.kind]}
+        {deliver && phase.kind === 'sending'
+          ? 'Sending.'
+          : deliver && phase.kind === 'sent'
+            ? 'Sent. Waiting for GitHub to record it.'
+            : spoken[phase.kind]}
       </p>
       {phase.kind === 'idle' && (
         <>
@@ -384,8 +464,8 @@ export function Recorder({ mode, thoughtSlug, onBusyChange }: RecorderProps): Re
             if (phase.text.trim().length > 0) void sendText(phase.text);
           }}
         >
-          <label htmlFor={textId} className="field">
-            {mode === 'origin' ? 'The words, as they are' : 'What is wrong with the output'}
+          <label htmlFor={textId} className="field" hidden={preview}>
+            {words.textLabel}
             <textarea
               id={textId}
               ref={textArea}
@@ -398,10 +478,13 @@ export function Recorder({ mode, thoughtSlug, onBusyChange }: RecorderProps): Re
               }}
             />
           </label>
+          {preview && (
+            <div className="preview" aria-label="Preview">
+              <Markdown text={phase.text} />
+            </div>
+          )}
           <p id={`${textId}-hint`} className="small quiet">
-            {mode === 'origin'
-              ? 'Write it here, or paste a transcript from somewhere else. It is kept exactly as it is, typos and all, and marked as text rather than a recording.'
-              : 'Say what went down the wrong road, not which sentences to change.'}
+            {words.textHint}
           </p>
           <div className="row">
             <button
@@ -409,8 +492,21 @@ export function Recorder({ mode, thoughtSlug, onBusyChange }: RecorderProps): Re
               className="control filled"
               disabled={phase.sending || phase.text.trim().length === 0}
             >
-              {phase.sending ? 'Opening the pull request…' : sendLabel}
+              {phase.sending ? words.sending : sendLabel}
             </button>
+            {mode === 'answer' && (
+              <button
+                type="button"
+                className="control"
+                aria-pressed={preview}
+                disabled={phase.text.trim().length === 0}
+                onClick={() => {
+                  setPreview((now) => !now);
+                }}
+              >
+                Preview
+              </button>
+            )}
             {discardButton(phase.text.trim().length > 0, phase.sending)}
           </div>
         </form>
@@ -440,7 +536,13 @@ export function Recorder({ mode, thoughtSlug, onBusyChange }: RecorderProps): Re
             This is what you said, written down. It goes in exactly as it is; nothing is tidied
             here.
           </p>
-          <blockquote className="transcript">{phase.transcript}</blockquote>
+          {mode === 'answer' ? (
+            <div className="transcript preview">
+              <Markdown text={phase.transcript} />
+            </div>
+          ) : (
+            <blockquote className="transcript">{phase.transcript}</blockquote>
+          )}
           <div className="row">
             <button
               type="button"
@@ -450,21 +552,36 @@ export function Recorder({ mode, thoughtSlug, onBusyChange }: RecorderProps): Re
               }}
               disabled={phase.kind === 'sending'}
             >
-              {phase.kind === 'sending' ? 'Opening the pull request…' : sendLabel}
+              {phase.kind === 'sending' ? words.sending : sendLabel}
             </button>
             {discardButton(true, phase.kind === 'sending')}
           </div>
         </>
       )}
 
-      {phase.kind === 'sent' && (
+      {phase.kind === 'sent' && deliver && (
+        <div className="done">
+          <p>
+            Sent. Waiting for GitHub to record your {words.sent}; this page shows the gate closed
+            when it has.
+            {phase.prUrl !== null && (
+              <>
+                {' '}
+                They land on <a href={phase.prUrl}>the pull request</a>.
+              </>
+            )}
+          </p>
+        </div>
+      )}
+
+      {phase.kind === 'sent' && !deliver && phase.prUrl !== null && (
         <div className="done">
           <p>
             Done. <a href={phase.prUrl}>The pull request is open</a>. Merge it and it becomes{' '}
-            {mode === 'origin' ? 'an origin, word for word' : 'feedback on that thought'}.
+            {words.sent}.
           </p>
           <button type="button" className="control" onClick={toIdle}>
-            {mode === 'origin' ? 'Say another' : 'Say more'}
+            {words.again}
           </button>
         </div>
       )}

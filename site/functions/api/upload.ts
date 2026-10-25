@@ -9,8 +9,8 @@ export const onRequestPost: Handler = async ({ request, env }) => {
   const audio = form?.get('audio');
   const mode = form?.get('mode');
   if (!(audio instanceof File)) return problem('Send the recording as the "audio" field.', 400);
-  if (mode !== 'origin' && mode !== 'feedback')
-    return problem('mode must be "origin" or "feedback".', 400);
+  if (mode !== 'origin' && mode !== 'feedback' && mode !== 'answer')
+    return problem('mode must be "origin", "feedback" or "answer".', 400);
   if (audio.size === 0) return problem('The recording is empty.', 400);
   if (audio.size > MAX_BYTES)
     return problem('The recording is larger than the studio accepts.', 413);
