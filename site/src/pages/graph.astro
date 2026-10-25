@@ -4,14 +4,16 @@
 // draws that from the Small ideas table of every post, so the shape says what the blog is about before a
 // word is read. The picture leads; beside it (under it on a phone) the same graph is a list, which is what
 // the keyboard and a screen reader use. Opening a topic, from either side, darkens its ideas and marks its
-// name in marigold, the one colour, with no script and no motion.
-import { getCollection } from 'astro:content';
+// name in marigold, the one colour, with no script and no motion. Each idea in the list links to the
+// section of its post that says it, or to the start of the whole piece when no section is clearly the one.
+import { getCollection, render } from 'astro:content';
 import Page from '../layouts/Page.astro';
 import ListHead from '../components/ListHead.astro';
 import GraphPicture from '../components/GraphPicture.astro';
-import { thoughtSlugOf } from '../lib/content';
+import { leafOf, thoughtSlugOf } from '../lib/content';
 import { graphOf, type GraphPost } from '../lib/graph';
 import { deskLayout, layoutGraph, phoneLayout } from '../lib/graph-layout';
+import { sectionFor, sectionsOf } from '../lib/idea-sections';
 import { settings } from '../lib/settings';
 import { thoughtsLabel } from '../lib/themes';
 import { topicName } from '../lib/topic-name';
@@ -22,6 +24,17 @@ interface ThoughtEntry {
   body?: string;
   data: { title: string; draft: boolean; themes: string[] };
 }
+interface VersionEntry {
+  id: string;
+  body?: string;
+}
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+// Typed here for the same reason: without generated types, render() is untyped when lint runs.
+const renderEntry = render as unknown as (entry: VersionEntry) => Promise<{ headings: Heading[] }>;
 
 const entries = (await getCollection('thoughts')) as unknown as ThoughtEntry[];
 const posts: GraphPost[] = entries.map((e) => ({
@@ -44,6 +57,29 @@ for (const t of graph.topics)
     if (i.topics.includes(t.topic) && !anchors.has(i.id))
       anchors.set(i.id, `i-${i.id.replace(/[^a-z0-9-]/g, '-')}`);
 const texts = new Map(graph.ideas.map((i) => [i.id, i.text]));
+
+// Where each idea's link lands: its section of the long version, with the address the post page gives that
+// heading; the whole piece (#road) when no section is clearly the one; the post itself when it has no road.
+const longs = ((await getCollection('versions')) as unknown as VersionEntry[]).filter(
+  (v) => leafOf(v.id) === 'long',
+);
+const sectionsBySlug = new Map(
+  await Promise.all(
+    longs.map(async (v) => {
+      const headings = (await renderEntry(v)).headings.filter((h) => h.depth === 2);
+      return [thoughtSlugOf(v.id), sectionsOf(v.body ?? '', headings)] as const;
+    }),
+  ),
+);
+const hrefs = new Map(
+  graph.ideas.map((i) => {
+    const sections = sectionsBySlug.get(i.slug);
+    const base = `/thoughts/${i.slug}`;
+    if (sections === undefined) return [i.id, base];
+    const found = sectionFor(i.text, sections);
+    return [i.id, found ? `${base}#${found.slug}` : `${base}#road`];
+  }),
+);
 
 const ideasLabel = (n: number): string => (n === 1 ? 'One small idea' : `${String(n)} small ideas`);
 const postCount = new Set(graph.ideas.map((i) => i.slug)).size;
@@ -160,7 +196,7 @@ const css = `@media (hover:none),(pointer:coarse){${rules(false)}}@media (hover:
                             : undefined
                         }
                       >
-                        <a href={`/thoughts/${i.slug}`}>{i.text}</a>
+                        <a href={hrefs.get(i.id) ?? `/thoughts/${i.slug}`}>{i.text}</a>
                         <p class="small quiet">
                           From {i.title}.
                           {others.length > 0 &&
