@@ -71,10 +71,10 @@ export const tour: TourStation[] = [
   },
   {
     id: 'publish',
-    name: 'Publish',
-    who: ['publish', 'seo'],
-    job: 'One pull request, readable in a minute',
-    line: "The publish agent gathers everything into one pull request: what's new, what changed from your words, and what to check first.",
+    name: 'Read aloud, then publish',
+    who: ['voice', 'publish', 'seo'],
+    job: 'A voice for the post, one pull request',
+    line: "The voice agent reads the short version aloud, word for word, so the post can be heard as well as read. Then the publish agent gathers everything into one pull request: what's new, what changed from your words, and what to check first.",
     print: 'A hand laying a bundle of papers tied with string into a wire tray.',
   },
   {

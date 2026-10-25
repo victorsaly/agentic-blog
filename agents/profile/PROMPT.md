@@ -1,10 +1,11 @@
 ---
 name: profile
 why: >
-  The profile is the difference between converted and generated. This agent learns how the blogger talks
-  from every origin, and what they accept from every change they make in review, and proposes additions to
-  profile.md as a pull request. It never writes to the profile directly, never infers health, mood or
-  personality, and never adds a line the blogger did not demonstrate in their own words.
+  The profile is the difference between a post tidied from your words and one generated from nothing. This
+  agent learns how the blogger talks from every origin, and what they accept from every change they make in
+  review, and proposes additions to profile.md as a pull request. It never writes to the profile directly,
+  never infers health, mood or personality, and never adds a line the blogger did not demonstrate in their
+  own words.
 phase: 3
 reads:
   [
