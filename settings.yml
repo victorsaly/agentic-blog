@@ -58,6 +58,7 @@ media:
   # null means Chris W. Changing it reads every post again, and each new recording waits for review.
   voice_id: eHHUhFBxuo0yMYCOGHks
   voice_name: Victor Saly # what the post's Listen row calls the voice
+  voice_speed: 1.1 # played this much quicker than spoken (0.8–1.25); eleven_v3 ignores ElevenLabs' own speed
 
 agents:
   model: claude-sonnet-5-5 # reasoning agents; override per agent in its PROMPT.md front matter

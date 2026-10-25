@@ -62,6 +62,7 @@ export interface Settings {
     image_reference?: string;
     voice_id: string | null;
     voice_name?: string;
+    voice_speed?: number;
   };
   agents: { model: string; max_output_tokens: number; review_required: true };
 }
