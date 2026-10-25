@@ -3,15 +3,35 @@
 // an index of topics, not of posts: one ruled row per topic, most written about first, with its name as the
 // one marigold mark (the thing being chosen here), how many thoughts carry it, and one plain line of what it
 // is about, from settings.yml. One link per row. The posts themselves live on each topic's page; the same
-// topics drawn with their small ideas are one link away, on /graph.
+// topics drawn with their small ideas are one link away, on /graph. A topic that so far appears only in the
+// small ideas of thoughts about other topics is named here too, so this page and the graph agree.
 import { getCollection } from 'astro:content';
 import Page from '../../layouts/Page.astro';
 import ListHead from '../../components/ListHead.astro';
+import { thoughtSlugOf } from '../../lib/content';
+import { graphOf } from '../../lib/graph';
+import { settings } from '../../lib/settings';
 import { themeCounts, thoughtsLabel } from '../../lib/themes';
 import { topicAbout, topicName } from '../../lib/topic-name';
 
 const all = await getCollection('thoughts', ({ data }) => !data.draft);
 const topics = themeCounts(all.map((t) => t.data.themes));
+const inIdeasOnly = graphOf(
+  all.map((t) => ({
+    slug: thoughtSlugOf(t.id),
+    title: t.data.title,
+    draft: t.data.draft,
+    body: t.body ?? '',
+  })),
+  settings.themes,
+)
+  .topics.map((t) => t.topic)
+  .filter((t) => !topics.some(([topic]) => topic === t));
+const named = inIdeasOnly.map((t) => topicName(t));
+const alsoNamed =
+  named.length > 1
+    ? `${named.slice(0, -1).join(', ')} and ${named[named.length - 1] ?? ''}`
+    : named[0];
 const note =
   topics.length === 1
     ? 'One topic so far.'
@@ -46,7 +66,15 @@ const note =
             ))}
           </ol>
           <p class="to-graph">
-            <a href="/graph">See the topics and every small idea in them as one graph</a>
+            {inIdeasOnly.length > 0 && (
+              <>
+                {inIdeasOnly.length === 1
+                  ? 'One more topic appears'
+                  : `${String(inIdeasOnly.length)} more topics appear`}{' '}
+                so far only inside thoughts about other topics: {alsoNamed}.{' '}
+              </>
+            )}
+            <a href="/graph">See every topic and every small idea in them as one graph</a>
           </p>
         </section>
       )

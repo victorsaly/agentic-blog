@@ -43,6 +43,42 @@ const graph = graphOf(
 const angleOf = (topic: { start: number; end: number }): number => (topic.start + topic.end) / 2;
 const norm = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
 
+/**
+ * Points along an SVG path made of M, L and A commands: each straight stretch sampled at ten points, and
+ * each arc (always round the centre here) by its radius and its end. Any other command fails the test.
+ */
+const pointsOf = (d: string): [number, number][] => {
+  const tokens = d.match(/[A-Z]|-?\d+(\.\d+)?/g) ?? [];
+  const points: [number, number][] = [];
+  let command = '';
+  let last: [number, number] = [0, 0];
+  for (let i = 0; i < tokens.length;) {
+    const token = tokens[i] ?? '';
+    if (/[A-Z]/.test(token)) {
+      if (!'MLA'.includes(token)) throw new Error(`unexpected ${token} in ${d}`);
+      command = token;
+      i += 1;
+      continue;
+    }
+    if (command === 'A') {
+      const r = Number(tokens[i]);
+      points.push([r, 0]);
+      i += 5;
+    }
+    const next: [number, number] = [Number(tokens[i]), Number(tokens[i + 1])];
+    if (command === 'L')
+      for (let t = 1; t < 10; t++)
+        points.push([
+          last[0] + ((next[0] - last[0]) * t) / 10,
+          last[1] + ((next[1] - last[1]) * t) / 10,
+        ]);
+    points.push(next);
+    last = next;
+    i += 2;
+  }
+  return points;
+};
+
 describe('ringOrder', () => {
   it('starts from the biggest topic and puts topics that share ideas side by side', () => {
     const order = ringOrder(graph);
@@ -117,14 +153,34 @@ describe('layoutGraph', () => {
         }
       });
 
-      it('joins every idea to each of its topics, and every topic to the middle', () => {
+      it('joins every idea to each of its topics, and draws no line through the middle', () => {
         for (const idea of layout.ideas) {
           const reached = layout.edges.filter((e) => e.idea === idea.id).flatMap((e) => e.topics);
           for (const t of idea.topics) expect(reached, `${idea.id} → ${t}`).toContain(t);
         }
-        const toMiddle = layout.edges.filter((e) => e.idea === undefined && e.topics.length === 1);
-        for (const t of layout.topics)
-          expect(toMiddle.some((e) => e.topics[0] === t.topic)).toBe(true);
+        // Every point a line passes through stays outside the space kept for the mark and the words.
+        for (const e of layout.edges) {
+          for (const [x, y] of pointsOf(e.d)) {
+            expect(Math.hypot(x, y), e.d).toBeGreaterThan(options.topicRadius * 0.9);
+          }
+        }
+      });
+
+      it('leaves a gap of at least one idea between any two arcs', () => {
+        const slot = (2 * Math.PI) / (layout.ideas.length + layout.topics.length);
+        const arcs = [...layout.topics].sort((p, q) => norm(p.start) - norm(q.start));
+        arcs.forEach((p, i) => {
+          const q = arcs[(i + 1) % arcs.length];
+          if (q === undefined || q === p) return;
+          const between = (((q.start - p.end) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+          expect(between, `${p.topic} → ${q.topic}`).toBeGreaterThan(slot * 0.9);
+        });
+      });
+
+      it('writes the count of each topic under its name, and ticks both ends of its arc', () => {
+        expect(topic('ai-changing-work').count).toBe('7 ideas');
+        expect(topic('apps-and-workflows').count).toBe('1 idea');
+        for (const p of layout.topics) expect(p.ticks.match(/M/g)).toHaveLength(2);
       });
 
       it('bundles ideas between two neighbouring topics into one knot', () => {
@@ -180,6 +236,51 @@ describe('layoutGraph', () => {
           expect(inside(angle, p), `${q.topic} inside ${p.topic}`).toBe(false);
         }
       }
+  });
+
+  it('makes an arc longer when its topic holds more ideas, shared ones included', () => {
+    // Two topics that share three ideas, and a third with two of its own (from the review on #98).
+    const shared = layoutGraph(
+      graphOf(
+        [
+          post('2026-01-01-a', [
+            'S1 | credibility, accountability',
+            'S2 | credibility, accountability',
+            'S3 | credibility, accountability',
+            'O1 | scalable-secure',
+            'O2 | scalable-secure',
+          ]),
+        ],
+        known,
+      ),
+      deskLayout,
+    );
+    const length = (t: string): number => {
+      const p = shared.topics.find((q) => q.topic === t);
+      if (p === undefined) throw new Error(`no ${t}`);
+      return p.end - p.start;
+    };
+    expect(length('credibility')).toBeGreaterThan(length('scalable-secure'));
+    expect(length('accountability')).toBeGreaterThan(length('scalable-secure'));
+  });
+
+  it('keeps every line out of the middle even when two topics share many ideas', () => {
+    const many = layoutGraph(
+      graphOf(
+        [
+          post('2026-01-01-a', [
+            ...Array.from({ length: 15 }, (_, i) => `M${String(i)} | credibility, accountability`),
+            'A1 | ai-changing-work',
+            'A2 | ai-changing-work, scalable-secure',
+          ]),
+        ],
+        known,
+      ),
+      deskLayout,
+    );
+    for (const e of many.edges)
+      for (const [x, y] of pointsOf(e.d))
+        expect(Math.hypot(x, y), e.d).toBeGreaterThan(deskLayout.topicRadius * 0.9);
   });
 
   it('draws nothing but the middle when there are no ideas', () => {
