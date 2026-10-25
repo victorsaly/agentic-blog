@@ -18,7 +18,8 @@ import {
   wordCount,
   wordsFromClock,
 } from './script.js';
-import { hasFfmpeg, quickenWithFfmpeg, type Quicken } from './tempo.js';
+import { hasFfmpeg } from '../_lib/workers-ai.js';
+import { quickenWithFfmpeg, type Quicken } from './tempo.js';
 
 export const SOURCE = 'versions/short.md';
 export const MANIFEST = 'voice/short.md';

@@ -104,11 +104,12 @@ jobs:
             echo "thought=$slug" >> "$GITHUB_OUTPUT"
           fi
 
-      # The voice agent sets the reading's pace with ffmpeg, which GitHub's runner image no longer carries.
+      # The voice agent sets the reading's pace with ffmpeg, and the image agent makes every drawing black on
+      # white with it; GitHub's runner image no longer carries it.
       # Without its recommended extras, and without rebuilding the manual pages after (which alone can take
       # minutes on these runners); it says what it is doing, and it never waits more than a few minutes.
-      - name: Install ffmpeg for the voice agent
-        if: steps.pick.outputs.agent == 'voice'
+      - name: Install ffmpeg for the voice and image agents
+        if: steps.pick.outputs.agent == 'voice' || steps.pick.outputs.agent == 'image'
         timeout-minutes: 4
         run: |
           sudo rm -f /var/lib/man-db/auto-update

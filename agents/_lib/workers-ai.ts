@@ -46,6 +46,14 @@ function imageField(data: unknown): string | null {
 }
 
 /** Every pixel to pure black or pure white, so the house style holds whatever the model drew. */
+/** Whether ffmpeg can be run here: asked before anything is spent on a picture or a reading that needs it. */
+export async function hasFfmpeg(): Promise<boolean> {
+  return run('ffmpeg', ['-version']).then(
+    () => true,
+    () => false,
+  );
+}
+
 export async function toBlackOnWhite(image: Uint8Array): Promise<Uint8Array> {
   const dir = await mkdtemp(join(tmpdir(), 'agentic-image-'));
   try {
