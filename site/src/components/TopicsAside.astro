@@ -1,8 +1,9 @@
 ---
 // Why: the archive and each topic page are wide like the home page, so the list sits in the main column
-// and this side column offers the ways to narrow it: every topic with how many posts carry it (the one you
-// are on marked, for screen readers too, and the count said with its unit), a way back to all the topics
-// from a topic page, and the feed. Ruled rows, the same as the home page's.
+// and this side column offers the other ways in: every topic with how many posts carry it (the one you are
+// on marked, for screen readers too, and the count said with its unit), a way back to all the topics from a
+// topic page, and the feed. Ruled rows, the same as the home page's. On a phone the topics move to the strip
+// under the heading (TopicStrip), so here they show on a desk only.
 import type { CollectionEntry } from 'astro:content';
 import { themeCounts, themeLabel } from '../lib/themes';
 
@@ -15,10 +16,10 @@ const { thoughts, current } = Astro.props;
 const counts = themeCounts(thoughts.map((t) => t.data.themes));
 ---
 
-<aside class="side" aria-label="Narrow by topic">
+<aside class="side" aria-label="Topics and the feed">
   {
     counts.length > 0 && (
-      <nav aria-labelledby="aside-topics">
+      <nav class="topics" aria-labelledby="aside-topics">
         <h2 class="label" id="aside-topics">
           Topics
         </h2>
@@ -26,7 +27,7 @@ const counts = themeCounts(thoughts.map((t) => t.data.themes));
           {counts.map(([topic, count]) => (
             <li>
               <a href={`/topics/${topic}`} aria-current={current === topic ? 'page' : undefined}>
-                {themeLabel(topic)}
+                <span class="name">{themeLabel(topic)}</span>
                 <span class="quiet">
                   {count}
                   <span class="visually-hidden">{count === 1 ? ' thought' : ' thoughts'}</span>
@@ -36,7 +37,9 @@ const counts = themeCounts(thoughts.map((t) => t.data.themes));
           ))}
           {current !== undefined && (
             <li>
-              <a href="/topics">All topics</a>
+              <a href="/topics">
+                <span class="name">All topics</span>
+              </a>
             </li>
           )}
         </ul>
@@ -46,14 +49,13 @@ const counts = themeCounts(thoughts.map((t) => t.data.themes));
   <section>
     <h2 class="label">Follow</h2>
     <ul class="rows">
-      <li><a href="/rss.xml">RSS feed</a></li>
+      <li><a href="/rss.xml"><span class="name">RSS feed</span></a></li>
     </ul>
   </section>
 </aside>
 
 <style>
   .side {
-    flex: 1 1 17rem;
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -79,13 +81,19 @@ const counts = themeCounts(thoughts.map((t) => t.data.themes));
     font-size: 1.0625rem;
     text-decoration: none;
   }
-  .rows a:hover {
+  .rows a:hover .name {
     text-decoration: underline;
   }
-  .rows a[aria-current='page'] {
+  /* The topic you are on: its name, not its count, carries the mark. */
+  .rows a[aria-current='page'] .name {
     font-weight: 700;
     text-decoration: underline;
     text-decoration-thickness: var(--rule-strong);
     text-underline-offset: 6px;
+  }
+  @media (max-width: 61rem) {
+    .topics {
+      display: none;
+    }
   }
 </style>

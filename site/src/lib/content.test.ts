@@ -9,6 +9,7 @@ import {
   readingLabel,
   readingMinutes,
   splitFirstSentence,
+  thoughtNumbers,
   thoughtSlugOf,
 } from './content.js';
 
@@ -77,5 +78,22 @@ describe('first sentence', () => {
       first: 'One sentence, no full stop',
       rest: '',
     });
+  });
+});
+
+describe('thoughtNumbers', () => {
+  const at = (id: string, day: string) => ({ id, data: { date: new Date(day) } });
+
+  it('counts from the first thought, so a new one never renumbers the old', () => {
+    const two = [at('b', '2026-10-24'), at('a', '2026-10-23')];
+    expect(thoughtNumbers(two).get('a')).toBe(1);
+    const three = [at('c', '2026-11-01'), ...two];
+    expect(thoughtNumbers(three).get('a')).toBe(1);
+    expect(thoughtNumbers(three).get('c')).toBe(3);
+  });
+
+  it('orders thoughts from the same day by id', () => {
+    const sameDay = thoughtNumbers([at('z', '2026-10-23'), at('m', '2026-10-23')]);
+    expect([sameDay.get('m'), sameDay.get('z')]).toEqual([1, 2]);
   });
 });

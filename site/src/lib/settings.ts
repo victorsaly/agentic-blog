@@ -19,6 +19,8 @@ const settingsSchema = z.object({
     publish: z.array(z.string().min(2).max(5)).min(1),
   }),
   themes: z.array(z.string().min(1)).min(1),
+  /** One plain line per theme, keyed by the theme, for the topic pages. */
+  topics: z.record(z.string(), z.string().min(1)).default({}),
   depths: z.array(z.enum(['message', 'idea', 'road'])).length(3),
   publishing: z.object({
     index: z.boolean(),

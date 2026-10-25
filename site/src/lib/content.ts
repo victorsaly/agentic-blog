@@ -83,3 +83,16 @@ export function splitFirstSentence(text: string): { first: string; rest: string 
   if (!match?.[1]) return { first: trimmed, rest: '' };
   return { first: match[1], rest: trimmed.slice(match[0].length) };
 }
+
+/**
+ * Each thought's number, counted from the first one published, so a post keeps its number when newer ones
+ * arrive. Same-day thoughts are ordered by their id, the same tie-break the lists use.
+ */
+export function thoughtNumbers(
+  thoughts: { id: string; data: { date: Date } }[],
+): Map<string, number> {
+  const oldestFirst = [...thoughts].sort(
+    (a, b) => a.data.date.getTime() - b.data.date.getTime() || a.id.localeCompare(b.id),
+  );
+  return new Map(oldestFirst.map((t, i) => [t.id, i + 1]));
+}

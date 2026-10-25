@@ -9,7 +9,14 @@ import Page from '../layouts/Page.astro';
 import ThoughtIndex from '../components/ThoughtIndex.astro';
 import { settings } from '../lib/settings';
 import { coversBySlug, firstSectionPrint } from '../lib/covers';
-import { formatDate, leafOf, readingLabel, readingMinutes, thoughtSlugOf } from '../lib/content';
+import {
+  formatDate,
+  leafOf,
+  readingLabel,
+  readingMinutes,
+  thoughtNumbers,
+  thoughtSlugOf,
+} from '../lib/content';
 import { picturesFrom } from '../lib/pictures';
 import { themeCounts, themeLabel } from '../lib/themes';
 import ideaIcon from '../assets/icons/idea.png';
@@ -174,7 +181,7 @@ const ways = [
             <h2 class="label" id="every-label">
               Recent thoughts
             </h2>
-            <ThoughtIndex thoughts={thoughts} />
+            <ThoughtIndex thoughts={thoughts} numbers={thoughtNumbers(all)} />
             <p class="more">
               <a href="/all">
                 {all.length > NEWEST
