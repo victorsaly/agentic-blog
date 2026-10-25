@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { alignWords, clock, isListenRequest, wordAt, type TimedWord } from './read-along';
+import { alignWords, clock, isListenRequest, stepWord, wordAt, type TimedWord } from './read-along';
 
 describe('alignWords', () => {
   it('gives every letter on the page the spoken word it belongs to', () => {
@@ -35,6 +35,21 @@ describe('alignWords', () => {
   it('refuses when a word changed', () => {
     expect(alignWords(['We show it'], ['We', 'hide', 'it'])).toBeNull();
   });
+
+  it('refuses when the page splits a word the voice says whole', () => {
+    expect(alignWords(['a part'], ['apart'])).toBeNull();
+    expect(alignWords(['a ', 'part'], ['apart'])).toBeNull();
+  });
+
+  it('refuses when the page joins two words the voice says apart', () => {
+    expect(alignWords(['apart'], ['a', 'part'])).toBeNull();
+    expect(alignWords(['a', 'part'], ['a', 'part'])).toBeNull();
+  });
+
+  it('accepts two words a dash on the page holds apart', () => {
+    expect(alignWords(['well—no'], ['well', '---', 'no'])).not.toBeNull();
+    expect(alignWords(['well—no'], ['well', 'no'])).not.toBeNull();
+  });
 });
 
 describe('wordAt', () => {
@@ -54,6 +69,31 @@ describe('wordAt', () => {
   it('is none before the first word starts', () => {
     expect(wordAt([['Hi', 0.5, 1]], 0.2)).toBe(-1);
     expect(wordAt([], 1)).toBe(-1);
+  });
+});
+
+describe('stepWord', () => {
+  const words: TimedWord[] = [
+    ['We', 0.1, 0.16],
+    ['hide', 0.256, 0.64],
+    ['it', 0.8, 1],
+  ];
+
+  it('goes forward to the start of the next word', () => {
+    expect(stepWord(words, 0, 1)).toBe(0.1);
+    expect(stepWord(words, 0.3, 1)).toBe(0.8);
+    expect(stepWord(words, 0.255, 1)).toBe(0.8);
+  });
+
+  it('goes back to the start of the word being said, or the one before if it has only just begun', () => {
+    expect(stepWord(words, 0.7, -1)).toBe(0.256);
+    expect(stepWord(words, 0.8, -1)).toBe(0.256);
+    expect(stepWord(words, 0.1, -1)).toBe(0);
+  });
+
+  it('stays within the reading', () => {
+    expect(stepWord(words, 5, 1)).toBe(0.8);
+    expect(stepWord(words, 0, -1)).toBe(0);
   });
 });
 

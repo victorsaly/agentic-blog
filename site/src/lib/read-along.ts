@@ -27,7 +27,8 @@ const isLetter = (c: string): boolean => /[\p{L}\p{N}]/u.test(c);
 /**
  * For each piece of page text (a text node, in reading order), the index of the spoken word each of its
  * characters belongs to, or null for a space or a mark only one side has. Null when the page and the voice
- * disagree on any letter or digit, or the page ends before the voice does.
+ * disagree on any letter or digit, on where a word ends ("a part" against "apart"), or the page ends before
+ * the voice does.
  */
 export function alignWords(
   pieces: readonly string[],
@@ -40,6 +41,9 @@ export function alignWords(
   });
   const owners = pieces.map((piece) => new Array<number | null>(piece.length).fill(null));
   let at = 0;
+  // The word of the last letter matched, and what the page printed since: nothing, only marks, or a space.
+  let last: number | null = null;
+  let gap: 'none' | 'mark' | 'space' = 'none';
   for (const [p, piece] of pieces.entries()) {
     const owner = owners[p];
     if (!owner) continue;
@@ -47,16 +51,26 @@ export function alignWords(
     while (i < piece.length) {
       const c = piece.charAt(i);
       if (isSpace(c)) {
+        gap = 'space';
         i++;
         continue;
       }
       const f = fold(c);
       const next = said.slice(at, at + f.length);
       if (next.map((s) => s.c).join('') === f) {
-        owner[i] = next[0]?.word ?? null;
+        const word = next[0]?.word ?? null;
+        if (isLetter(c) && word !== null) {
+          // One word on one side is two on the other: a space inside a word, or none between two.
+          if (last === word && gap === 'space') return null;
+          if (last !== null && last !== word && gap === 'none') return null;
+          last = word;
+          gap = 'none';
+        } else if (gap === 'none') gap = 'mark';
+        owner[i] = word;
         at += f.length;
         i++;
       } else if (!isLetter(c)) {
+        if (gap === 'none') gap = 'mark';
         i++; // a mark on the page the voice was not given
       } else if (at < said.length && !isLetter(said[at]?.c ?? '')) {
         at++; // a mark the voice was given that the page does not print
@@ -82,6 +96,19 @@ export function wordAt(words: readonly TimedWord[], seconds: number): number {
     } else high = mid - 1;
   }
   return found;
+}
+
+/**
+ * Where a step from the keyboard lands: the start of the next word, or of the word being said (the one
+ * before it when that word has only just begun). Seconds, never before 0 or past the last word's start.
+ */
+export function stepWord(words: readonly TimedWord[], seconds: number, direction: 1 | -1): number {
+  // A little slack, so a seek that lands a hair before a word's start still counts as on that word.
+  const now = wordAt(words, seconds + 0.05);
+  const begun = seconds - (words[now]?.[1] ?? 0);
+  const target = direction > 0 ? now + 1 : begun > 0.3 ? now : now - 1;
+  if (target < 0) return 0;
+  return words[Math.min(target, words.length - 1)]?.[1] ?? seconds;
 }
 
 /** A clock a reader reads: 1:36. */

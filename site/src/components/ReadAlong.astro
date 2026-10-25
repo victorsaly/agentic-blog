@@ -2,9 +2,10 @@
 // Why: some readers would rather listen, and a post that talks is closer to how it began, as a voice note.
 // The idea opens with one row: Listen, where the reading is, how long it runs. While it plays, the word
 // being said is underlined in the text itself, so a reader can follow along or look away and just listen;
-// a word can be clicked to hear from there, and the chat can start it too ("play it"). It is said plainly
-// that the voice is an AI one. Before the row shows, the script checks that the voice says exactly the
-// words on the page; if one letter differs the row stays hidden, so a stale recording is never played.
+// a word can be clicked to hear from there (or reached word by word with the arrow keys on the scrub), and
+// the chat can start it too ("play it"). It is said plainly that the voice is an AI one. Before the row
+// shows, the script checks that the voice says exactly the words on the page; if one letter or one word
+// break differs the row stays hidden, so a stale recording is never played.
 import type { TimedWord } from '../lib/read-along';
 import { clock } from '../lib/read-along';
 
@@ -42,7 +43,7 @@ const timings = JSON.stringify(words).replace(/</g, '\\u003c');
       class="scrub"
       min="0"
       max={seconds}
-      step="1"
+      step="any"
       value="0"
       aria-label="Where in the reading"
       aria-valuetext={`0:00 of ${clock(seconds)}`}
@@ -53,7 +54,8 @@ const timings = JSON.stringify(words).replace(/</g, '\\u003c');
     </span>
   </div>
   <p class="small quiet note" data-note>
-    Read aloud word for word by an AI voice, {voice}. The word being said is underlined.
+    Read aloud word for word by an AI voice, {voice}. The word being said is underlined; the arrow
+    keys on the line step word by word.
   </p>
   <script type="application/json" data-timings set:html={timings} />
 </div>
@@ -143,7 +145,7 @@ const timings = JSON.stringify(words).replace(/</g, '\\u003c');
 
 <script>
   // Why: the row works only when the voice and the page agree word for word; see the component's why.
-  import { alignWords, clock, wordAt, type TimedWord } from '../lib/read-along';
+  import { alignWords, clock, stepWord, wordAt, type TimedWord } from '../lib/read-along';
 
   const isTimed = (value: unknown): value is TimedWord[] =>
     Array.isArray(value) &&
@@ -259,14 +261,27 @@ const timings = JSON.stringify(words).replace(/</g, '\\u003c');
 
     const show = (seconds: number): void => {
       elapsed.textContent = clock(seconds);
-      scrub.setAttribute('aria-valuetext', `${clock(seconds)} of ${clock(total)}`);
-      if (!dragging) scrub.value = String(seconds);
+      const word = words[wordAt(words, seconds)]?.[0];
+      scrub.setAttribute(
+        'aria-valuetext',
+        `${clock(seconds)} of ${clock(total)}${word ? `, “${word}”` : ''}`,
+      );
+      scrub.value = String(seconds);
     };
 
+    // One loop at a time: a seek while playing replaces the queued frame rather than adding a second loop.
     const tick = (): void => {
-      show(audio.currentTime);
+      cancelAnimationFrame(frame);
+      // While the reader drags, the scrub shows where they are going, not where the voice still is.
+      if (!dragging) show(audio.currentTime);
       light(wordAt(words, audio.currentTime));
       frame = audio.paused ? 0 : requestAnimationFrame(tick);
+    };
+
+    const seek = (seconds: number): void => {
+      audio.currentTime = seconds;
+      if (!spans) start();
+      tick();
     };
 
     const start = (): void => {
@@ -290,7 +305,6 @@ const timings = JSON.stringify(words).replace(/</g, '\\u003c');
     });
     audio.addEventListener('pause', () => {
       play.setAttribute('aria-pressed', 'false');
-      cancelAnimationFrame(frame);
       tick();
     });
     audio.addEventListener('ended', () => {
@@ -310,9 +324,19 @@ const timings = JSON.stringify(words).replace(/</g, '\\u003c');
     });
     scrub.addEventListener('change', () => {
       dragging = false;
-      audio.currentTime = Number(scrub.value);
-      if (!spans) start();
-      tick();
+      seek(Number(scrub.value));
+    });
+    // The arrow keys step from word to word, the same starts a click on a word goes to.
+    scrub.addEventListener('keydown', (event) => {
+      const direction =
+        event.key === 'ArrowRight' || event.key === 'ArrowUp'
+          ? 1
+          : event.key === 'ArrowLeft' || event.key === 'ArrowDown'
+            ? -1
+            : 0;
+      if (direction === 0 || event.altKey || event.ctrlKey || event.metaKey) return;
+      event.preventDefault();
+      seek(stepWord(words, audio.currentTime, direction));
     });
 
     // A word in the text, once the reading has begun, plays from that word.
@@ -322,9 +346,8 @@ const timings = JSON.stringify(words).replace(/</g, '\\u003c');
       if (!span || span.closest('a') || !getSelection()?.isCollapsed) return;
       const word = words[Number(span.dataset['w'])];
       if (!word) return;
-      audio.currentTime = word[1];
       if (audio.paused) start();
-      else tick();
+      seek(word[1]);
     });
 
     // The chat heard "play it": open the idea, bring the row into view, and play.
