@@ -4,7 +4,10 @@
 // words typed or pasted in, with no recording. It is React because the state drives everything on screen.
 // Nothing said or written is lost by one press: Discard asks again when there is something to lose, and
 // leaving the page while recording asks the browser to check first. A level line shows the microphone is
-// hearing. Opened with ?start=1 (the overview's Say it), it starts recording at once. Only a short status
+// hearing, and the words appear as they are heard (Nova-3, live): a preview to check he is understood, while
+// the words that land are still written down carefully from the whole recording when he stops. He can pause
+// and resume, start over (a second press, since the take is lost), and listen back to the take beside the
+// written words before sending. Opened with ?start=1 (the overview's Say it), it starts recording at once. Only a short status
 // line is announced to a screen reader, not every change on screen. A gate's answer uses it too (mode
 // answer, with deliver): the words go to the gate instead of a pull request of their own, and before sending
 // they are shown as they will read, Markdown and all. After a send it says the pull request is open only once
@@ -12,10 +15,12 @@
 import { Markdown } from './Markdown';
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { MicIcon } from './MicIcon';
+import { listenLive, type LiveListening } from './live-listen';
+import { noWords, type LiveWords } from '../lib/live-words';
 
 type Phase =
   | { kind: 'idle' }
-  | { kind: 'recording'; since: number }
+  | { kind: 'recording'; since: number; pausedAt: number | null; pausedMs: number }
   | { kind: 'uploading' }
   | { kind: 'transcribing'; key: string }
   | { kind: 'ready'; key: string; transcript: string }
@@ -186,8 +191,8 @@ function listen(stream: MediaStream, bar: React.RefObject<HTMLSpanElement | null
   }
 }
 
-function formatElapsed(since: number, now: number): string {
-  const total = Math.floor((now - since) / 1000);
+function formatElapsed(ms: number): string {
+  const total = Math.floor(Math.max(0, ms) / 1000);
   const minutes = String(Math.floor(total / 60));
   const seconds = String(total % 60).padStart(2, '0');
   return `${minutes}:${seconds}`;
@@ -257,11 +262,26 @@ export function Recorder({
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const level = useRef<HTMLSpanElement | null>(null);
   const stopListening = useRef<(() => void) | null>(null);
+  // The words as they are heard, and why there are none when the browser cannot stream them.
+  const [live, setLive] = useState<LiveWords>(noWords);
+  const [liveNote, setLiveNote] = useState<string | null>(null);
+  const listening = useRef<LiveListening | null>(null);
+  // Start over loses the take, so it waits for a second press, like Discard.
+  const [confirmingRestart, setConfirmingRestart] = useState(false);
+  // The take, kept in the page so it can be played back beside the written words.
+  const [take, setTake] = useState<string | null>(null);
+  const keep = useCallback((url: string | null) => {
+    setTake((before) => {
+      if (before !== null) URL.revokeObjectURL(before);
+      return url;
+    });
+  }, []);
   // Leaving the page part (another thought chosen, the island removed) never leaves the microphone on:
   // the recording stops without being sent, and its tracks are released.
   useEffect(
     () => () => {
       stopListening.current?.();
+      listening.current?.stop();
       const media = recorder.current;
       if (media) {
         media.onstop = null;
@@ -301,15 +321,19 @@ export function Recorder({
       media.start(1000);
       recorder.current = media;
       stopListening.current = listen(stream, level);
+      keep(null);
+      setLive(noWords);
+      setLiveNote(null);
+      listening.current = listenLive(stream, setLive, setLiveNote);
       setNow(Date.now());
-      setPhase({ kind: 'recording', since: Date.now() });
+      setPhase({ kind: 'recording', since: Date.now(), pausedAt: null, pausedMs: 0 });
     } catch (error) {
       setPhase({
         kind: 'failed',
         message: `The microphone did not open (${reasonOf(error)}). Allow it for this site in the browser's settings, then start over.`,
       });
     }
-  }, []);
+  }, [keep]);
 
   // The overview's Say it opens this page with ?start=1: recording starts at once, and the address forgets
   // it so a reload does not start another.
@@ -379,15 +403,57 @@ export function Recorder({
     if (!media) return;
     stopListening.current?.();
     stopListening.current = null;
+    listening.current?.stop();
+    listening.current = null;
     media.onstop = () => {
       media.stream.getTracks().forEach((track) => {
         track.stop();
       });
-      void upload(new Blob(chunks.current, { type: media.mimeType }));
+      const blob = new Blob(chunks.current, { type: media.mimeType });
+      keep(URL.createObjectURL(blob));
+      void upload(blob);
     };
     media.stop();
     recorder.current = null;
-  }, [upload]);
+  }, [keep, upload]);
+
+  // Paused, nothing is recorded and no words are sent; the clock stops with it.
+  const pause = useCallback(() => {
+    recorder.current?.pause();
+    listening.current?.pause();
+    setPhase((at) =>
+      at.kind === 'recording' && at.pausedAt === null ? { ...at, pausedAt: Date.now() } : at,
+    );
+  }, []);
+  const resume = useCallback(() => {
+    recorder.current?.resume();
+    listening.current?.resume();
+    setPhase((at) =>
+      at.kind === 'recording' && at.pausedAt !== null
+        ? { ...at, pausedMs: at.pausedMs + Date.now() - at.pausedAt, pausedAt: null }
+        : at,
+    );
+  }, []);
+
+  // Throws this take away, unsent, and records a new one at once.
+  const startOver = useCallback(() => {
+    setConfirmingRestart(false);
+    stopListening.current?.();
+    stopListening.current = null;
+    listening.current?.stop();
+    listening.current = null;
+    const media = recorder.current;
+    if (media) {
+      media.onstop = null;
+      if (media.state !== 'inactive') media.stop();
+      media.stream.getTracks().forEach((track) => {
+        track.stop();
+      });
+      recorder.current = null;
+    }
+    chunks.current = [];
+    void start();
+  }, [start]);
 
   const send = useCallback(async () => {
     if (phase.kind !== 'ready') return;
@@ -455,6 +521,8 @@ export function Recorder({
   const toIdle = (): void => {
     setConfirmingDiscard(false);
     setPreview(false);
+    keep(null);
+    setLive(noWords);
     setPhase({ kind: 'idle' });
   };
   // A second press on Discard when there is something to lose; the first only asks.
@@ -569,8 +637,11 @@ export function Recorder({
       {phase.kind === 'recording' && (
         <>
           <p className="elapsed">
-            <span className="visually-hidden">Recording for </span>
-            {formatElapsed(phase.since, now)}
+            <span className="visually-hidden">
+              {phase.pausedAt === null ? 'Recording for ' : 'Paused at '}
+            </span>
+            {formatElapsed((phase.pausedAt ?? now) - phase.since - phase.pausedMs)}
+            {phase.pausedAt !== null && <span className="paused"> · paused</span>}
           </p>
           <span className="level" aria-hidden="true">
             <span ref={level} />
@@ -578,11 +649,66 @@ export function Recorder({
           <button type="button" className="say-it" onClick={stop}>
             Stop
           </button>
+          <div className="row controls">
+            <button
+              type="button"
+              className="control"
+              aria-pressed={phase.pausedAt !== null}
+              onClick={phase.pausedAt === null ? pause : resume}
+            >
+              {phase.pausedAt === null ? 'Pause' : 'Resume'}
+            </button>
+            <button
+              type="button"
+              className="control discard"
+              onClick={() => {
+                if (confirmingRestart) startOver();
+                else setConfirmingRestart(true);
+              }}
+              onBlur={() => {
+                setConfirmingRestart(false);
+              }}
+            >
+              {confirmingRestart ? 'Throw this take away' : 'Start over'}
+            </button>
+          </div>
         </>
       )}
 
       {phase.kind === 'uploading' && <p>Saving the recording…</p>}
       {phase.kind === 'transcribing' && <p>Writing down what you said…</p>}
+
+      {(phase.kind === 'recording' ||
+        phase.kind === 'uploading' ||
+        phase.kind === 'transcribing') && (
+        <div className="live-words">
+          <p className="small quiet">
+            Heard so far, live. A preview: what lands is written down again, carefully, from the
+            whole recording when you stop.
+          </p>
+          {live.kept === '' && live.guess === '' ? (
+            <p className="quiet">
+              {liveNote === null
+                ? 'Listening…'
+                : `No live words: ${liveNote}. The recording goes on.`}
+            </p>
+          ) : (
+            <p>
+              {live.kept}
+              {live.guess !== '' && <span className="guess"> {live.guess}</span>}
+            </p>
+          )}
+        </div>
+      )}
+
+      {take !== null &&
+        (phase.kind === 'transcribing' || phase.kind === 'ready' || phase.kind === 'sending') && (
+          <div className="take">
+            <p className="small quiet">Listen back before you send it.</p>
+            {/* eslint-disable-next-line jsx-a11y/media-has-caption -- what was said is written out beside it */}
+            <audio controls src={take} aria-label="Your recording" />
+          </div>
+        )}
 
       {(phase.kind === 'ready' || phase.kind === 'sending') && (
         <>
