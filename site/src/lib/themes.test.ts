@@ -13,6 +13,11 @@ describe('themeLabel', () => {
     expect(themeLabel('scalable-secure', names)).toBe('Scalable and secure');
     expect(themeLabel('ai-changing-work', names)).toBe('AI changing work');
   });
+
+  it('never takes a name from the object prototype', () => {
+    expect(themeLabel('constructor', {})).toBe('Constructor');
+    expect(themeLabel('to-string', { 'scalable-secure': 'Scalable and secure' })).toBe('To string');
+  });
 });
 
 describe('themeCounts', () => {

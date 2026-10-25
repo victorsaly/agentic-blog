@@ -6,8 +6,8 @@
  * (settings.yml topic_names) wins, for a tag that cannot say it alone: "scalable-secure" is "Scalable and secure".
  */
 export function themeLabel(theme: string, names: Readonly<Record<string, string>> = {}): string {
-  const named = names[theme];
-  if (named !== undefined) return named;
+  // Only a name set in settings counts; a tag like "constructor" must not find one on Object.prototype.
+  if (Object.hasOwn(names, theme)) return names[theme] ?? theme;
   const words = theme
     .split('-')
     .map((w) => (['ai', 'ui', 'api'].includes(w) ? w.toUpperCase() : w));
