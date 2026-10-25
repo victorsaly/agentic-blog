@@ -40,6 +40,7 @@ const settingsSchema = z.object({
     image_character: z.string().min(1).optional(),
     image_reference: z.string().min(1).optional(),
     voice_id: z.string().nullable(),
+    voice_name: z.string().min(1).optional(),
   }),
   agents: z.object({
     model: z.string().min(1),

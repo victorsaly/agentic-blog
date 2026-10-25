@@ -54,7 +54,10 @@ media:
   # A photo of Victor the image agent draws from, kept on Victor's machine only (.private/ is git-ignored;
   # the repo is public). Without it, the description above is all the agent has.
   image_reference: .private/reference/victor.png
-  voice_id: null # ElevenLabs voice id once chosen; null means Chris W, which reads the short version aloud (voice agent)
+  # The ElevenLabs voice the voice agent reads the short version in: Victor's own, cloned in ElevenLabs.
+  # null means Chris W. Changing it reads every post again, and each new recording waits for review.
+  voice_id: eHHUhFBxuo0yMYCOGHks
+  voice_name: Victor Saly # what the post's Listen row calls the voice
 
 agents:
   model: claude-sonnet-5-5 # reasoning agents; override per agent in its PROMPT.md front matter

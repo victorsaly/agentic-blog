@@ -30,7 +30,11 @@ export function voiceFor(settings: Settings): Voice {
   const id = settings.media.voice_id;
   return id === null || id === defaultVoice.id
     ? defaultVoice
-    : { id, name: 'the blogger’s chosen voice', model: defaultVoice.model };
+    : {
+        id,
+        name: settings.media.voice_name ?? `${settings.site.author}’s voice`,
+        model: defaultVoice.model,
+      };
 }
 
 /** One word per line, so a changed word is one changed line in the pull request. */
@@ -39,10 +43,16 @@ export function timingsFile(words: readonly (readonly [string, number, number])[
   return new TextEncoder().encode(`{\n  "words": [\n${lines}\n  ]\n}\n`);
 }
 
-function previousFingerprint(ctx: AgentContext): string | null {
+/** What the last reading was made from: its text and its voice (a manifest without one predates the setting). */
+function previousReading(ctx: AgentContext): { hash: string | null; voiceId: string } {
   const manifest = readIfPresent(ctx, MANIFEST);
-  const hash: unknown = manifest === undefined ? undefined : matter(manifest).data['text_sha256'];
-  return typeof hash === 'string' ? hash : null;
+  const data = manifest === undefined ? {} : matter(manifest).data;
+  const hash: unknown = data['text_sha256'];
+  const voiceId: unknown = data['voice_id'];
+  return {
+    hash: typeof hash === 'string' ? hash : null,
+    voiceId: typeof voiceId === 'string' ? voiceId : defaultVoice.id,
+  };
 }
 
 const onDisk = (dir: string) => (path: string) =>
@@ -84,18 +94,21 @@ export function makeRun(deps: VoiceDeps): AgentRun {
       };
 
     const hash = fingerprint(text);
+    const voice = voiceFor(ctx.settings);
+    const previous = previousReading(ctx);
     if (
-      previousFingerprint(ctx) === hash &&
+      previous.hash === hash &&
+      previous.voiceId === voice.id &&
       (await deps.exists(ctx, AUDIO)) &&
       (await deps.exists(ctx, TIMINGS))
     )
       return {
         status: 'nothing-to-do',
-        summary: 'The short version has not changed since it was last read; the audio stands.',
+        summary:
+          'Neither the short version nor the voice has changed since it was last read; the audio stands.',
         files: [],
       };
 
-    const voice = voiceFor(ctx.settings);
     const speech = deps.synthesise
       ? await deps.synthesise(text, voice)
       : await ctx.speak(text, { id: voice.id, model: voice.model });

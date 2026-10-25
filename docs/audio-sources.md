@@ -69,11 +69,11 @@ to ElevenLabs and writes `short.mp3`, `short.json` (the start and end, in second
 Actions on the `agent:voice` label and needs the `ELEVENLABS_API_KEY` secret; the site's build still never
 calls ElevenLabs.
 
-|       |                                                                                                     |
-| ----- | --------------------------------------------------------------------------------------------------- |
-| Model | `eleven_v3`                                                                                         |
-| Voice | "Chris W" (`hoSRtERLhFa8UfJ6P1JP`) unless `settings.yml` → `media.voice_id` names another           |
-| Redo  | only when the spoken text changes (its fingerprint differs) or a file is missing; otherwise skipped |
+|       |                                                                                                                          |
+| ----- | ------------------------------------------------------------------------------------------------------------------------ |
+| Model | `eleven_v3`                                                                                                              |
+| Voice | Victor's own, cloned in ElevenLabs (`eHHUhFBxuo0yMYCOGHks`), set in `settings.yml` → `media.voice_id`; Chris W when null |
+| Redo  | only when the spoken text changes (its fingerprint differs) or a file is missing; otherwise skipped                      |
 
 Victor listens to the audio in the pull request before merging; `reviewed: false` in `short.md` is flipped by
 hand when he has.

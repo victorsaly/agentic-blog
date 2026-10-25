@@ -112,6 +112,21 @@ describe('voice agent', () => {
     expect(voice.calls).toEqual([]);
   });
 
+  it('reads again when the settings choose another voice', async () => {
+    const source = shortVersion('Same words.');
+    const hash = fingerprint(spokenText(source, 'blog.victorsaly.com'));
+    const voice = fakeVoice();
+    const ctx = context({
+      [SOURCE]: source,
+      [MANIFEST]: `---\nwhy: Read aloud once.\ntext_sha256: ${hash}\nvoice_id: hoSRtERLhFa8UfJ6P1JP\n---\n`,
+    });
+    await makeRun({ synthesise: voice.synthesise, exists: everythingThere })({
+      ...ctx,
+      settings: { ...settings, media: { ...settings.media, voice_id: 'abc123' } },
+    });
+    expect(voice.calls).toHaveLength(1);
+  });
+
   it('reads again when the text changed, or when the audio is gone', async () => {
     const source = shortVersion('New words.');
     const manifest = `---\nwhy: Read aloud once.\ntext_sha256: ${fingerprint('Old words.')}\n---\n`;
@@ -206,5 +221,7 @@ describe('voiceFor', () => {
     expect(voiceFor(settings).name).toBe('Chris W');
     const other = { ...settings, media: { ...settings.media, voice_id: 'abc123' } };
     expect(voiceFor(other).id).toBe('abc123');
+    const named = { ...settings, media: { ...other.media, voice_name: 'Victor Saly' } };
+    expect(voiceFor(named).name).toBe('Victor Saly');
   });
 });

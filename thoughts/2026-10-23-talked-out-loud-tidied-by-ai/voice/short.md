@@ -8,12 +8,12 @@ read_from: versions/short.md
 language: en
 audio: short.mp3
 timings: short.json
-voice: Chris W
-voice_id: hoSRtERLhFa8UfJ6P1JP
+voice: Victor Saly
+voice_id: eHHUhFBxuo0yMYCOGHks
 model: eleven_v3
 text_sha256: c3caef70292ab50db57afdb5480e50288c4effc5af984d9a6eba4625c5e6d1c3
 words: 215
-seconds: 80
+seconds: 104.08
 made: '2026-10-25'
 reviewed: false
 ---
