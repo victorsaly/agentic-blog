@@ -25,12 +25,15 @@
     // Comments: three a minute per visitor, again in memory only.
     { "name": "COMMENT_LIMIT", "namespace_id": "1002", "simple": { "limit": 3, "period": 60 } },
   ],
-  // Reader comments. No database_id on purpose: `wrangler deploy` creates the database the first time and
-  // remembers it. Apply the table once afterwards: `npx wrangler d1 migrations apply COMMENTS_DB --remote`.
+  // Reader comments. The database exists already (created 2026-10-25, 0001_comments.sql applied), and its id
+  // is pinned so the deploy token needs no D1 permission: without an id, wrangler looks the database up by
+  // name on every deploy, and the token is refused. A new migration: `npx wrangler d1 migrations apply
+  // COMMENTS_DB --remote`, run by hand with an account that can edit D1.
   "d1_databases": [
     {
       "binding": "COMMENTS_DB",
       "database_name": "agentic-blog-comments",
+      "database_id": "1f67a92b-840f-4d59-9d88-e948340cf317",
       "migrations_dir": "migrations",
     },
   ],
