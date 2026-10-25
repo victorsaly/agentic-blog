@@ -12,7 +12,7 @@
       "question": "What questions did the interview agent ask Victor about the competence post, and did he answer them?",
       "mentions": [
         "Kurzweil|productive friction|judging|daughter",
-        "not (been )?answered|unanswered|no answer|(hasn't|has not|haven't|have not) (been )?answered"
+        "not (been )?answered|unanswered|no answer|none (of them )?(have |has |had )?(been )?answered|(hasn't|has not|haven't|have not) (been )?answered"
       ]
     },
     {
