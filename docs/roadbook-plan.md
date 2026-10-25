@@ -163,21 +163,17 @@ asking. The runner does not stream text yet (`node.delta`); the timeline joins i
   broken chain is refused with a plain message.
 - Good for: Opus or Fable (touches the runner and adds an endpoint that writes).
 
-#### Slice 8: questions that wait (needs its own plan first)
+#### Slice 8: questions that wait (planned in `docs/questions-plan.md`)
 
-This is the runtime under Later, made concrete by what Slice 7 shows Victor actually wants to answer.
-
-- One Cloudflare Agent (Durable Object) per run. On `gate.opened` the run pauses; Victor answers in the
-  studio; `gate.closed` records who decided and the run goes on. Today a question can only end in a hold.
-- Start an agent from the studio ("run structure on this thought") instead of a pull request label.
-- WebSockets from the run to the studio, replacing polling.
-- Check first: Durable Objects may need the Workers Paid plan; agents moving from Actions to Workers
-  changes where secrets and time limits live.
+A gate is a run that waits: when an agent finishes, the gates after it open as runs in `needs-you`. Victor
+answers in the studio, a workflow records it in git, and the next agents start. Agents stay on GitHub
+Actions. Durable Objects and Workflows both run on Workers Free (checked 25 October 2026), but
+orchestration on Cloudflare is Slice 8e, decided after living with 8a–8d. Merge happens in the studio
+(8d), by Victor's press, never an agent's.
 
 ### Later (each needs its own plan before work starts)
 
-- Runtime: one Cloudflare Agent (Durable Object) per run; gates become states the studio shows as
-  "needs you". Slice 8 is its first step.
+- Runtime on Cloudflare: see Slice 8e in `docs/questions-plan.md`.
 - `roadbook build` and `deploy` for the owner's own Cloudflare account.
 - The builder and an MCP server, so Claude can edit a project through `validate`.
 - The second project on the framework: bug fixing.
