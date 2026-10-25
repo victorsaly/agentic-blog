@@ -190,6 +190,57 @@ describe('withLive', () => {
     expect(a && standingOf(a, agents).state).toBe('held');
   });
 
+  // From the review on #99 (issue #101).
+  it('keeps the ledger ending for the same run when the live copy missed its end', () => {
+    const [a] = withLive(
+      built,
+      [
+        live({
+          id: '20261025T090000Z-structure-0001',
+          agent: 'structure',
+          state: 'running',
+          runs: 3,
+        }),
+      ],
+      agents,
+    );
+    expect(a?.cells[0]).toMatchObject({ ended: 'done', runs: 3 });
+    expect(a && standingOf(a, agents).state).toBe('moving');
+  });
+
+  it('says a run waiting on Victor needs him, not that it is running', () => {
+    const [a] = withLive(built, [live({ state: 'needs-you' })], agents);
+    expect(a?.cells[1]?.ended).toBe('waiting');
+    expect(a && standingOf(a, agents)).toMatchObject({ state: 'waiting', at: 'safety' });
+  });
+
+  it('says an agent that ended idle (not built yet) did not run', () => {
+    const [a] = withLive(built, [live({ state: 'idle' })], agents);
+    expect(a?.cells[1]?.ended).toBe('not-run');
+    expect(a && standingOf(a, agents).state).toBe('moving');
+  });
+
+  it('keeps the larger live run count when its newest run is older than the ledger', () => {
+    const [a] = withLive(
+      built,
+      [live({ id: '20261024T090000Z-structure-0000', agent: 'structure', state: 'held', runs: 3 })],
+      agents,
+    );
+    expect(a?.cells[0]).toMatchObject({ ended: 'done', runs: 3 });
+  });
+
+  it('puts a thought waiting on Victor before one with an agent running', () => {
+    const [a] = withLive(
+      built,
+      [
+        live({ state: 'needs-you' }),
+        live({ id: '20261025T130000Z-structure-0003', agent: 'structure', state: 'running' }),
+      ],
+      agents,
+    );
+    expect(a && standingOf(a, agents)).toMatchObject({ state: 'waiting', at: 'safety' });
+  });
+
   it('adds a thought the deploy has not seen yet, under its folder name, newest first', () => {
     const rows = withLive(built, [live({ thought: '2026-10-25-new' })], agents);
     expect(rows.map((r) => [r.slug, r.title])).toEqual([
