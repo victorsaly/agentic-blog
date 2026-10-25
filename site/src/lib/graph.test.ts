@@ -76,6 +76,11 @@ describe('smallIdeasOf', () => {
     ).toThrow('small idea 2: "crediblity" is not a topic');
   });
 
+  it('reads a table with no outer pipes at all, known by its separator row', () => {
+    const body = `## Small ideas\n\nThis | that, said plainly.\n\nIdea | Themes\n--- | ---\nOne | credibility\nTwo | accountability\n`;
+    expect(smallIdeasOf(body, known, 'f').map((r) => r.text)).toEqual(['One', 'Two']);
+  });
+
   it('refuses a row with an extra column instead of dropping it', () => {
     expect(() => smallIdeasOf(table('| One | credibility | accountability |'), known, 'f')).toThrow(
       'small idea 1: the row has 3 cells, not 2',

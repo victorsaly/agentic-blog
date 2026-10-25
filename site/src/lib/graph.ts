@@ -66,15 +66,23 @@ export function smallIdeasOf(body: string, known: readonly string[], file: strin
   const start = lines.findIndex((line) => heading.test(line.trim()));
   if (start === -1) return [];
 
-  // Every line under the heading with a pipe in it is a table row, with or without outer pipes.
-  // The table is the first run of lines with a pipe under the heading: it ends at any heading or at the
-  // first blank line after it, so a later table or a sentence with a pipe in it is not read as ideas.
+  // The table starts at the first line with a pipe that either begins with one or sits on a separator row
+  // (a table may leave out its outer pipes), so a sentence with a pipe in it above the table is not read
+  // as its header. Every line with a pipe after that is a row; the table ends at any heading or at the
+  // first blank line, so a later table is not read as ideas.
+  const under = lines.slice(start + 1);
+  const isRule = (line: string | undefined): boolean => {
+    if (line === undefined || !unescapedPipe.test(line)) return false;
+    const cells = cellsOf(line);
+    return cells.length > 1 && cells.every((cell) => delimiter.test(cell));
+  };
   const section: string[] = [];
-  for (const line of lines.slice(start + 1)) {
+  for (const [i, line] of under.entries()) {
     if (/^#{1,6}\s/.test(line)) break;
-    if (unescapedPipe.test(line) && line.trim().startsWith('|')) section.push(line);
-    else if (unescapedPipe.test(line) && section.length > 0) section.push(line);
-    else if (line.trim() === '' && section.length > 0) break;
+    const piped = unescapedPipe.test(line);
+    if (section.length > 0 && piped) section.push(line);
+    else if (section.length > 0 && line.trim() === '') break;
+    else if (piped && (line.trim().startsWith('|') || isRule(under[i + 1]))) section.push(line);
   }
 
   // The first row is the header and the second the separator; neither is an idea.

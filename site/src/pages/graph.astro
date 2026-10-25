@@ -176,6 +176,7 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
           </p>
           <figure
             id="graph"
+            tabindex="-1"
             aria-label={`A graph of ${String(graph.topics.length)} topics and ${ideasLabel(graph.ideas.length).toLowerCase()}; the same is listed beside it.`}
           >
             <div class="stage">
@@ -685,6 +686,7 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
   if (input && input.value !== '') applyFilter(input.value);
 
   // Keep.
+  const figure = document.querySelector<HTMLElement>('#graph');
   const stage = document.querySelector<HTMLElement>('.stage');
   const panel = document.querySelector<HTMLElement>('[data-pin]');
   const pinText = panel?.querySelector<HTMLElement>('[data-pin-text]');
@@ -711,13 +713,16 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
     const was = kept;
     kept?.removeAttribute('data-pinned');
     kept = null;
-    // Focus inside the panel goes back to the same idea in the list, not to the dot, which is hidden from
-    // assistive tech; or to where the reader was, if the idea is not in view in the list.
+    // Focus inside the panel goes back to the same idea in the list (a shared idea is listed under each of
+    // its topics, and some sit in a closed "Show all"), not to the dot, which is hidden from assistive tech;
+    // else to where the reader was, if that was more than the page itself; else to the picture.
     if (was && panel?.contains(document.activeElement)) {
-      const row = document.querySelector<HTMLAnchorElement>(
+      const rows = document.querySelectorAll<HTMLAnchorElement>(
         `.list [data-item="${CSS.escape(was.dataset.idea ?? '')}"] a`,
       );
-      (row?.checkVisibility() ? row : before)?.focus({ preventScroll: true });
+      const row = [...rows].find((a) => a.checkVisibility());
+      const back = before && before !== document.body && before.isConnected ? before : null;
+      (row ?? back ?? figure)?.focus({ preventScroll: true });
     }
     for (const picture of pictures) {
       picture.classList.remove('pinned');
@@ -778,7 +783,11 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
   // says which idea it asks about, so a screen reader does not hear thirty-six identical buttons.
   const chat = document.querySelector('.ask-open') !== null;
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-ask-idea]')) {
-    if (!chat) continue;
+    // No chat (a private build): no button asks it, the kept panel's included.
+    if (!chat) {
+      button.hidden = true;
+      continue;
+    }
     const named = (): void => {
       const text = texts.get(button.dataset.askIdea ?? '') ?? '';
       if (text) button.setAttribute('aria-label', `Ask about this: ${text}`);
@@ -801,13 +810,14 @@ const css = `${focusing}${pinnedRules}@media (hover:none),(pointer:coarse){${rul
   }
 
   // "Back to the graph" keeps the topic the reader opened lit: it scrolls to the picture without
-  // changing the address, so #t-topic still names the topic.
+  // changing the address, so #t-topic still names the topic, and takes the keyboard there too, so the next
+  // Tab starts from the picture and not from the bottom of the topic just left.
   for (const back of document.querySelectorAll<HTMLAnchorElement>('.back a')) {
     back.addEventListener('click', (event) => {
-      const picture = document.querySelector('#graph');
-      if (!picture) return;
+      if (!figure) return;
       event.preventDefault();
-      picture.scrollIntoView({ block: 'start' });
+      figure.scrollIntoView({ block: 'start' });
+      figure.focus({ preventScroll: true });
     });
   }
 </script>
