@@ -14,7 +14,8 @@ message: >
 origins:
   - origin/transcript.md
   - origin/answers.md
-draft: true
+number: 3
+draft: false
 ---
 
 ## The idea
