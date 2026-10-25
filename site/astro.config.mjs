@@ -38,8 +38,8 @@ export default defineConfig({
     // thoughts/ sits one level above the site so the content and the code share one history
     server: {
       fs: { allow: ['..'] },
-      // In development the reader chat's endpoint runs in the local Worker (npm run worker:dev, port 8787).
-      proxy: { '/ask': 'http://localhost:8787' },
+      // In development the reader chat's and the comments' endpoints run in the local Worker (npm run worker:dev, port 8787).
+      proxy: { '/ask': 'http://localhost:8787', '/comments': 'http://localhost:8787' },
     },
   },
 });
