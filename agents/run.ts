@@ -45,6 +45,7 @@ import {
 } from './_lib/context.js';
 import { writeOutputs } from './_lib/files.js';
 import { liveFromEnv } from './_lib/live.js';
+import { withLock } from './_lib/lock.js';
 import { agentNames, type AgentContext, type AgentName, type AgentRun } from './_lib/types.js';
 
 function isAgentName(value: string): value is AgentName {
@@ -223,28 +224,32 @@ async function main(): Promise<void> {
     await live.flush();
   }
 
-  // The gates after this step that are now ready open as runs of their own, after this run is saved.
+  // The gates after this step that are now ready open as runs of their own, after this run is saved. Only a
+  // run that did work opens them: with nothing to do (the answers are already in, say), nothing changed for a
+  // gate to ask about. Deciding and opening happen under the thought's lock, from the ledger read again inside
+  // it (this run included), so two runs at once never open the same gate twice.
   const opened: string[] = [];
-  // Only a run that did work opens them: with nothing to do (the answers are already in, say), nothing changed
-  // for a gate to ask about.
   const workflow = project.default.workflows.find((w) => w.id === 'blog-post');
   if (workflow && result.status === 'done') {
-    const runs = [...past.runs, { id: run, events: ledger.events }];
-    for (const gate of gatesToOpen(workflow, node, runs)) {
-      try {
-        const id = runId(new Date(), gate.id);
-        const reporter = liveFromEnv(id, slug, process.env);
-        const waiting = new Ledger({ onAppend: reporter.hear });
-        for (const body of gateOpening(gate, origin, startedBy(process.env)))
-          await waiting.append(body);
-        await saveRun(thought.dir, id, waiting);
-        await reporter.flush();
-        opened.push(gate.id);
-      } catch (error: unknown) {
-        // The agent's work stands; the gate can be opened by running it again.
-        const reason = error instanceof Error ? error.message : String(error);
-        console.error(`the ${gate.id} gate did not open: ${reason}`);
-      }
+    try {
+      await withLock(resolve(thought.dir), async () => {
+        const now = await readRuns(thought.dir, `thoughts/${slug}`);
+        if (now.issues.length > 0) throw new LedgerError(`refused: ${now.issues.join(' ')}`);
+        for (const gate of gatesToOpen(workflow, node, now.runs)) {
+          const id = runId(new Date(), gate.id);
+          const reporter = liveFromEnv(id, slug, process.env);
+          const waiting = new Ledger({ onAppend: reporter.hear });
+          for (const body of gateOpening(gate, origin, startedBy(process.env)))
+            await waiting.append(body);
+          await saveRun(thought.dir, id, waiting);
+          await reporter.flush();
+          opened.push(gate.id);
+        }
+      });
+    } catch (error: unknown) {
+      // The agent's work stands; the gates open when the agent runs again.
+      const reason = error instanceof Error ? error.message : String(error);
+      console.error(`gates after ${node} did not open: ${reason}`);
     }
   }
 
