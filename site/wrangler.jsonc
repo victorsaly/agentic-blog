@@ -10,7 +10,7 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "404-page",
-    "run_worker_first": ["/api/*", "/ask"]
+    "run_worker_first": ["/api/*", "/ask", "/comments/*"],
   },
   "routes": [{ "pattern": "blog.victorsaly.com", "custom_domain": true }],
   // Only the custom domain serves the site. workers.dev and preview URLs sit outside Cloudflare Access,
@@ -20,9 +20,24 @@
   "r2_buckets": [{ "binding": "AUDIO", "bucket_name": "agentic-blog-audio" }],
   "ai": { "binding": "AI" },
   // The reader chat's burst limit: five questions a minute per visitor, counted in Cloudflare's memory only.
-  "ratelimits": [{ "name": "CHAT_LIMIT", "namespace_id": "1001", "simple": { "limit": 5, "period": 60 } }],
-  "vars": { "GITHUB_REPO": "victorsaly/agentic-blog" },
-  "observability": { "enabled": true }
+  "ratelimits": [
+    { "name": "CHAT_LIMIT", "namespace_id": "1001", "simple": { "limit": 5, "period": 60 } },
+    // Comments: three a minute per visitor, again in memory only.
+    { "name": "COMMENT_LIMIT", "namespace_id": "1002", "simple": { "limit": 3, "period": 60 } },
+  ],
+  // Reader comments. No database_id on purpose: `wrangler deploy` creates the database the first time and
+  // remembers it. Apply the table once afterwards: `npx wrangler d1 migrations apply COMMENTS_DB --remote`.
+  "d1_databases": [
+    {
+      "binding": "COMMENTS_DB",
+      "database_name": "agentic-blog-comments",
+      "migrations_dir": "migrations",
+    },
+  ],
+  // The Turnstile site key is public by design; the secret is not (see below).
+  "vars": { "GITHUB_REPO": "victorsaly/agentic-blog", "TURNSTILE_SITE_KEY": "" },
+  "observability": { "enabled": true },
   // Secrets: GITHUB_TOKEN (`npx wrangler secret put GITHUB_TOKEN`, fine-grained, contents: write, this repo
-  // only) and ANTHROPIC_API_KEY for the reader chat (a key with a spend limit set in the Anthropic console).
+  // only), ANTHROPIC_API_KEY for the reader chat (a key with a spend limit set in the Anthropic console), and
+  // TURNSTILE_SECRET for the comment form (from the Turnstile widget in the Cloudflare dashboard).
 }

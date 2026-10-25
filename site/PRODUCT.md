@@ -35,7 +35,8 @@ A blog where every post starts as a raw voice or text note (the origin, never ed
 - Drawings: linocut prints in black and white, generated per post and reviewed; Victor is the recurring drawn person. In dark mode drawings stay ink on paper, dimmed, on a paper margin; inverting turned faces dark and hair white. Small icons invert.
 - Font switch (Atkinson Hyperlegible to Lexend) and theme switch (light and dark) in the header.
 - Private by default: robots are kept out until Victor flips `index: true`.
-- Undecided: whether readers can talk back (chat with readers) and what privacy that implies; publishing languages beyond English; a reader voice version.
+- Readers can comment on a post: a name, an optional email only Victor sees, and the words. Every comment waits for Victor's approval in the studio before anyone sees it. Spam is stopped with Turnstile, a rate limit and a hidden field, not with tracking. Kept: name, comment, email if given; removal on request to info@victorsaly.com.
+- Undecided: replies to comments; publishing languages beyond English; a reader voice version.
 
 ## Brand Commitments
 

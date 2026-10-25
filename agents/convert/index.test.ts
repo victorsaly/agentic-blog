@@ -32,6 +32,7 @@ function contextWith(languages: string[], social: string[]): AgentContext {
         ok: false,
         reason: 'not in a test',
       }),
+    speak: () => Promise.reject(new Error('convert speaks nothing')),
     today: '2026-10-23',
   };
 }

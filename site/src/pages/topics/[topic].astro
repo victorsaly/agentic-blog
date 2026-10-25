@@ -1,0 +1,50 @@
+---
+// Why: one page per topic, listing every post that carries it, message first, with the other topics beside
+// the list. A topic with no published post has no page, so a reader never lands on an empty list.
+import { getCollection } from 'astro:content';
+import Page from '../../layouts/Page.astro';
+import ListHead from '../../components/ListHead.astro';
+import ThoughtList from '../../components/ThoughtList.astro';
+import TopicsAside from '../../components/TopicsAside.astro';
+import { themeCounts, themeLabel, thoughtsLabel } from '../../lib/themes';
+
+export async function getStaticPaths() {
+  const thoughts = await getCollection('thoughts', ({ data }) => !data.draft);
+  return themeCounts(thoughts.map((t) => t.data.themes)).map(([topic]) => ({ params: { topic } }));
+}
+
+const { topic } = Astro.params;
+const all = (await getCollection('thoughts', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime() || b.id.localeCompare(a.id),
+);
+const thoughts = all.filter((t) => t.data.themes.includes(topic));
+const label = themeLabel(topic);
+---
+
+<Page
+  title={`${label} — Topics`}
+  description={`Every thought about ${label.toLowerCase()}.`}
+  width="wide"
+>
+  <ListHead label="Topic" title={label} note={`${thoughtsLabel(thoughts.length)} on this topic.`} />
+  <div class="frame body">
+    <section class="main" aria-labelledby="topic-list">
+      <h2 class="label" id="topic-list">Newest first</h2>
+      <ThoughtList thoughts={thoughts} current={topic} />
+    </section>
+    <TopicsAside thoughts={all} current={topic} />
+  </div>
+</Page>
+
+<style>
+  .body {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-6);
+    padding-top: var(--space-5);
+  }
+  .main {
+    flex: 999 1 36rem;
+    min-width: 0;
+  }
+</style>

@@ -1,0 +1,91 @@
+---
+// Why: the archive and each topic page are wide like the home page, so the list sits in the main column
+// and this side column offers the ways to narrow it: every topic with how many posts carry it (the one you
+// are on marked, for screen readers too, and the count said with its unit), a way back to all the topics
+// from a topic page, and the feed. Ruled rows, the same as the home page's.
+import type { CollectionEntry } from 'astro:content';
+import { themeCounts, themeLabel } from '../lib/themes';
+
+interface Props {
+  thoughts: CollectionEntry<'thoughts'>[];
+  current?: string;
+}
+
+const { thoughts, current } = Astro.props;
+const counts = themeCounts(thoughts.map((t) => t.data.themes));
+---
+
+<aside class="side" aria-label="Narrow by topic">
+  {
+    counts.length > 0 && (
+      <nav aria-labelledby="aside-topics">
+        <h2 class="label" id="aside-topics">
+          Topics
+        </h2>
+        <ul class="rows">
+          {counts.map(([topic, count]) => (
+            <li>
+              <a href={`/topics/${topic}`} aria-current={current === topic ? 'page' : undefined}>
+                {themeLabel(topic)}
+                <span class="quiet">
+                  {count}
+                  <span class="visually-hidden">{count === 1 ? ' thought' : ' thoughts'}</span>
+                </span>
+              </a>
+            </li>
+          ))}
+          {current !== undefined && (
+            <li>
+              <a href="/topics">All topics</a>
+            </li>
+          )}
+        </ul>
+      </nav>
+    )
+  }
+  <section>
+    <h2 class="label">Follow</h2>
+    <ul class="rows">
+      <li><a href="/rss.xml">RSS feed</a></li>
+    </ul>
+  </section>
+</aside>
+
+<style>
+  .side {
+    flex: 1 1 17rem;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+  .label {
+    margin-top: 0;
+  }
+  .rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-width: none;
+  }
+  .rows li {
+    border-bottom: var(--rule-width) solid var(--ink);
+  }
+  .rows a {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 3rem;
+    font-size: 1.0625rem;
+    text-decoration: none;
+  }
+  .rows a:hover {
+    text-decoration: underline;
+  }
+  .rows a[aria-current='page'] {
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-thickness: var(--rule-strong);
+    text-underline-offset: 6px;
+  }
+</style>

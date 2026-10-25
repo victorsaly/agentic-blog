@@ -11,6 +11,13 @@ export interface Env {
   ANTHROPIC_API_KEY?: string;
   /** Cloudflare's in-memory rate limiter for the chat: a burst limit per visitor, nothing stored. */
   CHAT_LIMIT?: { limit: (options: { key: string }) => Promise<{ success: boolean }> };
+  /** Reader comments. Missing until the database is created and bound; every comment route then says so plainly. */
+  COMMENTS_DB?: D1Database;
+  /** A burst limit per visitor on posting a comment, counted in Cloudflare's memory only. */
+  COMMENT_LIMIT?: { limit: (options: { key: string }) => Promise<{ success: boolean }> };
+  /** Turnstile's secret, a Worker secret; the public site key is the plain variable below. */
+  TURNSTILE_SECRET?: string;
+  TURNSTILE_SITE_KEY?: string;
   ASSETS: { fetch: (input: URL | Request | string) => Promise<Response> };
   /** Set to "1" in .dev.vars only. wrangler never deploys that file, so production never sees it. */
   DEV_SKIP_ACCESS?: string;

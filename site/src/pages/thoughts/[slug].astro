@@ -15,6 +15,7 @@ import HowMade from '../../components/HowMade.astro';
 import { join } from 'node:path';
 import { readRuns } from '@roadbook/core/node';
 import { howMade } from '../../lib/how-made';
+import { Comments } from '../../islands/Comments';
 import ReadAlong from '../../components/ReadAlong.astro';
 import { z } from 'astro/zod';
 import ideaIcon from '../../assets/icons/idea.png';
@@ -443,6 +444,10 @@ const pad = (n: number): string => String(n).padStart(2, '0');
           }
         </div>
       </aside>
+    </div>
+
+    <div class="frame" data-pagefind-ignore>
+      <Comments client:load slug={slug} />
     </div>
 
     <section class="frame end" aria-labelledby="end-label" data-pagefind-ignore>
