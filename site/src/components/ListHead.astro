@@ -2,19 +2,22 @@
 // Why: the archive, the topics page and each topic page open the way the home page does, at full width: a
 // heavy rule, a small label saying where you are (with a link one level up when there is one, so a topic
 // page is one tap from all the topics), the name set large, and one quiet line of what is below. No rule
-// closes it: the labelled section underneath opens with its own strong rule.
+// closes it: the labelled section underneath opens with its own strong rule. A page whose subject is a
+// picture (the graph) asks for the compact head, so the picture is in the first screen.
 interface Props {
   label: string;
   title: string;
   note: string;
   /** The page one level up, shown before the label as a link: "Topics / Accountability". */
   parent?: { href: string; name: string };
+  /** A smaller name and less air above it, for a page where something below must reach the first screen. */
+  compact?: boolean;
 }
 
-const { label, title, note, parent } = Astro.props;
+const { label, title, note, parent, compact = false } = Astro.props;
 ---
 
-<header class="frame head">
+<header class:list={['frame head', { compact }]}>
   <p class="label-plain">
     {
       parent && (
@@ -60,5 +63,16 @@ const { label, title, note, parent } = Astro.props;
     margin: var(--space-4) 0 0;
     max-width: 60ch;
     font-size: 1.3125rem;
+  }
+  .compact {
+    padding-top: var(--space-4);
+  }
+  .compact h1 {
+    font-size: clamp(2rem, 1.5rem + 1.6vw, 2.75rem);
+    line-height: 1.05;
+  }
+  .compact .note {
+    margin-top: var(--space-3);
+    font-size: var(--size-body);
   }
 </style>

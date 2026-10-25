@@ -66,11 +66,23 @@ export function smallIdeasOf(body: string, known: readonly string[], file: strin
   const start = lines.findIndex((line) => heading.test(line.trim()));
   if (start === -1) return [];
 
-  // Every line under the heading with a pipe in it is a table row, with or without outer pipes.
+  // The table starts at the first line with a pipe that either begins with one or sits on a separator row
+  // (a table may leave out its outer pipes), so a sentence with a pipe in it above the table is not read
+  // as its header. Every line with a pipe after that is a row; the table ends at any heading or at the
+  // first blank line, so a later table is not read as ideas.
+  const under = lines.slice(start + 1);
+  const isRule = (line: string | undefined): boolean => {
+    if (line === undefined || !unescapedPipe.test(line)) return false;
+    const cells = cellsOf(line);
+    return cells.length > 1 && cells.every((cell) => delimiter.test(cell));
+  };
   const section: string[] = [];
-  for (const line of lines.slice(start + 1)) {
-    if (/^#{1,2}\s/.test(line)) break;
-    if (unescapedPipe.test(line)) section.push(line);
+  for (const [i, line] of under.entries()) {
+    if (/^#{1,6}\s/.test(line)) break;
+    const piped = unescapedPipe.test(line);
+    if (section.length > 0 && piped) section.push(line);
+    else if (section.length > 0 && line.trim() === '') break;
+    else if (piped && (line.trim().startsWith('|') || isRule(under[i + 1]))) section.push(line);
   }
 
   // The first row is the header and the second the separator; neither is an idea.
@@ -121,8 +133,17 @@ export function smallIdeasOf(body: string, known: readonly string[], file: strin
  * idea of every published post, an edge from the core to each topic and from each idea to each of its topics.
  * Posts are taken in slug order, so the same posts always give the same graph.
  */
+/** A thought's folder name and a topic: lowercase words joined by hyphens. */
+export const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
 export function graphOf(posts: readonly GraphPost[], known: readonly string[]): Graph {
   const published = posts.filter((p) => !p.draft).sort((a, b) => a.slug.localeCompare(b.slug));
+  // A post's folder name becomes part of every idea's id, an address and a selector: it must be plain.
+  for (const p of published)
+    if (!SLUG.test(p.slug))
+      throw new Error(
+        `thoughts/${p.slug}: a thought's folder is lowercase words joined by hyphens`,
+      );
 
   const ideas: GraphIdea[] = published.flatMap((post) =>
     smallIdeasOf(post.body, known, `thoughts/${post.slug}/structure.md`).map((row, index) => ({

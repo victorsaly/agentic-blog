@@ -33,9 +33,10 @@ export const card = defineAgentCard({
   ],
   qualityBar: { approvedWithoutRewrite: 0.8 },
   model: { default: 'writer', allowed: ['writer'] },
-  budget: { usdPerRun: 0.15, secondsPerRun: 240 },
+  // A real run on 2026-10-25 cost $0.35: the search results it reads are most of it (about 97,000 tokens).
+  budget: { usdPerRun: 0.4, secondsPerRun: 240 },
   behaviour: optionalStep(),
-  metrics: standardMetrics(0.8, 0.15),
+  metrics: standardMetrics(0.8, 0.4),
   variables: {
     maxSources: {
       type: 'number',
@@ -45,6 +46,6 @@ export const card = defineAgentCard({
   },
   data: { sends: ['text'] },
   owner: 'Victor Saly',
-  version: '1.0.0',
+  version: '1.1.0',
   stage: 'active',
 });

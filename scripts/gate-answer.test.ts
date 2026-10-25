@@ -14,7 +14,6 @@ import {
   numberOf,
   numbersFromGrep,
   publishedStructure,
-  publishesOnClose,
 } from './gate-answer';
 
 describe('the answer as an origin', () => {
@@ -97,12 +96,6 @@ describe('approving the merge gate', () => {
     'draft: true is only front matter.',
     '',
   ].join('\n');
-
-  it('publishes only when the merge gate is approved', () => {
-    expect(publishesOnClose('merge', 'approved')).toBe(true);
-    expect(publishesOnClose('merge', 'redirected')).toBe(false);
-    expect(publishesOnClose('message', 'approved')).toBe(false);
-  });
 
   it('takes the number after the highest one taken', () => {
     expect(nextNumber([])).toBe(1);

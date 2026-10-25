@@ -68,11 +68,6 @@ export function answerOrigin(
   ].join('\n');
 }
 
-/** Approving the merge gate is what publishes a thought: its pull request then carries it out of draft. */
-export function publishesOnClose(gate: string, decision: string): boolean {
-  return gate === 'merge' && decision === 'approved';
-}
-
 /** The next free number: one past the highest any other thought already has. */
 export function nextNumber(taken: readonly number[]): number {
   return Math.max(0, ...taken) + 1;
