@@ -20,6 +20,23 @@ export function isGoing(state: string): boolean {
   return state === 'running' || state === 'waiting' || state === 'idle' || state === 'needs-you';
 }
 
+/**
+ * Says it is working but has sent nothing for a while, so it may have stopped without a word. A run that
+ * needs Victor is waiting on him, not on itself, so it never goes quiet.
+ */
+export function isQuiet(run: Pick<LiveRunRow, 'state' | 'updatedAt'>, now: string): boolean {
+  return (
+    run.state !== 'needs-you' &&
+    isGoing(run.state) &&
+    Date.parse(now) - Date.parse(run.updatedAt) > QUIET_MS
+  );
+}
+
+/** A run as the list sends it: its row, and whether it is the latest started for its thought and agent. */
+export interface ListedRun extends LiveRunRow {
+  latest: boolean;
+}
+
 function isRow(value: unknown): value is LiveRunRow {
   return (
     isRecord(value) &&
@@ -35,10 +52,13 @@ function isRow(value: unknown): value is LiveRunRow {
   );
 }
 
+const isListed = (value: unknown): value is ListedRun =>
+  isRow(value) && typeof (value as { latest?: unknown }).latest === 'boolean';
+
 /** GET /api/runs read back; null when the answer is not a list of runs. */
-export function readRunRows(data: unknown): LiveRunRow[] | null {
+export function readRunRows(data: unknown): ListedRun[] | null {
   if (!isRecord(data) || !Array.isArray(data.runs)) return null;
-  return data.runs.filter(isRow);
+  return data.runs.filter(isListed);
 }
 
 /** One ledger event as the page shows it: its place, its time, its type, and the rest as sent. */
@@ -72,7 +92,7 @@ export function readRunDetail(data: unknown): RunDetail | null {
 }
 
 /** A run on the board, marked quiet when it says it is going but has sent nothing for a while. */
-export interface BoardRun extends LiveRunRow {
+export interface BoardRun extends ListedRun {
   quiet: boolean;
 }
 
@@ -84,27 +104,15 @@ export interface Board {
 }
 
 /** The runs sorted into what Victor needs to know first: newest first within each. */
-export function boardOf(rows: readonly LiveRunRow[], now: string): Board {
+export function boardOf(rows: readonly ListedRun[], now: string): Board {
   const sorted = [...rows].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  const marked = sorted.map((r) => ({
-    ...r,
-    quiet:
-      r.state !== 'needs-you' &&
-      isGoing(r.state) &&
-      Date.parse(now) - Date.parse(r.updatedAt) > QUIET_MS,
-  }));
-  // A hold stands until the same agent runs on the same thought again; an older hold is history.
-  const latest = new Set<string>();
-  const standing = marked.filter((r) => {
-    const key = `${r.thought} ${r.agent}`;
-    if (latest.has(key)) return false;
-    latest.add(key);
-    return true;
-  });
+  const marked = sorted.map((r) => ({ ...r, quiet: isQuiet(r, now) }));
   return {
     needsYou: marked.filter((r) => r.state === 'needs-you'),
     going: marked.filter((r) => isGoing(r.state) && r.state !== 'needs-you'),
-    held: standing.filter((r) => r.state === 'held'),
+    // A hold stands until the same agent starts again on the same thought; an older hold is history, even
+    // when it reported after the newer run had finished.
+    held: marked.filter((r) => r.state === 'held' && r.latest),
     finished: marked.filter((r) => r.state === 'done' || r.state === 'failed').slice(0, RECENT),
   };
 }

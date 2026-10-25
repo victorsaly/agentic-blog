@@ -1,14 +1,15 @@
 // Why: the board decides what Victor sees first and the timeline says what each event was; a slip here would
 // show a stopped run as working, an old hold as standing, or words the ledger never said.
 import { describe, expect, it } from 'vitest';
-import type { LiveRunRow } from './live-runs';
 import {
   QUIET_MS,
   boardOf,
   clockOf,
+  isQuiet,
   readRunDetail,
   readRunRows,
   timelineOf,
+  type ListedRun,
   type ShownEvent,
 } from './run-board';
 
@@ -16,7 +17,7 @@ const USD = { show: 'USD', perUsd: 1 } as const;
 const NOW = '2026-10-25T12:00:00.000Z';
 const ago = (ms: number): string => new Date(Date.parse(NOW) - ms).toISOString();
 
-function aRow(over: Partial<LiveRunRow> = {}): LiveRunRow {
+function aRow(over: Partial<ListedRun> = {}): ListedRun {
   return {
     id: '20261025T115900Z-safety-d367',
     thought: '2026-10-23-a-thought',
@@ -27,6 +28,7 @@ function aRow(over: Partial<LiveRunRow> = {}): LiveRunRow {
     usd: 0.01,
     events: 3,
     head: 'a'.repeat(64),
+    latest: true,
     ...over,
   };
 }
@@ -38,7 +40,9 @@ const event = (seq: number, fields: Record<string, unknown>): ShownEvent => {
 
 describe('reading the answers back', () => {
   it('keeps only what is a run', () => {
-    expect(readRunRows({ runs: [aRow(), { id: 'x' }] })).toHaveLength(1);
+    const unmarked: Record<string, unknown> = { ...aRow() };
+    delete unmarked.latest;
+    expect(readRunRows({ runs: [aRow(), unmarked, { id: 'x' }] })).toHaveLength(1);
     expect(readRunRows({ error: 'nope' })).toBeNull();
   });
 
@@ -81,16 +85,23 @@ describe('the board', () => {
     expect(board.going.find((r) => r.id === 'silent')?.quiet).toBe(true);
   });
 
-  it('lets a later run of the same agent on the same thought lift an older hold', () => {
+  it('shows a hold only while it is the latest run started, even if it reported last', () => {
     const board = boardOf(
       [
-        aRow({ id: 'old', state: 'held', updatedAt: ago(60 * 60_000) }),
-        aRow({ id: 'new', state: 'done', updatedAt: ago(1000) }),
+        aRow({ id: 'old', state: 'held', latest: false, updatedAt: ago(1000) }),
+        aRow({ id: 'new', state: 'done', updatedAt: ago(60_000) }),
         aRow({ id: 'other', state: 'held', thought: '2026-10-24-another' }),
       ],
       NOW,
     );
     expect(board.held.map((r) => r.id)).toEqual(['other']);
+  });
+
+  it('never calls a run that needs Victor quiet, however long it waits', () => {
+    const waiting = { state: 'needs-you', updatedAt: ago(QUIET_MS * 10) };
+    expect(isQuiet(waiting, NOW)).toBe(false);
+    expect(isQuiet({ ...waiting, state: 'running' }, NOW)).toBe(true);
+    expect(isQuiet({ ...waiting, state: 'done' }, NOW)).toBe(false);
   });
 });
 

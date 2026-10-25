@@ -6,9 +6,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { agentName } from '../lib/agent-runs';
 import {
-  QUIET_MS,
   clockOf,
   isGoing,
+  isQuiet,
   readRunDetail,
   stateWord,
   timelineOf,
@@ -37,6 +37,9 @@ function errorOf(data: unknown, fallback: string): string {
     ? (data as { error: string }).error
     : fallback;
 }
+
+/** Both the day and the time in the reader's own time zone, so they never come from two different clocks. */
+const here = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 const timeOf = (iso: string): string =>
   new Date(iso).toLocaleTimeString('en-GB', {
@@ -137,7 +140,7 @@ export function RunTimeline({ titles, currency }: RunTimelineProps): React.JSX.E
     );
 
   const title = titles[run.thought] ?? run.thought;
-  const quiet = going && Date.parse(now) - Date.parse(run.updatedAt) > QUIET_MS;
+  const quiet = isQuiet(run, now);
   const lines = timelineOf(events, currency);
 
   return (
@@ -168,7 +171,7 @@ export function RunTimeline({ titles, currency }: RunTimelineProps): React.JSX.E
         <div>
           <dt>Started</dt>
           <dd>
-            {formatDate(new Date(run.startedAt))}, {timeOf(run.startedAt)}
+            {formatDate(new Date(run.startedAt), 'en-GB', here)}, {timeOf(run.startedAt)}
           </dd>
         </div>
         <div>

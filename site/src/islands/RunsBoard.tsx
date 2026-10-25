@@ -6,16 +6,22 @@
 // time it was true. Only the summary line is announced, so a screen reader is not talked over by each refresh.
 import { useCallback, useState } from 'react';
 import { agentName, durationOf } from '../lib/agent-runs';
-import { boardOf, isGoing, readRunRows, stateWord, type BoardRun } from '../lib/run-board';
+import {
+  boardOf,
+  isGoing,
+  readRunRows,
+  stateWord,
+  type BoardRun,
+  type ListedRun,
+} from '../lib/run-board';
 import { moneyOf, type Currency } from '../lib/money';
-import type { LiveRunRow } from '../lib/live-runs';
 import { usePoll } from './use-poll';
 
 const BUSY_MS = 5_000;
 const QUIET_MS = 30_000;
 
 interface Status {
-  known: { rows: LiveRunRow[]; at: string } | null;
+  known: { rows: ListedRun[]; at: string } | null;
   error: string | null;
 }
 
