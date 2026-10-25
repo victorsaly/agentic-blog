@@ -167,12 +167,11 @@ More detail: [the agents](agents/README.md) · [the site](site/README.md) · [th
 
 | Workflow | When | What it does |
 |---|---|---|
-| [CI](.github/workflows/ci.yml) | every pull request and push | why check, lint, types, tests, build, then axe on the built pages |
-| [Deploy](.github/workflows/deploy.yml) | push to `main` | builds and deploys the Worker to blog.victorsaly.com |
+| [CI](.github/workflows/ci.yml) | every pull request and push to `main` | why check, lint, types, tests, build, then axe on the built pages; on `main`, deploys that same build to blog.victorsaly.com once both pass |
 | [New origin](.github/workflows/origin.yml) | the studio sends a note | lands the origin in its thought folder as a pull request |
 | [Agents](.github/workflows/agents.yml) | label `agent:<name>`, or by hand | runs one agent on one thought and commits its output |
 | [Security weekly](.github/workflows/security-weekly.yml) | weekly | audits dependencies and opens an issue when something needs patching |
-| [Format](.github/workflows/format.yml), [Lockfile](.github/workflows/lockfile.yml) | by hand, on dependency changes | keep Prettier formatting and `package-lock.json` in step |
+| [Format](.github/workflows/format.yml) | by hand, on a pull request's branch | commits Prettier's changes to that branch |
 
 ## Project structure
 

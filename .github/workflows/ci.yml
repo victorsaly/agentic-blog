@@ -1,5 +1,6 @@
 # Why: every pull request is held to the same gate: every file has a why, the code passes lint, types and
-# tests, the site builds, and every page passes an accessibility check. Nothing merges on a red run.
+# tests, the site builds, and every page passes an accessibility check. Nothing merges on a red run. On main
+# the same run then deploys the site it built and checked, so nothing reaches readers without passing.
 name: CI
 
 on:
@@ -10,9 +11,11 @@ on:
 permissions:
   contents: read
 
+# A newer push to a pull request replaces the older run; on main every run finishes, so a deploy is never
+# cut off halfway.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   check:
@@ -23,7 +26,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
-      - run: npm ci --no-audit --no-fund || npm install --no-audit --no-fund
+          cache: npm
+      - run: npm ci --no-audit --no-fund
       - name: Every file says why it exists
         run: node scripts/ci-annotate.mjs why npm run check:why
       - name: Agent cards match their prompts
@@ -46,7 +50,14 @@ jobs:
           fi
           echo "No merged ledger run was touched."
       - name: Lint and format
+        id: lint
         run: node scripts/ci-annotate.mjs lint npm run lint
+      # Prints the patch prettier wants, so a failing lint can be fixed from anywhere (even a phone).
+      - name: What prettier would change
+        if: failure() && steps.lint.outcome == 'failure'
+        run: |
+          npm run format --silent || true
+          git --no-pager diff
       - name: Types
         run: node scripts/ci-annotate.mjs types npm run typecheck
       - name: Tests
@@ -59,6 +70,8 @@ jobs:
         with:
           name: site
           path: site/dist
+          # dist/.assetsignore keeps the worker code out of the public assets; without it the deploy would serve it.
+          include-hidden-files: true
           retention-days: 7
 
   accessibility:
@@ -70,13 +83,26 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
-      - run: npm ci --no-audit --no-fund || npm install --no-audit --no-fund
+          cache: npm
+      - run: npm ci --no-audit --no-fund
       - uses: actions/download-artifact@v4
         with:
           name: site
           path: site/dist
+      - name: Playwright version
+        id: pw
+        run: echo "version=$(npx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
       - name: Install Playwright
+        if: steps.pw-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
+      - name: Install Playwright's system libraries
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
       - name: Serve and audit
         run: |
           npx --yes serve@14 site/dist -l 4321 -s &
@@ -86,22 +112,30 @@ jobs:
           done
           node scripts/ci-annotate.mjs axe node scripts/axe.mjs http://localhost:4321
 
-  format-patch:
-    name: Formatting diff (for fixing from anywhere)
+  deploy:
+    name: Deploy the Worker
+    needs: [check, accessibility]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-main
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
-      - run: npm ci --no-audit --no-fund || npm install --no-audit --no-fund
-      - name: What prettier would change
-        run: |
-          npm run format --silent || true
-          git --no-pager diff > format.patch || true
-          if [ -s format.patch ]; then
-            echo "::group::format.patch"; cat format.patch; echo "::endgroup::"
-            echo "::warning::prettier wants changes; see format.patch in the log"
-          else
-            echo "nothing to format"
-          fi
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      # The exact site the checks passed, not a fresh build.
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: site/dist
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: site
+          command: deploy
