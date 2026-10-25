@@ -103,11 +103,16 @@ const icons: Record<StudioAreaId, string> = {
     agentsBadge.hidden = waiting === 0;
   }
 
+  // On Agents and Today the shared runs feed also sends the count, and keeps it current. Once it has, this
+  // page's own first ask is out of date by the time it answers, so its answer is dropped: the badge never
+  // goes back to an older count than the one on the page.
+  let fedByFeed = false;
+
   async function countAgents(): Promise<void> {
     try {
       const response = await fetch('/api/runs');
       const answer = response.ok ? readRunsAnswer(await response.json()) : null;
-      if (answer === null) return;
+      if (answer === null || fedByFeed) return;
       const { holds, asking } = waitingOnVictor(answer);
       showAgents(holds.length + asking.length);
     } catch {
@@ -117,7 +122,9 @@ const icons: Record<StudioAreaId, string> = {
 
   void countAgents();
   window.addEventListener(AGENTS_WAITING, (event) => {
-    if (event instanceof CustomEvent && typeof event.detail === 'number') showAgents(event.detail);
+    if (!(event instanceof CustomEvent) || typeof event.detail !== 'number') return;
+    fedByFeed = true;
+    showAgents(event.detail);
   });
 </script>
 
