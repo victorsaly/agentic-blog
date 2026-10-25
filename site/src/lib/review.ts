@@ -1,6 +1,7 @@
 // Why: nothing an agent wrote should reach a reader looking as if Victor had read it. Each version, each
 // sources file and each recording carries `reviewed`; this works out, from those flags alone, what still
-// waits for him, so the studio can list it and a post can tag it. Pure, so the list is tested without a build.
+// waits for him, so the studio can list it and a post can tag it. Each carries its words too, so he can read
+// it in the studio, a draft and the sources included, which have no page. Pure, so it is tested without a build.
 
 export interface Waiting {
   /** The file to open and set `reviewed: true` in, from the repo root. */
@@ -11,6 +12,8 @@ export interface Waiting {
   href?: string;
   /** A recording's audio, so it can be heard in the studio: on the post it plays only once reviewed. */
   listen?: string;
+  /** The file's words as written (Markdown), so it can be read in the studio without a page to go to. */
+  text?: string;
 }
 
 export interface ThoughtWaiting {
@@ -26,22 +29,29 @@ interface VersionLike {
   leaf: string;
   kind: string;
   reviewed: boolean;
+  body?: string | undefined;
 }
 
 interface SourcesLike {
   slug: string;
   reviewed: boolean;
+  body?: string | undefined;
 }
 
 interface VoiceLike {
   slug: string;
   leaf: string;
   reviewed: boolean;
+  body?: string | undefined;
   /** The audio's URL in the built site, when it was found. */
   audio?: string;
 }
 
 const order = ['short', 'long', 'linkedin', 'language', 'voice'];
+
+/** The words, when there are any to read. */
+const textOf = (body: string | undefined): Pick<Waiting, 'text'> =>
+  body !== undefined && body.trim() !== '' ? { text: body.trim() } : {};
 
 function nameOf(v: VersionLike): Pick<Waiting, 'name' | 'href'> {
   const post = `/thoughts/${v.slug}`;
@@ -75,18 +85,29 @@ export function waitingForReview(
       const waiting: Waiting[] = own.map((v) => {
         const { name, href } = nameOf(v);
         const file = `thoughts/${t.slug}/versions/${v.leaf}.md`;
-        return href && !t.draft ? { file, name, href } : { file, name };
+        return href && !t.draft
+          ? { file, name, href, ...textOf(v.body) }
+          : { file, name, ...textOf(v.body) };
       });
       for (const v of voices.filter((x) => x.slug === t.slug && !x.reviewed)) {
         // An unreviewed recording is not played on the post, so it is heard here instead.
         const file = `thoughts/${t.slug}/voice/${v.leaf}.md`;
         const name =
           v.leaf === 'short' ? 'The idea, read aloud' : `The ${v.leaf} version, read aloud`;
-        waiting.push(v.audio ? { file, name, listen: v.audio } : { file, name });
+        waiting.push(
+          v.audio
+            ? { file, name, listen: v.audio, ...textOf(v.body) }
+            : { file, name, ...textOf(v.body) },
+        );
       }
-      if (sources.some((s) => s.slug === t.slug && !s.reviewed))
+      const unread = sources.find((s) => s.slug === t.slug && !s.reviewed);
+      if (unread)
         // Unreviewed sources are not shown to readers at all, so there is no page to link.
-        waiting.push({ file: `thoughts/${t.slug}/sources.md`, name: 'The sources' });
+        waiting.push({
+          file: `thoughts/${t.slug}/sources.md`,
+          name: 'The sources',
+          ...textOf(unread.body),
+        });
       return { slug: t.slug, title: t.title, draft: t.draft, waiting };
     })
     .filter((t) => t.waiting.length > 0);

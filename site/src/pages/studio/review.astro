@@ -29,13 +29,13 @@ const waiting = await loadWaiting();
     padding: 0;
     font-weight: 700;
   }
-  .review .thought ul {
+  .review .thought > ul {
     list-style: none;
     margin: var(--space-2) 0 0;
     padding: 0;
     max-width: none;
   }
-  .review .thought li {
+  .review .thought > ul > li {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
@@ -77,5 +77,19 @@ const waiting = await loadWaiting();
   .review .status {
     min-height: 1.6em;
     margin-top: var(--space-2);
+  }
+  /* A file read in place opens under its row, at reading width; the toggle is a plain disclosure. */
+  .review .read-here {
+    grid-column: 1 / -1;
+    margin-top: var(--space-2);
+  }
+  .review .read-here > summary {
+    cursor: pointer;
+    font-weight: 700;
+  }
+  .review .read-here > .markdown {
+    margin-top: var(--space-2);
+    padding-left: var(--space-3);
+    border-left: var(--rule-strong) solid var(--ink);
   }
 </style>
