@@ -7,6 +7,11 @@ checked: 2026-10-25
 verdict: pass
 decided_by: Victor Saly
 decided: 2026-10-25
+kept:
+  - "I have two readers in mind before anyone else. My daughter is dyslexic. My son finds it hard to hold his attention on a page. If the two of them can open a post and get the message straight away, anyone can."
+  - "The type is chosen for them too."
+  - "If it does not work for my kids, it is not finished."
+  - "Built for a dyslexic reader and a distracted one: message first"
 ---
 
 # Security check: Talked out loud, tidied by AI
