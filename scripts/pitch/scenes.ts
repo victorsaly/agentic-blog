@@ -89,7 +89,7 @@ export const scenes: Scene[] = [
     start: 8,
     dur: 6,
     kind: 'page',
-    path: '/studio',
+    path: '/studio/talk',
     caption: 'Press record. Talk.',
     captionAt: 1.2,
     actions: [{ t: 1.6, zoom: '.recorder' }],
