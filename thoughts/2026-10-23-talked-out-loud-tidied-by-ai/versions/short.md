@@ -6,7 +6,7 @@ kind: short
 language: en
 converted_from: ../origin/transcript.md
 converted_by: claude-chat
-reviewed: false
+reviewed: true
 ---
 
 Every post on this blog starts as a voice note. I talk into my phone, badly, and that recording is kept

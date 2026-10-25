@@ -4,7 +4,7 @@ why: >
   almost no books, people or studies, so the list is short. I kept to what the post actually leans on, in
   order of first mention. Where I found no source I say so. I did not guess any URL.
 checked: 2026-10-23
-reviewed: false
+reviewed: true
 ---
 
 # Sources for "What counts as evidence of competence"
