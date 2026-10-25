@@ -1,6 +1,8 @@
 // Why: the studio answers a gate in two steps, reading then deciding, and both cross a boundary: what the
 // page sends is read here before anything is asked of GitHub, and what Victor needs beside the question (the
-// interview's questions, the structure he is approving) is named here once. Pure, so the rules are tested.
+// interview's questions, the structure he is approving) is named here once. An answer can be spoken: then it
+// carries the key of its recording, which must be one the studio saved for an answer. Pure, so tested.
+import { isSafeKey } from './origin-request';
 
 export type GateDecision = 'answered' | 'approved' | 'redirected' | 'picked';
 export type GateAsks = 'answer' | 'approve' | 'pick';
@@ -10,17 +12,35 @@ export const MAX_WORDS = 10_000;
 
 const decisions: readonly GateDecision[] = ['answered', 'approved', 'redirected', 'picked'];
 
+export interface GateRequest {
+  decision: GateDecision;
+  words: string;
+  medium: 'voice' | 'text';
+  /** The recording's key in R2, for a spoken answer. */
+  key?: string;
+}
+
 export function readGateRequest(
   body: unknown,
-): { ok: true; value: { decision: GateDecision; words: string } } | { ok: false; error: string } {
+): { ok: true; value: GateRequest } | { ok: false; error: string } {
   if (typeof body !== 'object' || body === null) return { ok: false, error: 'Send JSON.' };
-  const { decision, words } = body as { decision?: unknown; words?: unknown };
+  const { decision, words, medium, key } = body as {
+    decision?: unknown;
+    words?: unknown;
+    medium?: unknown;
+    key?: unknown;
+  };
   if (typeof decision !== 'string' || !(decisions as readonly string[]).includes(decision))
     return { ok: false, error: 'Say what you decided.' };
   const said = typeof words === 'string' ? words : '';
   if (said.length > MAX_WORDS)
     return { ok: false, error: `Keep it under ${String(MAX_WORDS)} characters.` };
-  return { ok: true, value: { decision: decision as GateDecision, words: said } };
+  if (medium === 'voice') {
+    if (typeof key !== 'string' || !isSafeKey(key) || !key.startsWith('answer/'))
+      return { ok: false, error: 'A spoken answer needs the key of its recording.' };
+    return { ok: true, value: { decision: decision as GateDecision, words: said, medium, key } };
+  }
+  return { ok: true, value: { decision: decision as GateDecision, words: said, medium: 'text' } };
 }
 
 /** The file beside a gate's question, from the thought's folder, and what to call it. */

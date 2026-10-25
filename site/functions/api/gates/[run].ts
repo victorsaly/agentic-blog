@@ -72,7 +72,7 @@ export const onRequestPost: Handler = async ({ request, env, params }) => {
     );
   const parsed = readGateRequest(await request.json().catch(() => null));
   if (!parsed.ok) return problem(parsed.error, 400);
-  const { decision, words } = parsed.value;
+  const { decision, words, medium, key } = parsed.value;
 
   const run = await gateRun(db, id);
   if (!run) return problem('The studio has no run by that name.', 404);
@@ -94,6 +94,8 @@ export const onRequestPost: Handler = async ({ request, env, params }) => {
           words,
           by,
           branch: pull?.branch ?? '',
+          medium,
+          ...(key ? { key } : {}),
         },
       }),
     });

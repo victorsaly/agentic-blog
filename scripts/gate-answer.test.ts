@@ -26,6 +26,26 @@ describe('the answer as an origin', () => {
   });
 });
 
+describe('a spoken answer as an origin', () => {
+  it('is voice, with the key of its recording, and still passes the schema', () => {
+    const text = answerOrigin(
+      '2026-10-23-a',
+      'Spoken words.',
+      '2026-10-25',
+      'info@victorsaly.com',
+      {
+        key: 'answer/2026-10-25T19-00-00-000Z-ab12cd34.webm',
+      },
+    );
+    const { data } = matter(text);
+    expect(originFrontMatter.safeParse(data).success).toBe(true);
+    expect(data).toMatchObject({
+      medium: 'voice',
+      audio: 'answer/2026-10-25T19-00-00-000Z-ab12cd34.webm',
+    });
+  });
+});
+
 describe('the close-gate payload', () => {
   it('reads what the studio sends and refuses a run or thought it does not recognise', () => {
     const sent = {
@@ -36,7 +56,7 @@ describe('the close-gate payload', () => {
       by: 'info@victorsaly.com',
       branch: 'origin/2026-10-23-a',
     };
-    expect(closeGatePayload.parse(sent)).toEqual(sent);
+    expect(closeGatePayload.parse(sent)).toEqual({ ...sent, medium: 'text' });
     expect(closeGatePayload.safeParse({ ...sent, run: '../x' }).success).toBe(false);
     expect(closeGatePayload.safeParse({ ...sent, thought: 'x' }).success).toBe(false);
   });

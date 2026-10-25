@@ -1,11 +1,15 @@
 // Why: a gate waits on Victor, and this is where he answers it: beside the question, what he is answering
 // about (the interview's questions, the structure he is approving) and the pull request it is on. An answer
-// is a text box; an approval is Approve, or Not this with his words. Sending only asks GitHub to record it,
+// can be spoken or written (the studio's recorder, with a preview of how it reads); an approval is Approve,
+// or Not this with his words. What he is answering about is shown as it reads, not as Markdown source.
+// Sending only asks GitHub to record it,
 // which takes about a minute, so the page says it was sent and is waiting, never that it is done; the run
 // turns Done on its own when the workflow has written it. Every control has a label, and the status line is
 // announced once.
 import { useEffect, useId, useState } from 'react';
 import type { GateView } from '../lib/gates';
+import { Markdown } from './Markdown';
+import { Recorder, type Delivery } from './Recorder';
 
 interface Context {
   pull: { number: number; url: string } | null;
@@ -77,7 +81,7 @@ export function GateAnswer({ run, gate, onSent }: GateAnswerProps): React.JSX.El
     };
   }, [run]);
 
-  const send = async (decision: 'answered' | 'approved' | 'redirected'): Promise<void> => {
+  const send = async (decision: 'approved' | 'redirected'): Promise<void> => {
     setSending({ state: 'sending' });
     try {
       const response = await fetch(`/api/gates/${encodeURIComponent(run)}`, {
@@ -98,6 +102,24 @@ export function GateAnswer({ run, gate, onSent }: GateAnswerProps): React.JSX.El
             : 'The studio could not be reached. Nothing was sent; try again.',
       });
     }
+  };
+
+  /** A spoken or written answer, handed over by the recorder; throws so it can say what failed. */
+  const deliver = async (said: Delivery): Promise<string | null> => {
+    const response = await fetch(`/api/gates/${encodeURIComponent(run)}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        decision: 'answered',
+        words: said.transcript,
+        medium: said.medium,
+        ...(said.medium === 'voice' ? { key: said.key } : {}),
+      }),
+    });
+    const data: unknown = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(errorOf(data, 'The studio could not send it.'));
+    onSent();
+    return about?.pull?.url ?? null;
   };
 
   const busy = sending.state === 'sending' || sending.state === 'sent';
@@ -123,34 +145,13 @@ export function GateAnswer({ run, gate, onSent }: GateAnswerProps): React.JSX.El
       {about?.context && (
         <details className="context" open>
           <summary>{about.context.label}</summary>
-          <div className="context-text">{about.context.text}</div>
+          <div className="context-text">
+            <Markdown text={about.context.text} />
+          </div>
         </details>
       )}
 
-      {gate.asks === 'answer' && (
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            void send('answered');
-          }}
-        >
-          <label htmlFor={`${id}-words`} className="field">
-            Your answers, in your own words
-            <textarea
-              id={`${id}-words`}
-              rows={10}
-              value={words}
-              disabled={busy}
-              onChange={(event) => {
-                setWords(event.target.value);
-              }}
-            />
-          </label>
-          <button type="submit" className="control filled" disabled={busy || words.trim() === ''}>
-            Send answers
-          </button>
-        </form>
-      )}
+      {gate.asks === 'answer' && <Recorder mode="answer" deliver={deliver} />}
 
       {gate.asks === 'approve' && (
         <div className="decide">

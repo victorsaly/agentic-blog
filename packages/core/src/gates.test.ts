@@ -118,30 +118,29 @@ describe('closeGate', () => {
   });
 
   it('refuses what cannot stand, each with a plain reason', async () => {
+    const reason = (closing: ReturnType<typeof closeGate>): string =>
+      closing.ok ? 'it closed' : closing.error;
     const answer = (await waiting('answer')).events;
-    expect(closeGate(answer, { decision: 'approved', words: '', by })).toMatchObject({
-      ok: false,
-      error: expect.stringMatching(/asks to answer/),
-    });
-    expect(closeGate(answer, { decision: 'answered', words: '  ', by })).toMatchObject({
-      error: expect.stringMatching(/needs words/),
-    });
-    expect(closeGate(answer, { decision: 'answered', words: 'x', by: 'structure' })).toMatchObject({
-      error: expect.stringMatching(/RB080/),
-    });
+    expect(reason(closeGate(answer, { decision: 'approved', words: '', by }))).toMatch(
+      /asks to answer/,
+    );
+    expect(reason(closeGate(answer, { decision: 'answered', words: '  ', by }))).toMatch(
+      /needs words/,
+    );
     expect(
-      closeGate((await ran('interview')).events, { decision: 'answered', words: 'x', by }),
-    ).toMatchObject({
-      error: 'This run is not a gate.',
-    });
+      reason(closeGate(answer, { decision: 'answered', words: 'x', by: 'structure' })),
+    ).toMatch(/RB080/);
+    expect(
+      reason(closeGate((await ran('interview')).events, { decision: 'answered', words: 'x', by })),
+    ).toBe('This run is not a gate.');
     const closed = await run(
       { type: 'node.state', node: 'g', from: 'idle', to: 'needs-you' },
       { type: 'gate.opened', node: 'g', asks: 'answer', question: 'Well?' },
       { type: 'gate.closed', node: 'g', decision: 'answered', by },
       { type: 'node.state', node: 'g', from: 'needs-you', to: 'done' },
     );
-    expect(closeGate(closed.events, { decision: 'answered', words: 'again', by })).toMatchObject({
-      error: expect.stringMatching(/already closed/),
-    });
+    expect(reason(closeGate(closed.events, { decision: 'answered', words: 'again', by }))).toMatch(
+      /already closed/,
+    );
   });
 });

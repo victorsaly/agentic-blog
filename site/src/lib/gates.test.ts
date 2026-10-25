@@ -7,11 +7,11 @@ describe('readGateRequest', () => {
   it('reads a decision and its words, and refuses anything else', () => {
     expect(readGateRequest({ decision: 'answered', words: 'Here.' })).toEqual({
       ok: true,
-      value: { decision: 'answered', words: 'Here.' },
+      value: { decision: 'answered', words: 'Here.', medium: 'text' },
     });
     expect(readGateRequest({ decision: 'approved' })).toEqual({
       ok: true,
-      value: { decision: 'approved', words: '' },
+      value: { decision: 'approved', words: '', medium: 'text' },
     });
     expect(readGateRequest({ decision: 'merged' })).toMatchObject({ ok: false });
     expect(readGateRequest(null)).toMatchObject({ ok: false });
@@ -20,6 +20,20 @@ describe('readGateRequest', () => {
     ).toMatchObject({
       ok: false,
     });
+  });
+});
+
+describe('a spoken answer', () => {
+  it('carries the key of a recording saved for an answer, and nothing else', () => {
+    const key = 'answer/2026-10-25T19-00-00-000Z-ab12cd34.webm';
+    expect(readGateRequest({ decision: 'answered', words: 'Hi.', medium: 'voice', key })).toEqual({
+      ok: true,
+      value: { decision: 'answered', words: 'Hi.', medium: 'voice', key },
+    });
+    for (const bad of ['origin/2026-a.webm', '../secret', undefined])
+      expect(
+        readGateRequest({ decision: 'answered', words: 'Hi.', medium: 'voice', key: bad }),
+      ).toMatchObject({ ok: false });
   });
 });
 

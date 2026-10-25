@@ -37,7 +37,8 @@ if (file !== null) {
       `thoughts/${payload.thought}/${file} is already there; an origin is never overwritten.`,
     );
   await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, answerOrigin(payload.thought, payload.words, date, payload.by), {
+  const spoken = payload.medium === 'voice' && payload.key ? { key: payload.key } : undefined;
+  await writeFile(path, answerOrigin(payload.thought, payload.words, date, payload.by, spoken), {
     encoding: 'utf8',
     flag: 'wx',
   });

@@ -102,7 +102,9 @@ was made" and the runs list (`isGateRun`).
 `extendRun` saves a run only when the file on disk is its verified start; `GET`/`POST /api/gates/:run`
 (context and pull request from GitHub, then `close-gate`); `.github/workflows/gates.yml` with
 `scripts/close-gate.ts` writing `origin/answers.md` and closing the run on the gate's branch (a new pull
-request when the gate is already on `main`); `GateAnswer` on the run page; Today's link says Answer. The
+request when the gate is already on `main`); `GateAnswer` on the run page; Today's link says Answer. An answer can be spoken (the studio's recorder in
+`answer` mode; the origin is then voice, with its `answer/` recording key) or written, with a preview of how
+it reads; what is beside the gate is shown as rendered Markdown (`lib/markdown-view.ts`). The
 interview's "nothing to do" once answers exist means the answers gate never reopens, so a second answers
 file is never needed: an existing `origin/answers.md` is refused, never overwritten.
 

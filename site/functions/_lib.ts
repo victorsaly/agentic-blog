@@ -50,7 +50,7 @@ export function signedInEmail(request: Request): string {
 }
 
 /** R2 keys are dated and random so two recordings can never collide or be guessed. */
-export function newAudioKey(mode: 'origin' | 'feedback', extension: string): string {
+export function newAudioKey(mode: 'origin' | 'feedback' | 'answer', extension: string): string {
   const stamp = new Date().toISOString().replaceAll(/[:.]/g, '-');
   const random = crypto.randomUUID().slice(0, 8);
   return `${mode}/${stamp}-${random}.${extension}`;
