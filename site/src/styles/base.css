@@ -343,6 +343,106 @@ details.depth > .body {
   padding-top: var(--space-3);
 }
 
+/* A field: a label over one bordered box, shared by the studio's forms and the readers' comment form. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  max-width: var(--measure);
+}
+
+.field input,
+.field textarea {
+  font: inherit;
+  min-height: var(--tap);
+  padding: 0 var(--space-2);
+  border: var(--rule-width) solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.field textarea {
+  padding: var(--space-2);
+  line-height: inherit;
+  resize: vertical;
+}
+
+/* Comments under a post: rows divided by hairlines, then the form. Plain text, no cards. */
+.comments {
+  margin-top: var(--space-6);
+}
+
+.comment-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: none;
+}
+
+.comment-list li {
+  padding-block: var(--space-3);
+  border-bottom: var(--rule-width) solid var(--rule);
+}
+
+.comment-list p {
+  margin: 0;
+  max-width: var(--measure);
+}
+
+.comment-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-3);
+}
+
+.comment-body {
+  margin-top: var(--space-1);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.comment-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.comment-form p {
+  margin: 0;
+}
+
+.comment-ask {
+  margin: 0;
+  font-size: var(--size-h2);
+}
+
+.comment-form .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.comment-form .status {
+  min-height: 1.6em;
+}
+
+.control:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* The hidden field only a bot fills: out of sight and out of the tab order, not display: none. */
+.comment-trap {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
 .quiet {
   color: var(--quiet);
 }

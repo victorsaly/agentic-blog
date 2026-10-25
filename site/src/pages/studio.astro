@@ -7,6 +7,7 @@ import Page from '../layouts/Page.astro';
 import { Recorder } from '../islands/Recorder';
 import { FeedbackStudio } from '../islands/FeedbackStudio';
 import { ReviewList } from '../islands/ReviewList';
+import { CommentsReview } from '../islands/CommentsReview';
 import { settings } from '../lib/settings';
 import { leafOf, thoughtSlugOf } from '../lib/content';
 import { waitingForReview } from '../lib/review';
@@ -51,6 +52,17 @@ const waiting = waitingForReview(thoughts, versions, sources);
   <section class="review" aria-labelledby="review-label">
     <h2 class="label" id="review-label">Waiting for your review</h2>
     <ReviewList client:load waiting={waiting} />
+  </section>
+
+  <section class="review" aria-labelledby="comments-label">
+    <h2 class="label" id="comments-label">Comments waiting</h2>
+    <CommentsReview client:visible status="pending" />
+  </section>
+
+  <section class="review" aria-labelledby="comments-shown-label">
+    <h2 class="label" id="comments-shown-label">Comments showing</h2>
+    <p class="small quiet">Approved by mistake? Delete it here and it leaves the post at once.</p>
+    <CommentsReview client:visible status="approved" />
   </section>
 
   <p class="small quiet">
@@ -118,6 +130,38 @@ const waiting = waitingForReview(thoughts, versions, sources);
     min-height: 1.6em;
     margin-top: var(--space-2);
   }
+  .comments-review ul {
+    list-style: none;
+    margin: var(--space-3) 0 0;
+    padding: 0;
+    max-width: none;
+  }
+  .comments-review li {
+    padding-block: var(--space-3);
+    border-bottom: var(--rule-width) solid var(--rule);
+  }
+  .comments-review p {
+    margin: 0;
+    max-width: none;
+  }
+  .comments-review .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-1) var(--space-3);
+  }
+  .comments-review .text {
+    margin-top: var(--space-2);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    max-width: var(--measure);
+  }
+  .comments-review .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+  }
 </style>
 
 <style is:global>
@@ -146,27 +190,6 @@ const waiting = waitingForReview(thoughts, versions, sources);
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-2);
-  }
-  .field {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-    width: 100%;
-    max-width: var(--measure);
-  }
-  .field input,
-  .field textarea {
-    font: inherit;
-    min-height: var(--tap);
-    padding: 0 var(--space-2);
-    border: var(--rule-width) solid var(--ink);
-    background: var(--paper);
-    color: var(--ink);
-  }
-  .field textarea {
-    padding: var(--space-2);
-    line-height: inherit;
-    resize: vertical;
   }
   .recorder form .field + p {
     margin-top: var(--space-2);
