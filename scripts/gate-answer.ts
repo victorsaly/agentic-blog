@@ -1,6 +1,7 @@
 // Why: when Victor answers a gate in the studio, his words have to land the way every word of his does: as an
 // origin, exactly as he wrote it, with the front matter the schema checks. This decides the file and its text,
 // and reads the studio's request, without touching the disk, so both are tested.
+import matter from 'gray-matter';
 import { z } from 'zod';
 
 /** The thought folders the studio and the agents name: a date, then words. */
@@ -65,4 +66,59 @@ export function answerOrigin(
     words.endsWith('\n') ? words.slice(0, -1) : words,
     '',
   ].join('\n');
+}
+
+/** The next free number: one past the highest any other thought already has. */
+export function nextNumber(taken: readonly number[]): number {
+  return Math.max(0, ...taken) + 1;
+}
+
+/**
+ * A draft's structure.md, published: `draft: true` becomes `draft: false`, with the number given unless it
+ * already has one. Only those lines change, so the rest of the file stays exactly as the agents wrote it.
+ * Null when it is not a draft, so a thought already out is never renumbered. The agents may write CRLF
+ * line endings, as fileFromReply allows; the file keeps the ones it has.
+ */
+export function publishedStructure(source: string, number: number): string | null {
+  const eol = source.startsWith('---\r\n') ? '\r\n' : '\n';
+  const open = `---${eol}`;
+  const end = source.indexOf(`${eol}---`, 3);
+  if (!source.startsWith(open) || end === -1) return null;
+  const lines = source.slice(open.length, end).split(eol);
+  const draft = lines.findIndex((line) => /^draft:\s*true\s*$/.test(line));
+  if (draft === -1) return null;
+  const numbered = lines.some((line) => line.startsWith('number:'));
+  lines.splice(draft, 1, ...(numbered ? [] : [`number: ${String(number)}`]), 'draft: false');
+  return `${open}${lines.join(eol)}${source.slice(end)}`;
+}
+
+/** The number a structure.md was given, if it has one. */
+export function numberOf(source: string): number | null {
+  const given: unknown = matter(source).data['number'];
+  return typeof given === 'number' ? given : null;
+}
+
+/**
+ * The numbers in `git grep` output over many branches (`<ref>:thoughts/<slug>/structure.md:number: N`), but
+ * not the thought being published: its own older branches must not hold a number against it.
+ */
+export function numbersFromGrep(output: string, except: string): number[] {
+  return output.split('\n').flatMap((line) => {
+    const found = /^[^:]+:thoughts\/([^/]+)\/structure\.md:number:\s*(\d+)\s*$/.exec(line);
+    return found && found[1] !== except ? [Number(found[2])] : [];
+  });
+}
+
+/** A number claimed for a thought: the tag `number/N` on the remote, its message the thought's slug. */
+export interface Claim {
+  number: number;
+  thought: string;
+}
+
+/** The claims in `git for-each-ref --format='%(refname:strip=3) %(contents:subject)' refs/tags/number`. */
+export function claimsFrom(output: string): Claim[] {
+  return output.split('\n').flatMap((line) => {
+    const found = /^(\d+) (\S+)\s*$/.exec(line);
+    return found ? [{ number: Number(found[1]), thought: found[2] ?? '' }] : [];
+  });
 }

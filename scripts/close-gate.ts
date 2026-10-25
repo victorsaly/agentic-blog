@@ -12,8 +12,10 @@
 // something before the gate changed since it opened, and one already recorded is not recorded again, only
 // merged (running the workflow again resumes a merge that did not go through).
 //   PAYLOAD='{"run":…,"thought":…,"decision":…,"words":…,"by":…}' npx tsx scripts/close-gate.ts
-import { appendFile, mkdir, stat, writeFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { appendFile, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
+import { promisify } from 'node:util';
 import {
   Ledger,
   closeGate,
@@ -26,8 +28,18 @@ import {
 import project from '../roadbook.config';
 import { extendRun, readRuns } from '@roadbook/core/node';
 import { liveFromEnv } from '../agents/_lib/live';
-import { answerFileFor, answerOrigin, closeGatePayload } from './gate-answer';
+import {
+  answerFileFor,
+  answerOrigin,
+  closeGatePayload,
+  nextNumber,
+  numberOf,
+  numbersFromGrep,
+  publishedStructure,
+} from './gate-answer';
+import { claimNumber, claimsIn } from './claim-number';
 
+const git = promisify(execFile);
 const root = resolve(process.env['CONTENT_ROOT'] ?? resolve(import.meta.dirname, '..'));
 const payload = closeGatePayload.parse(JSON.parse(process.env['PAYLOAD'] ?? 'null'));
 const thoughtDir = join(root, 'thoughts', payload.thought);
@@ -91,6 +103,38 @@ if (file !== null) {
   });
 }
 
+// Approving the gate before the way out publishes the thought: the commit that records the approval, the one
+// the workflow merges, also carries it out of draft with the next free number. The numbers are read on main, on the gate's branch, and on every
+// other branch fetched into it: a thought approved but not merged yet holds its number, so a second approval
+// before the first merge takes the next one, and a branch made before another thought went out never takes
+// that one's. Two approvals at the same moment cannot both win either: the number is claimed by pushing the
+// tag number/N to NUMBER_REMOTE (the gates workflow sets it), a push git refuses when the tag is there, and
+// the one refused takes the next. A thought that already claimed one, in a run that failed later, keeps it.
+let number: number | null = null;
+if (merging) {
+  const path = join(thoughtDir, 'structure.md');
+  const source = await readFile(path, 'utf8');
+  // Only a draft is given a number; one already out keeps its own and claims nothing.
+  if (publishedStructure(source, 1) !== null) {
+    const main = resolve(import.meta.dirname, '..');
+    const claims = await claimsIn(root);
+    const taken = [
+      ...(await Promise.all([numbersIn(root), numbersIn(main), numbersOnBranches(root)])).flat(),
+      ...claims.filter((c) => c.thought !== payload.thought).map((c) => c.number),
+    ];
+    const remote = process.env['NUMBER_REMOTE'];
+    const given =
+      numberOf(source) ??
+      claims.find((c) => c.thought === payload.thought)?.number ??
+      (remote ? await claimNumber(root, remote, payload.thought, taken) : nextNumber(taken));
+    const published = publishedStructure(source, given);
+    if (published !== null) {
+      await writeFile(path, published, 'utf8');
+      number = numberOf(published);
+    }
+  }
+}
+
 // Carry the run on from where it was saved, telling the studio every event (a resend changes nothing there).
 const live = liveFromEnv(run.id, payload.thought, process.env);
 const last = run.events.at(-1);
@@ -115,7 +159,7 @@ const start = !workflow
 const title = `content: ${closing.node} gate closed on ${payload.thought} (${payload.decision})`;
 const outputs = {
   title,
-  body: `Closed in the studio by ${payload.by}: \`${closing.node}\` ${payload.decision}.${file ? `\n\n- Answer: \`thoughts/${payload.thought}/${file}\`` : ''}\n- Run: \`${run.id}\``,
+  body: `Closed in the studio by ${payload.by}: \`${closing.node}\` ${payload.decision}.${file ? `\n\n- Answer: \`thoughts/${payload.thought}/${file}\`` : ''}${number !== null ? `\n\n- Published as thought ${String(number)}: it goes live with this merge.` : ''}\n- Run: \`${run.id}\``,
   branch: `gate/${payload.thought}-${run.id.slice(-4)}`,
   start: start.join(' '),
   // Approving the gate before the way out is Victor's merge; the workflow carries it out once checks pass.
@@ -123,4 +167,53 @@ const outputs = {
   merge: merging ? 'true' : '',
 };
 await write(outputs);
-console.info(JSON.stringify({ closed: closing.node, decision: payload.decision, file, start }));
+console.info(
+  JSON.stringify({ closed: closing.node, decision: payload.decision, file, number, start }),
+);
+
+/** The numbers every other thought under this checkout already has. */
+async function numbersIn(checkout: string): Promise<number[]> {
+  const dir = join(checkout, 'thoughts');
+  const slugs = await readdir(dir).catch(() => []);
+  const found = await Promise.all(
+    slugs
+      .filter((slug) => slug !== payload.thought)
+      .map(async (slug) => {
+        const source = await readFile(join(dir, slug, 'structure.md'), 'utf8').catch(() => '');
+        const given = numberOf(source);
+        return given === null ? [] : [given];
+      }),
+  );
+  return found.flat();
+}
+
+/**
+ * The numbers on every branch fetched into this checkout (the gates workflow fetches them all), in one grep.
+ * None when nothing was fetched or nothing matched; a line in a body that looks like a number only leaves a gap.
+ * The branches are named by their commits, so a name git cannot resolve never hides the rest; any other git
+ * failure stops the gate, since guessing "no numbers" could give one twice.
+ */
+async function numbersOnBranches(checkout: string): Promise<number[]> {
+  const opts = { cwd: checkout, maxBuffer: 16 * 1024 * 1024 };
+  const listed = await git('git', ['for-each-ref', '--format=%(objectname)', 'refs/remotes'], opts);
+  const commits = [...new Set(listed.stdout.split('\n').filter((sha) => sha !== ''))];
+  if (commits.length === 0) return [];
+  const grep = [
+    'grep',
+    '-E',
+    '^number:[[:space:]]*[0-9]+',
+    ...commits,
+    '--',
+    'thoughts/*/structure.md',
+  ];
+  const output = await git('git', grep, opts).then(
+    (r) => r.stdout,
+    (error: unknown) => {
+      // git grep exits 1 when nothing matches; that is no numbers, not a failure.
+      if (typeof error === 'object' && error !== null && 'code' in error && error.code === 1)
+        return '';
+      throw error;
+    },
+  );
+  return numbersFromGrep(output, payload.thought);
+}

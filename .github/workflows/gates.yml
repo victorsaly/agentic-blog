@@ -38,6 +38,13 @@ jobs:
           fetch-depth: 50
           # Pushes made with GitHub's own token never start CI; BOT_TOKEN pushes as a person.
           token: ${{ secrets.BOT_TOKEN || github.token }}
+      # Every branch and every number already claimed, so a number given to a post approved but not merged
+      # yet is never given again. No --depth: that would cut the history above, which a resumed merge reads.
+      - name: Fetch every branch and claimed number
+        working-directory: target
+        run: >-
+          git fetch --quiet origin '+refs/heads/*:refs/remotes/origin/*'
+          '+refs/tags/number/*:refs/tags/number/*'
       - uses: actions/setup-node@v5
         with:
           node-version-file: .node-version
@@ -49,6 +56,8 @@ jobs:
           # Through the environment, never pasted into the script: it carries Victor's own words.
           PAYLOAD: ${{ toJSON(github.event.client_payload) }}
           CONTENT_ROOT: target
+          # Where a number is claimed, as the tag number/N, before it is written in the post.
+          NUMBER_REMOTE: origin
           STUDIO_URL: ${{ vars.STUDIO_URL }}
           STUDIO_ACCESS_CLIENT_ID: ${{ secrets.STUDIO_ACCESS_CLIENT_ID }}
           STUDIO_ACCESS_CLIENT_SECRET: ${{ secrets.STUDIO_ACCESS_CLIENT_SECRET }}
