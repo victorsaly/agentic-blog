@@ -168,11 +168,12 @@ asking. The runner does not stream text yet (`node.delta`); the timeline joins i
 A gate is a run that waits: when an agent finishes, the gates after it open as runs in `needs-you`. Victor
 answers in the studio, a workflow records it in git, and the next agents start. Agents stay on GitHub
 Actions. Durable Objects and Workflows both run on Workers Free (checked 25 October 2026), but
-orchestration on Cloudflare is Slice 8d, decided after living with 8a–8c.
+orchestration on Cloudflare is Slice 8e, decided after living with 8a–8d. Merge happens in the studio
+(8d), by Victor's press, never an agent's.
 
 ### Later (each needs its own plan before work starts)
 
-- Runtime on Cloudflare: see Slice 8d in `docs/questions-plan.md`.
+- Runtime on Cloudflare: see Slice 8e in `docs/questions-plan.md`.
 - `roadbook build` and `deploy` for the owner's own Cloudflare account.
 - The builder and an MCP server, so Claude can edit a project through `validate`.
 - The second project on the framework: bug fixing.

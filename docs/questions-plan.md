@@ -50,21 +50,24 @@ The studio already lists `needs-you` runs and shows their timelines. What is new
 and that closing a gate starts whatever comes after it. Git stays the record, Actions stays the place
 agents run, and the studio only asks GitHub to act, the same way new origins already land.
 
-## Decisions (open, with a recommendation each)
+## Decisions (Victor, 25 October 2026)
 
-1. **Runtime for now: GitHub Actions** (recommended). Gates live in the ledger and in the studio. A
-   Cloudflare Workflow per thought (orchestration only, agents still on Actions) is Slice 8d, decided after
-   living with 8a–8c. Moving agents into Durable Objects is not planned.
-2. **The answer to `answers` lands as an origin file** (recommended): `origin/answers.md`, the file the
+1. **Runtime for now: GitHub Actions.** Gates live in the ledger and in the studio. A Cloudflare Workflow
+   per thought (orchestration only, agents still on Actions) is Slice 8e, decided after living with 8a–8d.
+   Moving agents into Durable Objects is not planned.
+2. **The answer to `answers` lands as an origin file**: `origin/answers.md`, the file the
    structure agent already reads. A later answer is a new file (`origin/answers-<stamp>.md`), never an
    edit, because origin is append-only. **Approving `message`** records `gate.closed` with
    `decision: approved`. "Not this" records `redirected` with Victor's words as `feedback.given`, which
    starts structure again with them.
-3. **The run goes on by itself** (recommended): closing a gate starts the agents that come directly after
-   it (`structure` after `answers`; `convert` and `image` after `message`), on the thought's branch, within
-   the cards' budgets. The alternative is a "Run next" button for each step.
-4. **`merge` stays a GitHub merge.** The studio links to the pull request and never merges (non-negotiable
-   3). WebSockets wait for 8d: polling every 3 to 5 seconds is enough for one person.
+3. **The run goes on by itself**: closing a gate starts the agents that come directly after it
+   (`structure` after `answers`; `convert` and `image` after `message`), on the thought's branch, within
+   the cards' budgets. (Not chosen: a "Run next" button for each step.)
+4. **`merge` happens in the studio** (Slice 8d). Victor presses Merge; the Worker merges the pull request
+   through GitHub's API and the ledger records the gate closed by his Access email. This keeps
+   non-negotiable 3: a person merges, never an agent, and `main` stays protected, so GitHub still refuses a
+   merge its rules refuse. (Not chosen: leaving merge in GitHub.)
+5. **WebSockets wait for 8e.** Polling every 3 to 5 seconds is enough for one person.
 
 ## The slices
 
@@ -76,8 +79,8 @@ One slice per pull request, in this order. A slice is not done until CI is green
   `after` lists that agent, and whose other `after` steps are also done on this thought, opens as a run:
   - its id is `<stamp>-<gate id>-<hex>`;
   - its events are `run.started`, then `node.state` from `idle` to `needs-you`, then `gate.opened` with the
-    gate's `asks` and `question`.
-    It is saved beside the agent's ledger and committed in the same commit.
+    gate's `asks` and `question`;
+  - it is saved beside the agent's ledger and committed in the same commit.
 - A gate that is already open on the thought is not opened twice.
 - Live reporting is unchanged: the gate run reaches the studio like any run, so the board's "Needs you",
   Today and the Agents tab show it with no studio change.
@@ -122,14 +125,32 @@ One slice per pull request, in this order. A slice is not done until CI is green
   board and the pipeline, and open their own gates or holds when they end. One press re-runs an agent.
 - Good for: Opus or Fable.
 
-### Slice 8d: orchestration on Cloudflare (needs its own decision first)
+### Slice 8d: merge from the studio
+
+- When `publish` ends `done`, the `merge` gate opens like any gate (8a). Its control in the studio is
+  Merge. Beside it is what will go live: the pull request's title, its files, its checks, and any hold
+  that stands.
+- Merge is enabled only when every required check has passed and no hold stands. Otherwise the studio says
+  which check or hold is in the way, and links to it.
+- Pressing Merge asks once more, naming the thought and saying it goes live on blog.victorsaly.com. It is
+  hard to undo and public, so it is never one press.
+- `POST /api/gates/:run` with `merge` merges the pull request through GitHub's API (the Worker's token needs
+  Pull requests: write, a setup step for Victor), then sends `close-gate` so `gates.yml` records
+  `gate.closed` (decision `approved`, by his Access email) on the branch before it is gone. If GitHub
+  refuses (a check went red, the branch moved), nothing is recorded and the studio shows GitHub's reason.
+- Done: on a thought whose checks are green, Merge in the studio merges its pull request, the deploy runs,
+  and the ledger names Victor as the one who merged. With a red check or a standing hold, Merge is not
+  offered and the reason is shown.
+- Good for: Opus or Fable (an outward, hard-to-undo action behind a confirmation).
+
+### Slice 8e: orchestration on Cloudflare (needs its own decision first)
 
 - One Cloudflare Workflow per thought runs `blog-post`. Each agent step sends `run-agent` and waits
   (`waitForEvent`) for the run's last event, which the events endpoint passes on. Each gate step waits
   for Victor's answer. GitHub Actions still runs every agent.
 - What it adds over 8c: the whole thought's progress in one place, timeouts and reminders (a gate open for
   three days says so), and a natural home for WebSockets if polling ever feels slow.
-- Decide after living with 8a–8c. If the dispatch chain in 8c is reliable, 8d may never be needed.
+- Decide after living with 8a–8d. If the dispatch chain in 8c is reliable, 8e may never be needed.
 
 ## Later (each needs its own plan before work starts)
 
@@ -137,7 +158,7 @@ One slice per pull request, in this order. A slice is not done until CI is green
   (RB080 applies), or "run the guard again". A guard's hold reason can quote private things, so it stays in
   the studio and never reaches the post.
 - Agents asking in the middle of a run (an agent stops itself with a question, not a gate between agents).
-  This needs a run that can pause mid-node, which is 8d's territory.
+  This needs a run that can pause mid-node, which is 8e's territory.
 - Agents running on Workers.
 
 ## Rules for any agent picking up a slice
