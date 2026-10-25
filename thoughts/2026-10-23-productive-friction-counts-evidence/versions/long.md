@@ -5,7 +5,7 @@ kind: long
 language: en
 converted_from: ../origin/text.md
 converted_by: convert
-reviewed: false
+reviewed: true
 ---
 
 # What counts as evidence of competence

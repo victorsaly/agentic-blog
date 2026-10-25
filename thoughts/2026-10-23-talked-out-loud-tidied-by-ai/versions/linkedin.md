@@ -6,7 +6,7 @@ kind: linkedin
 language: en
 converted_from: ../origin/transcript.md
 converted_by: claude-chat
-reviewed: false
+reviewed: true
 ---
 
 Nobody puts "made with AI" in the footer. I'm putting "converted with AI" on everything.

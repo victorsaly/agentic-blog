@@ -5,7 +5,7 @@ kind: short
 language: en
 converted_from: ../origin/text.md
 converted_by: convert
-reviewed: false
+reviewed: true
 ---
 
 We hide AI-assisted work as if it were cheating. I see it as a better way of producing results.

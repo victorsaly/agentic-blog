@@ -5,7 +5,7 @@ kind: linkedin
 language: en
 converted_from: ../origin/text.md
 converted_by: convert
-reviewed: false
+reviewed: true
 ---
 
 We hide AI-assisted work like it is cheating. I see it as an enhanced way of producing results.

@@ -8,7 +8,7 @@ kind: long
 language: en
 converted_from: ../origin/transcript.md
 converted_by: claude-chat
-reviewed: false
+reviewed: true
 ---
 
 # Talked out loud, tidied by AI
