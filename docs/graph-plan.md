@@ -22,16 +22,12 @@ by hand. Start at me and walk outwards, or start at one idea and see what it con
 - Topics come from `settings.yml → themes`. Reader copy says **Topics**; the field and `lib/themes.ts` keep
   the old name on purpose.
 
-## Decisions for Victor before Slice G2
+## Decisions (Victor, 25 October 2026)
 
-1. **The name and address.** Recommended: **Map**, at `/map`. The first post says "a map, not a list";
-   "graph" reads as a chart. The alternative is "Graph", at `/graph`.
-2. **Where the ideas live.** Recommended: keep the table and parse it, failing the build on a malformed
-   row. No agent change, and both posts work as they are. The alternative is moving the ideas into front
-   matter (`ideas: [{ text, themes }]`), which is sturdier but changes the structure agent, its card, its
-   tests and both posts.
-3. **When it becomes the front door.** Recommended: not in this plan. Live with `/map` first; Slice G3 is
-   the switch, and it is a separate decision.
+1. **The name and address: Graph, at `/graph`.** Not "Map".
+2. **Where the ideas live: the table stays and is parsed**, failing the build on a malformed row. No agent
+   change, and both posts work as they are. (Moving ideas into front matter was the alternative.)
+3. **The front door: not in this plan.** Live with `/graph` first; Slice G3 is a separate decision.
 
 ## The slices
 
@@ -51,14 +47,14 @@ One slice per pull request, in this order. A slice is not done until CI is green
 - Done: `npm run test` covers it; nothing on the site changes.
 - Good for: Copilot or Sonnet.
 
-### Slice G2: the `/map` page
+### Slice G2: the `/graph` page
 
 - Built at build time as one inline SVG. No client JavaScript, no force simulation, no new dependency.
 - Layout is computed, never placed by hand: me at the centre; topics evenly on a ring, most written about
   at the top; each idea on an outer ring at the mean angle of its topics, so an idea on two topics sits
   between them. Ideas of one post stay next to each other. Same input, same picture.
 - Ink only: hairline edges, filled dots for ideas, topic names in the strong weight. Marigold marks one
-  thing: the topic you opened (`/map#credibility` uses `:target` to darken its edges and ideas and dim the
+  thing: the topic you opened (`/graph#credibility` uses `:target` to darken its edges and ideas and dim the
   rest). No motion.
 - Every node is a link: the core to `/how-it-works`, a topic to `/topics/<topic>`, an idea to its post.
 - The readable layer sits under the picture and is the same data as a list: each topic, its ideas, each
@@ -67,7 +63,7 @@ One slice per pull request, in this order. A slice is not done until CI is green
 - Phones first: under about 600px the SVG shows the core and the topic ring only, with a count on each
   topic, and the list does the rest. Ideas' text never appears inside the SVG at any width; it goes in the
   list.
-- A link to the map in the header next to Topics, and from `/topics`.
+- A link to the graph in the header next to Topics, and from `/topics`.
 - Before starting: Impeccable and `emil-design-eng`. Before merge: `/impeccable critique` and axe.
 - Done: the page builds from the two posts with no hand-placed coordinates; a new topic in a post appears
   on the ring after a build with no code change; keyboard and screen reader reach every idea through the
@@ -76,9 +72,9 @@ One slice per pull request, in this order. A slice is not done until CI is green
 
 ### Slice G3: the front door (needs Victor's decision first)
 
-- The home page's lead becomes the map; the newest post and the index move below it. The portrait, the
+- The home page's lead becomes the graph; the newest post and the index move below it. The portrait, the
   name and the one line stay first.
-- Done: Victor has lived with `/map` and said yes; the home page still works at phone width with the map
+- Done: Victor has lived with `/graph` and said yes; the home page still works at phone width with the graph
   in place; the critique score does not drop.
 
 ### Later (each needs its own plan before work starts)
