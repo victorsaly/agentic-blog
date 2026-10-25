@@ -1,6 +1,7 @@
-// Why: one comment in the studio, with the email only Victor may see. A waiting comment can be approved or
-// deleted. An approved one can still be deleted, in case it was let through by mistake; that takes a second
-// press, because readers can already see it.
+// Why: one comment in the studio, with the email only Victor may see, under the title of the post it was left
+// on. A waiting comment can be approved or deleted; an approved one can still be deleted, in case it was let
+// through by mistake. Deleting is for good, so it always takes a second press, and it sits at the far end of
+// the row, away from Approve, where a thumb will not find it by accident.
 import { useState } from 'react';
 import type { CommentStatus, OwnerComment } from '../lib/comments';
 
@@ -16,6 +17,8 @@ export interface CommentRowProps {
   /** Which list the row sits in: waiting ones can be approved, showing ones need a second press to delete. */
   list: CommentStatus;
   busy: boolean;
+  /** The post's title, when it is known; the folder name otherwise. */
+  title?: string | undefined;
   onApprove: (comment: OwnerComment) => void;
   onDelete: (comment: OwnerComment) => void;
 }
@@ -24,6 +27,7 @@ export function CommentRow({
   comment,
   list,
   busy,
+  title,
   onApprove,
   onDelete,
 }: CommentRowProps): React.JSX.Element {
@@ -41,7 +45,7 @@ export function CommentRow({
         <span className="small quiet">{dateOf(comment.createdAt)}</span>
       </p>
       <p className="small quiet">
-        On <a href={`/thoughts/${comment.slug}`}>{comment.slug}</a>
+        On <a href={`/thoughts/${comment.slug}`}>{title ?? comment.slug}</a>
       </p>
       <p className="text">{comment.body}</p>
       <div className="actions">
@@ -59,10 +63,10 @@ export function CommentRow({
         )}
         <button
           type="button"
-          className={confirming ? 'control filled' : 'control'}
+          className={confirming ? 'control filled delete' : 'control delete'}
           disabled={busy}
           onClick={() => {
-            if (list === 'approved' && !confirming) setConfirming(true);
+            if (!confirming) setConfirming(true);
             else onDelete(comment);
           }}
           onBlur={() => {

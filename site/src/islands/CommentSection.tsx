@@ -12,6 +12,8 @@ export interface CommentSectionProps {
   state: OwnerListState;
   busy: number | null;
   note: string;
+  /** Post titles by folder name. */
+  titles: Record<string, string>;
   onApprove: (comment: OwnerComment) => void;
   onDelete: (comment: OwnerComment) => void;
   onMore: () => void;
@@ -25,6 +27,7 @@ export function CommentSection({
   state,
   busy,
   note,
+  titles,
   onApprove,
   onDelete,
   onMore,
@@ -53,6 +56,7 @@ export function CommentSection({
                   comment={comment}
                   list={list}
                   busy={busy === comment.id}
+                  title={titles[comment.slug]}
                   onApprove={onApprove}
                   onDelete={onDelete}
                 />
@@ -80,7 +84,7 @@ export function CommentSection({
         </div>
       )}
 
-      <p className="small status" role="status">
+      <p className="small status" role="status" id={`comments-${list}-status`} tabIndex={-1}>
         {note}
       </p>
     </section>

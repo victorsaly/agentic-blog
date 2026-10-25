@@ -1,7 +1,8 @@
 // Why: what the agents are doing on GitHub right now, without waiting for a deploy: what is running and on
 // which step, what is queued, and how the latest runs ended, each with its log and pull request. It asks
 // again every few seconds while something is going and the page is in view, less often when all is quiet,
-// and never while the page is hidden. Only the summary line is announced, so a screen reader is not
+// and never while the page is hidden. When GitHub cannot be asked it says so, and what it showed before is
+// marked with the time it was true: a failure never reads as all quiet. Only the summary line is announced, so a screen reader is not
 // talked over by every refresh.
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -25,10 +26,11 @@ const words: Record<LiveState, string> = {
   stopped: 'Stopped',
 };
 
-type Status =
-  | { kind: 'loading' }
-  | { kind: 'ready'; runs: LiveRun[]; at: string }
-  | { kind: 'failed'; message: string; runs: LiveRun[] };
+/** What GitHub last told the page, and whether the latest ask failed. A failure never pretends all is quiet. */
+interface Status {
+  known: { runs: LiveRun[]; at: string } | null;
+  error: string | null;
+}
 
 function errorOf(data: unknown): string {
   return typeof data === 'object' &&
@@ -44,7 +46,7 @@ export interface AgentsLiveProps {
 }
 
 export function AgentsLive({ titles }: AgentsLiveProps): React.JSX.Element {
-  const [status, setStatus] = useState<Status>({ kind: 'loading' });
+  const [status, setStatus] = useState<Status>({ known: null, error: null });
 
   const load = useCallback(async (): Promise<LiveRun[]> => {
     try {
@@ -52,18 +54,14 @@ export function AgentsLive({ titles }: AgentsLiveProps): React.JSX.Element {
       const data: unknown = await response.json().catch(() => null);
       const runs = response.ok ? readLiveRuns(data) : null;
       if (runs === null) throw new Error(errorOf(data));
-      setStatus({ kind: 'ready', runs, at: new Date().toISOString() });
+      setStatus({ known: { runs, at: new Date().toISOString() }, error: null });
       return runs;
     } catch (error: unknown) {
       const message =
         error instanceof Error && error.message !== 'Failed to fetch'
           ? error.message
           : 'The studio could not be reached. Check the connection.';
-      setStatus((now) => ({
-        kind: 'failed',
-        message,
-        runs: now.kind === 'loading' ? [] : now.runs,
-      }));
+      setStatus((now) => ({ known: now.known, error: message }));
       return [];
     }
   }, []);
@@ -92,19 +90,35 @@ export function AgentsLive({ titles }: AgentsLiveProps): React.JSX.Element {
     };
   }, [load]);
 
-  if (status.kind === 'loading')
+  const { known, error } = status;
+  if (known === null && error === null)
     return <p className="quiet">Asking GitHub what the agents are doing…</p>;
+  if (known === null)
+    return (
+      <div className="agents-live">
+        <p className="summary" aria-live="polite">
+          Could not ask GitHub what the agents are doing.
+        </p>
+        <p role="alert">{error} The page asks again on its own.</p>
+      </div>
+    );
 
-  const now = status.kind === 'ready' ? status.at : new Date().toISOString();
-  const going = status.runs.filter((r) => r.state === 'running' || r.state === 'queued');
-  const recent = status.runs
-    .filter((r) => r.state !== 'running' && r.state !== 'queued')
-    .slice(0, RECENT);
+  const now = new Date().toISOString();
+  const runs = known.runs;
+  const going = runs.filter((r) => r.state === 'running' || r.state === 'queued');
+  const recent = runs.filter((r) => r.state !== 'running' && r.state !== 'queued').slice(0, RECENT);
   const running = going.filter((r) => r.state === 'running').length;
-  const summary =
+  const counted =
     going.length === 0
-      ? 'No agent is working on GitHub right now.'
-      : `${String(running)} running, ${String(going.length - running)} queued.`;
+      ? 'No agent is working on GitHub'
+      : `${String(running)} running, ${String(going.length - running)} queued`;
+  // A failed ask keeps what was known, and says how old it is instead of passing it off as now.
+  const seen = new Date(known.at).toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const summary =
+    error === null ? `${counted} right now.` : `${counted} at ${seen}, the last answer.`;
 
   const row = (run: LiveRun): React.JSX.Element => {
     const thought = run.thought === null ? null : (titles[run.thought] ?? run.thought);
@@ -136,7 +150,7 @@ export function AgentsLive({ titles }: AgentsLiveProps): React.JSX.Element {
       <p className="summary" aria-live="polite">
         {summary}
       </p>
-      {status.kind === 'failed' && <p role="alert">{status.message}</p>}
+      {error !== null && <p role="alert">{error} The page asks again on its own.</p>}
 
       <section aria-labelledby="going-label">
         <h2 className="label" id="going-label">

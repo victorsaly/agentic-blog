@@ -36,8 +36,7 @@ export const onRequestGet: Handler = async ({ env }) => {
       502,
     );
   }
-  if (!response.ok)
-    return problem(`GitHub did not answer (${String(response.status)}). Try again.`, 502);
+  if (!response.ok) return problem(`GitHub did not answer (${String(response.status)}).`, 502);
 
   const runs = readRuns(await response.json()).filter(isShown);
   const lookups = runs.filter(needsSteps).slice(0, STEP_LOOKUPS);

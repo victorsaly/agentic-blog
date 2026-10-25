@@ -1,10 +1,10 @@
 ---
-// Why: every studio page is the same private room with a different job in it. This layout gives them one
-// heading, the row of areas, and the sign-in line, and keeps each page out of search engines, so a page only
-// adds what its job needs. It uses the site's full frame: the studio is a workroom, not something to read. Cloudflare Access sits in front of /studio and everything under it, and /api/*.
+// Why: every studio page is the same private room with a different job in it. This layout gives them the
+// room's own slim header (not the reader's), the row of areas, and keeps each page out of search engines, so
+// a page only adds what its job needs. It uses the site's full frame: the studio is a workroom, not something
+// to read. Cloudflare Access sits in front of /studio and everything under it, and /api/*.
 import Page from './Page.astro';
 import StudioTabs from '../components/StudioTabs.astro';
-import { settings } from '../lib/settings';
 import { areaFor, studioAreas } from '../lib/studio-areas';
 import { loadWaiting } from '../lib/studio-data';
 
@@ -19,25 +19,17 @@ const reviewWaiting = (await loadWaiting()).reduce((sum, t) => sum + t.waiting.l
 const title = current === 'today' || !area ? 'Studio' : `${area.name} · Studio`;
 ---
 
-<Page title={title} description={description} noindex={true} width="wide">
+<Page title={title} description={description} noindex={true} width="wide" room="studio">
   <div class="frame studio">
-    <p class="label">Studio</p>
     <StudioTabs current={current} counts={{ review: reviewWaiting }} />
     <slot />
-    <p class="small quiet signed-in">
-      Signed in as {settings.site.author}. This page is behind Cloudflare Access and is never
-      indexed.
-    </p>
   </div>
 </Page>
 
 <style>
   /* The studio is a workroom, not a page to read: it takes the whole frame. Prose still keeps its measure. */
   .studio {
-    padding-top: var(--space-5);
-  }
-  .signed-in {
-    margin-top: var(--space-6);
+    padding-block: var(--space-4) var(--space-6);
   }
 </style>
 
@@ -46,15 +38,71 @@ const title = current === 'today' || !area ? 'Studio' : `${area.name} · Studio`
   .recorder {
     margin: var(--space-4) 0 var(--space-6);
   }
-  .recorder .big {
+  /* The one big action, the same wherever it is: a filled ink button with the microphone, full width. */
+  .say-it {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
     width: 100%;
     min-height: calc(var(--tap) * 3);
+    border: 2px solid var(--ink);
+    background: var(--ink);
+    color: var(--paper);
     font-size: var(--size-message);
     font-weight: 700;
-    border-width: 2px;
+    text-decoration: none;
+    transition: scale var(--duration-press) var(--ease-out);
+  }
+  .say-it:hover {
+    background: var(--ink);
+    color: var(--paper);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+  .say-it:active {
+    scale: 0.98;
+  }
+  .say-it:focus-visible {
+    outline: var(--focus);
+    outline-offset: var(--focus-offset);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .say-it {
+      transition: none;
+    }
   }
   .recorder .alternative {
     margin-top: var(--space-2);
+  }
+  /* How loud the microphone hears: a hairline track with an ink line stretched from the left. It moves only
+     while recording, which Victor asked for by pressing Say it; it is information, not decoration. */
+  .recorder .level {
+    display: block;
+    height: 6px;
+    margin: 0 0 var(--space-3);
+    border-bottom: var(--rule-width) solid var(--rule);
+  }
+  .recorder .level span {
+    display: block;
+    height: 100%;
+    background: var(--ink);
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+  /* Discard sits away from the main action, so a thumb does not find it by mistake. */
+  .recorder .discard {
+    margin-left: auto;
+  }
+  .recorder .done,
+  .recorder .failed {
+    display: grid;
+    gap: var(--space-3);
+    justify-items: start;
+  }
+  .recorder .done p,
+  .recorder .failed p {
+    margin: 0;
   }
   .recorder .elapsed {
     font-size: var(--size-title);

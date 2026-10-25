@@ -2,7 +2,12 @@
 // records in the browser, sends the audio to R2, asks for a transcript, and opens the pull request. Some
 // thoughts already exist as text (written down, or transcribed elsewhere), so the same island also takes
 // words typed or pasted in, with no recording. It is React because the state drives everything on screen.
+// Nothing said or written is lost by one press: Discard asks again when there is something to lose, and
+// leaving the page while recording asks the browser to check first. A level line shows the microphone is
+// hearing. Opened with ?start=1 (the overview's Say it), it starts recording at once. Only a short status
+// line is announced to a screen reader, not every change on screen.
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { MicIcon } from './MicIcon';
 
 type Phase =
   | { kind: 'idle' }
@@ -31,6 +36,9 @@ export interface RecorderProps {
   /** 'origin' records a thought; 'feedback' records a note about an output and needs the thought slug. */
   mode: 'origin' | 'feedback';
   thoughtSlug?: string;
+  /** Told whether something said or written is in hand (not yet sent or discarded), so a parent can hold
+   * still around it, as the feedback page does with its choice of thought. */
+  onBusyChange?: (busy: boolean) => void;
 }
 
 async function postJson<T>(url: string, body: BodyInit, contentType?: string): Promise<T> {
@@ -38,10 +46,73 @@ async function postJson<T>(url: string, body: BodyInit, contentType?: string): P
   const response = await fetch(url, { method: 'POST', body, headers });
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`${url} answered ${String(response.status)}: ${text || response.statusText}`);
+    let reason = text || response.statusText;
+    try {
+      const data: unknown = JSON.parse(text);
+      if (
+        typeof data === 'object' &&
+        data !== null &&
+        typeof (data as { error?: unknown }).error === 'string'
+      )
+        reason = (data as { error: string }).error;
+    } catch {
+      /* not JSON: the text itself is the reason */
+    }
+    throw new Error(`${reason} (${String(response.status)})`);
   }
   const data: unknown = await response.json();
   return data as T;
+}
+
+/** What went wrong, without the "Error:" a thrown error prints with. */
+function reasonOf(error: unknown): string {
+  if (error instanceof Error)
+    return error.message === 'Failed to fetch' ? 'the studio could not be reached' : error.message;
+  return String(error);
+}
+
+/** What a screen reader hears as the recorder moves on: one short line, never the whole section. */
+const spoken: Record<Phase['kind'], string> = {
+  idle: '',
+  recording: 'Recording.',
+  uploading: 'Saving the recording.',
+  transcribing: 'Writing down what you said.',
+  ready: 'Written down. Read it, then send it or discard it.',
+  sending: 'Opening the pull request.',
+  writing: '',
+  sent: 'Done. The pull request is open.',
+  failed: '',
+};
+
+/** Shows how loud the microphone hears, by stretching a line; returns how to stop. A browser without audio
+ * analysis simply shows no line. */
+function listen(stream: MediaStream, bar: React.RefObject<HTMLSpanElement | null>): () => void {
+  try {
+    const context = new AudioContext();
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 512;
+    context.createMediaStreamSource(stream).connect(analyser);
+    const samples = new Uint8Array(analyser.fftSize);
+    let frame = 0;
+    const draw = (): void => {
+      analyser.getByteTimeDomainData(samples);
+      let sum = 0;
+      for (const sample of samples) {
+        const v = (sample - 128) / 128;
+        sum += v * v;
+      }
+      const loudness = Math.min(1, Math.sqrt(sum / samples.length) * 4);
+      if (bar.current) bar.current.style.transform = `scaleX(${loudness.toFixed(3)})`;
+      frame = requestAnimationFrame(draw);
+    };
+    frame = requestAnimationFrame(draw);
+    return () => {
+      cancelAnimationFrame(frame);
+      void context.close();
+    };
+  } catch {
+    return () => undefined;
+  }
 }
 
 function formatElapsed(since: number, now: number): string {
@@ -51,14 +122,45 @@ function formatElapsed(since: number, now: number): string {
   return `${minutes}:${seconds}`;
 }
 
-export function Recorder({ mode, thoughtSlug }: RecorderProps): React.JSX.Element {
+export function Recorder({ mode, thoughtSlug, onBusyChange }: RecorderProps): React.JSX.Element {
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
+  const busy = phase.kind !== 'idle' && phase.kind !== 'sent';
+  useEffect(() => {
+    onBusyChange?.(busy);
+  }, [busy, onBusyChange]);
+  useEffect(
+    () => () => {
+      onBusyChange?.(false);
+    },
+    [onBusyChange],
+  );
   const [now, setNow] = useState<number>(() => Date.now());
   const recorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
   const textArea = useRef<HTMLTextAreaElement | null>(null);
   const textId = useId();
   const writing = phase.kind === 'writing';
+  // Discard on something that would be lost waits for a second press.
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  const level = useRef<HTMLSpanElement | null>(null);
+  const stopListening = useRef<(() => void) | null>(null);
+  // Leaving the page part (another thought chosen, the island removed) never leaves the microphone on:
+  // the recording stops without being sent, and its tracks are released.
+  useEffect(
+    () => () => {
+      stopListening.current?.();
+      const media = recorder.current;
+      if (media) {
+        media.onstop = null;
+        if (media.state !== 'inactive') media.stop();
+        media.stream.getTracks().forEach((track) => {
+          track.stop();
+        });
+        recorder.current = null;
+      }
+    },
+    [],
+  );
 
   // The reader asked for the text box by pressing the button, so the caret goes straight into it.
   useEffect(() => {
@@ -85,12 +187,40 @@ export function Recorder({ mode, thoughtSlug }: RecorderProps): React.JSX.Elemen
       };
       media.start(1000);
       recorder.current = media;
+      stopListening.current = listen(stream, level);
       setNow(Date.now());
       setPhase({ kind: 'recording', since: Date.now() });
     } catch (error) {
-      setPhase({ kind: 'failed', message: `The microphone did not open: ${String(error)}` });
+      setPhase({
+        kind: 'failed',
+        message: `The microphone did not open (${reasonOf(error)}). Allow it for this site in the browser's settings, then start over.`,
+      });
     }
   }, []);
+
+  // The overview's Say it opens this page with ?start=1: recording starts at once, and the address forgets
+  // it so a reload does not start another.
+  useEffect(() => {
+    if (mode !== 'origin') return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('start') !== '1') return;
+    url.searchParams.delete('start');
+    window.history.replaceState(null, '', url);
+    void start();
+  }, [mode, start]);
+
+  // Leaving while recording would lose it; the browser asks first.
+  const recording = phase.kind === 'recording';
+  useEffect(() => {
+    if (!recording) return undefined;
+    const hold = (event: BeforeUnloadEvent): void => {
+      event.preventDefault();
+    };
+    window.addEventListener('beforeunload', hold);
+    return () => {
+      window.removeEventListener('beforeunload', hold);
+    };
+  }, [recording]);
 
   const upload = useCallback(
     async (blob: Blob) => {
@@ -100,18 +230,28 @@ export function Recorder({ mode, thoughtSlug }: RecorderProps): React.JSX.Elemen
         form.set('audio', blob, `${mode}-${new Date().toISOString()}.webm`);
         form.set('mode', mode);
         if (thoughtSlug) form.set('thought', thoughtSlug);
-        const { key } = await postJson<UploadResponse>('/api/upload', form);
-        setPhase({ kind: 'transcribing', key });
-        const { text } = await postJson<TranscribeResponse>(
-          '/api/transcribe',
-          JSON.stringify({ key }),
-          'application/json',
-        );
-        setPhase({ kind: 'ready', key, transcript: text });
+        let saved = false;
+        try {
+          const { key } = await postJson<UploadResponse>('/api/upload', form);
+          saved = true;
+          setPhase({ kind: 'transcribing', key });
+          const { text } = await postJson<TranscribeResponse>(
+            '/api/transcribe',
+            JSON.stringify({ key }),
+            'application/json',
+          );
+          setPhase({ kind: 'ready', key, transcript: text });
+        } catch (error) {
+          throw new Error(
+            saved
+              ? `The recording is saved, but it could not be written down: ${reasonOf(error)}.`
+              : `The recording could not be saved: ${reasonOf(error)}. It is still in this page; try again.`,
+          );
+        }
       } catch (error) {
         setPhase({
           kind: 'failed',
-          message: String(error),
+          message: reasonOf(error),
           retry: () => {
             void upload(blob);
           },
@@ -124,6 +264,8 @@ export function Recorder({ mode, thoughtSlug }: RecorderProps): React.JSX.Elemen
   const stop = useCallback(() => {
     const media = recorder.current;
     if (!media) return;
+    stopListening.current?.();
+    stopListening.current = null;
     media.onstop = () => {
       media.stream.getTracks().forEach((track) => {
         track.stop();
@@ -145,7 +287,7 @@ export function Recorder({ mode, thoughtSlug }: RecorderProps): React.JSX.Elemen
     } catch (error) {
       setPhase({
         kind: 'failed',
-        message: String(error),
+        message: `The pull request did not open: ${reasonOf(error)}. The words are kept; try again.`,
         retry: () => {
           void send();
         },
@@ -168,7 +310,7 @@ export function Recorder({ mode, thoughtSlug }: RecorderProps): React.JSX.Elemen
       } catch (error) {
         setPhase({
           kind: 'failed',
-          message: String(error),
+          message: `The pull request did not open: ${reasonOf(error)}. The words are kept; try again.`,
           retry: () => {
             void sendText(text);
           },
@@ -178,26 +320,54 @@ export function Recorder({ mode, thoughtSlug }: RecorderProps): React.JSX.Elemen
     [mode, thoughtSlug],
   );
 
-  const title = mode === 'origin' ? 'Say it' : 'Say what is wrong with the output';
+  const title = mode === 'origin' ? 'Say it' : 'Say what is wrong';
   const writeLabel = mode === 'origin' ? 'Write or paste it instead' : 'Write it instead';
   const sendLabel = mode === 'origin' ? 'Make it an origin' : 'Send the feedback';
+  const toIdle = (): void => {
+    setConfirmingDiscard(false);
+    setPhase({ kind: 'idle' });
+  };
+  // A second press on Discard when there is something to lose; the first only asks.
+  const discard = (somethingToLose: boolean): void => {
+    if (somethingToLose && !confirmingDiscard) setConfirmingDiscard(true);
+    else toIdle();
+  };
+  const discardButton = (somethingToLose: boolean, disabled: boolean): React.JSX.Element => (
+    <button
+      type="button"
+      className="control discard"
+      disabled={disabled}
+      onClick={() => {
+        discard(somethingToLose);
+      }}
+      onBlur={() => {
+        setConfirmingDiscard(false);
+      }}
+    >
+      {confirmingDiscard ? 'Discard it for good' : 'Discard'}
+    </button>
+  );
 
   return (
-    <section className="recorder" aria-live="polite">
+    <section className="recorder">
+      <p className="visually-hidden" role="status">
+        {spoken[phase.kind]}
+      </p>
       {phase.kind === 'idle' && (
         <>
           <button
             type="button"
-            className="big"
+            className="say-it"
             onClick={() => {
               void start();
             }}
           >
+            <MicIcon />
             {title}
           </button>
           <button
             type="button"
-            className="alternative"
+            className="control alternative"
             onClick={() => {
               setPhase({ kind: 'writing', text: '', sending: false });
             }}
@@ -234,28 +404,28 @@ export function Recorder({ mode, thoughtSlug }: RecorderProps): React.JSX.Elemen
               : 'Say what went down the wrong road, not which sentences to change.'}
           </p>
           <div className="row">
-            <button type="submit" disabled={phase.sending || phase.text.trim().length === 0}>
+            <button
+              type="submit"
+              className="control filled"
+              disabled={phase.sending || phase.text.trim().length === 0}
+            >
               {phase.sending ? 'Opening the pull request…' : sendLabel}
             </button>
-            <button
-              type="button"
-              disabled={phase.sending}
-              onClick={() => {
-                setPhase({ kind: 'idle' });
-              }}
-            >
-              Discard
-            </button>
+            {discardButton(phase.text.trim().length > 0, phase.sending)}
           </div>
         </form>
       )}
 
       {phase.kind === 'recording' && (
         <>
-          <p className="elapsed" aria-label="Recording time">
+          <p className="elapsed">
+            <span className="visually-hidden">Recording for </span>
             {formatElapsed(phase.since, now)}
           </p>
-          <button type="button" className="big" onClick={stop}>
+          <span className="level" aria-hidden="true">
+            <span ref={level} />
+          </span>
+          <button type="button" className="say-it" onClick={stop}>
             Stop
           </button>
         </>
@@ -267,12 +437,14 @@ export function Recorder({ mode, thoughtSlug }: RecorderProps): React.JSX.Elemen
       {(phase.kind === 'ready' || phase.kind === 'sending') && (
         <>
           <p className="small quiet">
-            This is the first conversion. It is not edited here; the pull request keeps it as it is.
+            This is what you said, written down. It goes in exactly as it is; nothing is tidied
+            here.
           </p>
           <blockquote className="transcript">{phase.transcript}</blockquote>
           <div className="row">
             <button
               type="button"
+              className="control filled"
               onClick={() => {
                 void send();
               }}
@@ -280,51 +452,37 @@ export function Recorder({ mode, thoughtSlug }: RecorderProps): React.JSX.Elemen
             >
               {phase.kind === 'sending' ? 'Opening the pull request…' : sendLabel}
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                setPhase({ kind: 'idle' });
-              }}
-              disabled={phase.kind === 'sending'}
-            >
-              Discard
-            </button>
+            {discardButton(true, phase.kind === 'sending')}
           </div>
         </>
       )}
 
       {phase.kind === 'sent' && (
-        <p>
-          Done. <a href={phase.prUrl}>The pull request is open</a>; read it, fix what sounds wrong,
-          merge.{' '}
-          <button
-            type="button"
-            onClick={() => {
-              setPhase({ kind: 'idle' });
-            }}
-          >
-            Say another
+        <div className="done">
+          <p>
+            Done. <a href={phase.prUrl}>The pull request is open</a>. Merge it and it becomes{' '}
+            {mode === 'origin' ? 'an origin, word for word' : 'feedback on that thought'}.
+          </p>
+          <button type="button" className="control" onClick={toIdle}>
+            {mode === 'origin' ? 'Say another' : 'Say more'}
           </button>
-        </p>
+        </div>
       )}
 
       {phase.kind === 'failed' && (
-        <p role="alert">
-          {phase.message}{' '}
-          {phase.retry && (
-            <button type="button" onClick={phase.retry}>
-              Try again
+        <div className="failed" role="alert">
+          <p>{phase.message}</p>
+          <div className="row">
+            {phase.retry && (
+              <button type="button" className="control filled" onClick={phase.retry}>
+                Try again
+              </button>
+            )}
+            <button type="button" className="control" onClick={toIdle}>
+              Start over
             </button>
-          )}{' '}
-          <button
-            type="button"
-            onClick={() => {
-              setPhase({ kind: 'idle' });
-            }}
-          >
-            Start over
-          </button>
-        </p>
+          </div>
+        </div>
       )}
     </section>
   );

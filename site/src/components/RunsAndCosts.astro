@@ -34,8 +34,7 @@ const share = shareOfCap(thisMonth.usd, monthlyCapUsd);
 const withRuns = posts.filter((p) => p.rows.length > 0);
 ---
 
-<section class="runs" aria-labelledby="runs-label">
-  <h2 class="label" id="runs-label">Runs and costs</h2>
+<section class="runs">
   <p class="month">
     <strong>{thisMonth.isFloor ? 'At least ' : ''}{money(thisMonth.usd)}</strong> spent on agents this
     month, {share} of the {money(monthlyCapUsd)} monthly budget.
@@ -88,7 +87,7 @@ const withRuns = posts.filter((p) => p.rows.length > 0);
 
 <style>
   .runs {
-    margin-top: var(--space-6);
+    margin-top: var(--space-3);
   }
   .month {
     margin: var(--space-3) 0 var(--space-1);
@@ -104,8 +103,9 @@ const withRuns = posts.filter((p) => p.rows.length > 0);
   .post h3 span {
     font-weight: 400;
   }
+  /* Four short columns read as one row only when they stay close: on a desk the table keeps to its content. */
   table {
-    max-width: none;
+    max-width: 48rem;
   }
   th {
     color: var(--quiet);
