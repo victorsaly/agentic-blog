@@ -1,7 +1,15 @@
 // Why: a gate that opens too early asks Victor about work that is not finished; one that opens twice asks
 // him the same question twice; one that never opens leaves the thought stuck with nobody told.
 import { describe, expect, it } from 'vitest';
-import { closeGate, gatesToOpen, sentBackTo, stepsBefore, stepsToStart } from './gates.js';
+import {
+  closeGate,
+  gatesToOpen,
+  leadsOut,
+  stillReady,
+  sentBackTo,
+  stepsBefore,
+  stepsToStart,
+} from './gates.js';
 import { Ledger, type EventBody } from './ledger.js';
 import type { WorkflowInput } from './schema.js';
 
@@ -232,5 +240,32 @@ describe('the run goes on', () => {
     const again = [...first, await ran('review'), await ran('convert')];
     expect(stepsToStart(join, 'convert', again)).toEqual(['proof']);
     expect(stepsToStart(join, 'proof', [...again, await ran('proof')])).toEqual(['review']);
+  });
+});
+
+describe('the way out', () => {
+  it('lets only the gate directly before the way out merge on its approval', () => {
+    const out = {
+      id: 'o',
+      why: 'A gate, then the way out.',
+      nodes: {
+        write: { kind: 'agent', why: 'Writes.' },
+        look: { kind: 'gate', why: 'Owner.', after: ['write'], asks: 'approve', question: 'Ok?' },
+        merge: { kind: 'gate', why: 'Owner.', after: ['look'], asks: 'approve', question: 'Live?' },
+        live: { kind: 'sink', why: 'Out.', after: ['merge'] },
+      },
+    } as unknown as WorkflowInput;
+    expect(leadsOut(out, 'merge')).toBe(true);
+    expect(leadsOut(out, 'look')).toBe(false);
+    expect(leadsOut(out, 'write')).toBe(false);
+    expect(leadsOut(workflow, 'look')).toBe(false);
+  });
+
+  it('calls an open gate stale once a step before it holds, until it is done again', async () => {
+    const runs = [await ran('convert'), await ran('image'), await opened('look')];
+    expect(stillReady(workflow, 'look', runs)).toBe(true);
+    const held = [...runs, await ran('image', 'held')];
+    expect(stillReady(workflow, 'look', held)).toBe(false);
+    expect(stillReady(workflow, 'look', [...held, await ran('image')])).toBe(true);
   });
 });
