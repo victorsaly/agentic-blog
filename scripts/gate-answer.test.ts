@@ -1,9 +1,18 @@
 // Why: an answer lands as an origin, and an origin the schema refuses would fail the build on the pull
-// request; a payload read wrongly would close the wrong gate or none.
+// request; a payload read wrongly would close the wrong gate or none. Approving the merge gate has to carry the
+// thought out of draft, or a merged post has no page.
 import matter from 'gray-matter';
 import { describe, expect, it } from 'vitest';
-import { originFrontMatter } from './content-schema';
-import { answerFileFor, answerOrigin, closeGatePayload } from './gate-answer';
+import { checkNumbers } from './check-why';
+import { originFrontMatter, structureFrontMatter } from './content-schema';
+import {
+  answerFileFor,
+  answerOrigin,
+  closeGatePayload,
+  nextNumber,
+  publishedStructure,
+  publishesOnClose,
+} from './gate-answer';
 
 describe('the answer as an origin', () => {
   it('lands only the interview answers, as origin/answers.md', () => {
@@ -60,5 +69,60 @@ describe('the close-gate payload', () => {
     expect(closeGatePayload.parse(sent)).toEqual({ ...sent, medium: 'text' });
     expect(closeGatePayload.safeParse({ ...sent, run: '../x' }).success).toBe(false);
     expect(closeGatePayload.safeParse({ ...sent, thought: 'x' }).success).toBe(false);
+  });
+});
+
+describe('approving the merge gate', () => {
+  const draft = [
+    '---',
+    'why: >',
+    '  The structure of a thought about trying the same idea again.',
+    'title: Same idea, a year later',
+    'date: 2026-10-25',
+    'language: en',
+    'themes:',
+    '  - accountability',
+    'message: >',
+    '  The message.',
+    'origins:',
+    '  - origin/transcript.md',
+    'draft: true',
+    '---',
+    '',
+    '## The idea',
+    '',
+    'draft: true is only front matter.',
+    '',
+  ].join('\n');
+
+  it('publishes only when the merge gate is approved', () => {
+    expect(publishesOnClose('merge', 'approved')).toBe(true);
+    expect(publishesOnClose('merge', 'redirected')).toBe(false);
+    expect(publishesOnClose('message', 'approved')).toBe(false);
+  });
+
+  it('takes the number after the highest one taken', () => {
+    expect(nextNumber([])).toBe(1);
+    expect(nextNumber([2, 1, 2])).toBe(3);
+  });
+
+  it('carries a draft out with its number, a thought the build and check:why accept', () => {
+    const published = publishedStructure(draft, 3);
+    expect(published).not.toBeNull();
+    const { data, content } = matter(published ?? '');
+    expect(data).toMatchObject({ number: 3, draft: false });
+    expect(structureFrontMatter.safeParse(data).success).toBe(true);
+    expect(checkNumbers([{ file: 'thoughts/c/structure.md', data }])).toEqual([]);
+    // Only the draft line changed: the body, which says "draft: true" too, is left as it was.
+    expect(content).toContain('draft: true is only front matter.');
+    expect(published?.replace('number: 3\ndraft: false', 'draft: true')).toBe(draft);
+  });
+
+  it('keeps a number already given, and never touches a thought already out', () => {
+    const numbered = draft.replace('draft: true', 'number: 7\ndraft: true');
+    expect(matter(publishedStructure(numbered, 3) ?? '').data).toMatchObject({ number: 7 });
+    expect(
+      publishedStructure(draft.replace('draft: true', 'number: 2\ndraft: false'), 3),
+    ).toBeNull();
   });
 });

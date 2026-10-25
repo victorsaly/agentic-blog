@@ -8,13 +8,21 @@
 // "start" output, which the workflow starts on the same branch): the steps after the gate, or, when Victor
 // sent it back, the steps before it, which then run again with his words.
 //   PAYLOAD='{"run":…,"thought":…,"decision":…,"words":…,"by":…}' npx tsx scripts/close-gate.ts
-import { appendFile, mkdir, stat, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { Ledger, closeGate, stepsBefore, stepsToStart } from '@roadbook/core';
 import project from '../roadbook.config';
 import { extendRun, readRuns } from '@roadbook/core/node';
 import { liveFromEnv } from '../agents/_lib/live';
-import { answerFileFor, answerOrigin, closeGatePayload } from './gate-answer';
+import matter from 'gray-matter';
+import {
+  answerFileFor,
+  answerOrigin,
+  closeGatePayload,
+  nextNumber,
+  publishedStructure,
+  publishesOnClose,
+} from './gate-answer';
 
 const root = resolve(process.env['CONTENT_ROOT'] ?? resolve(import.meta.dirname, '..'));
 const payload = closeGatePayload.parse(JSON.parse(process.env['PAYLOAD'] ?? 'null'));
@@ -48,6 +56,22 @@ if (file !== null) {
   });
 }
 
+// Approving the merge gate publishes the thought: its pull request carries it out of draft with the next free
+// number, so merging it is what puts it live. The numbers are read on main and on the gate's branch, so a
+// branch made before another thought went out never takes that one's number.
+let number: number | null = null;
+if (publishesOnClose(closing.node, payload.decision)) {
+  const path = join(thoughtDir, 'structure.md');
+  const main = resolve(import.meta.dirname, '..');
+  const taken = (await Promise.all([numbersIn(root), numbersIn(main)])).flat();
+  const published = publishedStructure(await readFile(path, 'utf8'), nextNumber(taken));
+  if (published !== null) {
+    await writeFile(path, published, 'utf8');
+    const given: unknown = matter(published).data['number'];
+    number = typeof given === 'number' ? given : null;
+  }
+}
+
 // Carry the run on from where it was saved, telling the studio every event (a resend changes nothing there).
 const live = liveFromEnv(run.id, payload.thought, process.env);
 const last = run.events.at(-1);
@@ -73,7 +97,7 @@ const start = !workflow
 const title = `content: ${closing.node} gate closed on ${payload.thought} (${payload.decision})`;
 const outputs = {
   title,
-  body: `Closed in the studio by ${payload.by}: \`${closing.node}\` ${payload.decision}.${file ? `\n\n- Answer: \`thoughts/${payload.thought}/${file}\`` : ''}\n- Run: \`${run.id}\``,
+  body: `Closed in the studio by ${payload.by}: \`${closing.node}\` ${payload.decision}.${file ? `\n\n- Answer: \`thoughts/${payload.thought}/${file}\`` : ''}${number !== null ? `\n\n- Published as thought ${String(number)}: merging this puts it live.` : ''}\n- Run: \`${run.id}\``,
   branch: `gate/${payload.thought}-${run.id.slice(-4)}`,
   start: start.join(' '),
 };
@@ -81,4 +105,22 @@ const out = process.env['GITHUB_OUTPUT'];
 if (out)
   for (const [key, value] of Object.entries(outputs))
     await appendFile(out, `${key}<<EOF_GATE\n${value}\nEOF_GATE\n`);
-console.info(JSON.stringify({ closed: closing.node, decision: payload.decision, file, start }));
+console.info(
+  JSON.stringify({ closed: closing.node, decision: payload.decision, file, number, start }),
+);
+
+/** The numbers every other thought under this checkout already has. */
+async function numbersIn(checkout: string): Promise<number[]> {
+  const dir = join(checkout, 'thoughts');
+  const slugs = await readdir(dir).catch(() => []);
+  const found = await Promise.all(
+    slugs
+      .filter((slug) => slug !== payload.thought)
+      .map(async (slug) => {
+        const source = await readFile(join(dir, slug, 'structure.md'), 'utf8').catch(() => '');
+        const given: unknown = matter(source).data['number'];
+        return typeof given === 'number' ? [given] : [];
+      }),
+  );
+  return found.flat();
+}

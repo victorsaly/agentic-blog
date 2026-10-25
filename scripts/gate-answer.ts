@@ -66,3 +66,29 @@ export function answerOrigin(
     '',
   ].join('\n');
 }
+
+/** Approving the merge gate is what publishes a thought: its pull request then carries it out of draft. */
+export function publishesOnClose(gate: string, decision: string): boolean {
+  return gate === 'merge' && decision === 'approved';
+}
+
+/** The next free number: one past the highest any other thought already has. */
+export function nextNumber(taken: readonly number[]): number {
+  return Math.max(0, ...taken) + 1;
+}
+
+/**
+ * A draft's structure.md, published: `draft: true` becomes `draft: false`, with the number given unless it
+ * already has one. Only those lines change, so the rest of the file stays exactly as the agents wrote it.
+ * Null when it is not a draft, so a thought already out is never renumbered.
+ */
+export function publishedStructure(source: string, number: number): string | null {
+  const end = source.indexOf('\n---', 3);
+  if (!source.startsWith('---\n') || end === -1) return null;
+  const lines = source.slice(4, end).split('\n');
+  const draft = lines.findIndex((line) => /^draft:\s*true\s*$/.test(line));
+  if (draft === -1) return null;
+  const numbered = lines.some((line) => line.startsWith('number:'));
+  lines.splice(draft, 1, ...(numbered ? [] : [`number: ${String(number)}`]), 'draft: false');
+  return `---\n${lines.join('\n')}${source.slice(end)}`;
+}
