@@ -24,6 +24,14 @@ const settingsSchema = z.object({
     index: z.boolean(),
     badge_text: z.string().min(1),
     social: z.array(z.string()),
+    /** What readers see costs in; the ledger stays in US dollars. */
+    currency: z
+      .object({
+        show: z.enum(['GBP', 'USD']),
+        per_usd: z.number().positive(),
+        rate_date: z.coerce.date(),
+      })
+      .default({ show: 'USD', per_usd: 1, rate_date: new Date('2026-10-23') }),
   }),
   licence: z.object({ code: z.string(), content: z.string() }),
   media: z.object({

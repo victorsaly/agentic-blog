@@ -1,0 +1,101 @@
+---
+// Why: the blog's promise, shown on the post itself: which agents worked on it, what each one does, and where
+// a person stepped in (an edit, a part written by hand, an override and its reason). Every line is read from
+// the post's ledger at build time; nothing here is typed by hand, and a post with no recorded runs shows no
+// box at all. What runs cost and how each ended, holds included, is the blogger's business and lives in the
+// studio, not here. Ruled rows in the house style, monochrome.
+import type { HowMade } from '../lib/how-made';
+import { formatDate } from '../lib/content';
+import { settings } from '../lib/settings';
+
+interface Props {
+  made: HowMade;
+  /** Each agent's purpose, from its card. */
+  jobs: Record<string, string>;
+}
+
+const { made, jobs } = Astro.props;
+const author = settings.site.author.split(' ')[0] ?? settings.site.author;
+const name = (agent: string): string => agent.charAt(0).toUpperCase() + agent.slice(1);
+const runs = made.steps.reduce((n, s) => n + s.runs, 0);
+const day = (iso: string): string => formatDate(new Date(`${iso}T12:00:00Z`));
+---
+
+<section class="made" id="how-made" aria-labelledby="made-label" data-pagefind-ignore>
+  <h2 class="label" id="made-label">How this was made</h2>
+  <p class="small quiet intro">
+    The agents that worked on this post, read from its ledger, where every run is recorded as it
+    happens and cannot be changed afterwards. Recorded since {day(made.since)}.
+  </p>
+  <ol class="steps">
+    {
+      made.steps.map((step) => (
+        <li>
+          <span class="agent">{name(step.agent)}</span>
+          {jobs[step.agent] && <span class="job small quiet">{jobs[step.agent]}</span>}
+        </li>
+      ))
+    }
+  </ol>
+  {
+    (made.editedByPerson.length > 0 || made.byPerson.length > 0) && (
+      <p class="small people">
+        {made.editedByPerson.length > 0 &&
+          `${author} edited what ${made.editedByPerson.map(name).join(', ')} wrote. `}
+        {made.byPerson.length > 0 &&
+          `${author} wrote ${made.byPerson.map(name).join(', ')}, in place of an agent.`}
+      </p>
+    )
+  }
+  {
+    made.overrides.length > 0 && (
+      <ul class="overrides small">
+        {made.overrides.map((o) => (
+          <li>
+            {author} overrode {name(o.node)}: “{o.reason}”
+          </li>
+        ))}
+      </ul>
+    )
+  }
+  <p class="small total">
+    {runs}
+    {runs === 1 ? ' agent run' : ' agent runs'} recorded. <a href="/how-it-works"
+      >How the agents work</a
+    >
+  </p>
+</section>
+
+<style>
+  .made {
+    margin-top: var(--space-6);
+  }
+  .intro {
+    margin: var(--space-3) 0 0;
+  }
+  .steps {
+    list-style: none;
+    margin: var(--space-3) 0 0;
+    padding: 0;
+    max-width: none;
+    border-top: var(--rule-width) solid var(--ink);
+  }
+  .steps li {
+    display: flex;
+    flex-direction: column;
+    padding-block: var(--space-3);
+    border-bottom: var(--rule-width) solid var(--ink);
+  }
+  .agent {
+    font-weight: 700;
+  }
+  .people,
+  .overrides,
+  .total {
+    margin: var(--space-3) 0 0;
+    max-width: none;
+  }
+  .overrides {
+    padding-left: var(--space-4);
+  }
+</style>

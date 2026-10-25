@@ -30,6 +30,11 @@ where each lives). This file says what to build next and in what order.
   characters it reports billing). Left for Slice 5: a card listing the writer it
   uses for review (the image agent reviews with `writer`, which its card does not name), and adapters for
   the other provider kinds.
+- **Slice 4 is built** (`feat/disclosure-box`), split by Victor's decision: readers see "How this was made"
+  after a post's sources (the agents that worked on it and what each does, any edit, part written by hand
+  or override with its reason); the studio's "Runs and costs" shows every run of every post with how it
+  ended, holds included, its cost in pounds, and the month against the budget. Both read `ledger/` at build
+  time; a run that does not verify stops the build. A post with no runs shows no box.
 - **Nothing runs through Roadbook yet.** The agents still run through `agents/run.ts` and their
   `PROMPT.md`; the cards describe them alongside. That is deliberate: the existing logic keeps working
   while the framework grows under it.
