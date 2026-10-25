@@ -1,0 +1,32 @@
+---
+// Why: the money side of the ledger, on its own page. Every thought's ledger is read and checked at build
+// time, drafts included, since a draft's runs cost money too. A run that does not verify stops the build.
+import { getCollection } from 'astro:content';
+import { join } from 'node:path';
+import { readRuns } from '@roadbook/core/node';
+import Studio from '../../layouts/Studio.astro';
+import RunsAndCosts from '../../components/RunsAndCosts.astro';
+import { thoughtSlugOf } from '../../lib/content';
+import { runRows } from '../../lib/how-made';
+import project from '../../../../roadbook.config';
+
+const everyThought = (await getCollection('thoughts')).map((t) => ({
+  slug: thoughtSlugOf(t.id),
+  title: t.data.title,
+}));
+const costed = await Promise.all(
+  everyThought.map(async (t) => {
+    const ledger = await readRuns(
+      join(process.cwd(), '..', 'thoughts', t.slug),
+      `thoughts/${t.slug}`,
+    );
+    if (ledger.issues.length > 0) throw new Error(ledger.issues.join('\n'));
+    return { ...t, rows: runRows(ledger.runs) };
+  }),
+);
+---
+
+<Studio description="Every run of every post, and what it cost.">
+  <h1>Runs</h1>
+  <RunsAndCosts posts={costed} monthlyCapUsd={project.budget.monthlyCapUsd} builtAt={new Date()} />
+</Studio>

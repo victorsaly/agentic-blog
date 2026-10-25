@@ -1,0 +1,15 @@
+---
+// Why: when an output went down the wrong road, Victor says so about the road instead of editing sentences.
+// The feedback lands as a note on that one thought, and the feedback agent reworks the versions from it.
+import Studio from '../../layouts/Studio.astro';
+import { FeedbackStudio } from '../../islands/FeedbackStudio';
+---
+
+<Studio description="Say what an output got wrong.">
+  <h1>Talk back</h1>
+  <p class="quiet">
+    When an output went down the wrong road, say so here instead of editing sentences. Name the
+    thought first.
+  </p>
+  <FeedbackStudio client:load />
+</Studio>

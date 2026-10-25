@@ -1,0 +1,93 @@
+---
+// Why: what the agents wrote that Victor has not read yet, so nothing waits unseen. Drafts are included: the
+// structure agent opens every thought as a draft, and its versions wait for review then.
+import { getCollection } from 'astro:content';
+import Studio from '../../layouts/Studio.astro';
+import { ReviewList } from '../../islands/ReviewList';
+import { leafOf, thoughtSlugOf } from '../../lib/content';
+import { waitingForReview } from '../../lib/review';
+
+const thoughts = (await getCollection('thoughts')).map((t) => ({
+  slug: thoughtSlugOf(t.id),
+  title: t.data.title,
+  date: t.data.date,
+  draft: t.data.draft,
+}));
+const versions = (await getCollection('versions')).map((v) => ({
+  slug: thoughtSlugOf(v.id),
+  leaf: leafOf(v.id),
+  kind: v.data.kind,
+  reviewed: v.data.reviewed,
+}));
+const sources = (await getCollection('sources')).map((s) => ({
+  slug: thoughtSlugOf(s.id),
+  reviewed: s.data.reviewed,
+}));
+const waiting = waitingForReview(thoughts, versions, sources);
+---
+
+<Studio description="What the agents wrote that you have not read yet.">
+  <section class="review" aria-labelledby="review-label">
+    <h1 id="review-label">Waiting for your review</h1>
+    <ReviewList client:load waiting={waiting} />
+  </section>
+</Studio>
+
+<style is:global>
+  .review-list > p {
+    margin-top: var(--space-3);
+  }
+  .review .thought {
+    margin: var(--space-4) 0 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+  }
+  .review .thought legend {
+    padding: 0;
+    font-weight: 700;
+  }
+  .review .thought ul {
+    list-style: none;
+    margin: var(--space-2) 0 0;
+    padding: 0;
+    max-width: none;
+  }
+  .review .thought li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: var(--tap);
+    padding-block: var(--space-2);
+    border-bottom: var(--rule-width) solid var(--rule);
+  }
+  .review .thought input {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0;
+    accent-color: var(--ink);
+  }
+  .review .thought label {
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+  }
+  .review .thought code {
+    color: var(--quiet);
+    overflow-wrap: anywhere;
+  }
+  .review .read {
+    font-size: var(--size-small);
+  }
+  .review .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+  }
+  .review .status {
+    min-height: 1.6em;
+    margin-top: var(--space-2);
+  }
+</style>

@@ -1,0 +1,17 @@
+---
+// Why: where an origin begins. One big button to talk, and a way to write or paste instead when the thought
+// already exists as text; either way it is kept exactly as it came and opened as a pull request.
+import Studio from '../../layouts/Studio.astro';
+import { Recorder } from '../../islands/Recorder';
+---
+
+<Studio description="Say a new thought, or paste it.">
+  <h1>Talk</h1>
+  <p class="quiet">
+    Talk. Don't tidy. What you say here is kept exactly as it comes out, and becomes an origin that
+    every conversion will point back to. When the thought already exists as text, write or paste it
+    instead; it is kept the same way.
+  </p>
+
+  <Recorder client:load mode="origin" />
+</Studio>

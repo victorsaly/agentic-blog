@@ -1,0 +1,66 @@
+---
+// Why: the door into the studio. Most visits are to say something new, so that is the one big thing here;
+// below it each other area is named with what it is for, one link each, so the room is clear at a glance
+// instead of one long page to scroll.
+import Studio from '../../layouts/Studio.astro';
+import { studioAreas } from '../../lib/studio-areas';
+
+const others = studioAreas.filter((a) => a.id !== 'today' && a.id !== 'talk');
+---
+
+<Studio description="A private room to talk in.">
+  <h1>Today</h1>
+  <p class="quiet">
+    Talk. Don't tidy. Everything else the agents and readers left is one area away.
+  </p>
+
+  <a class="say-it" href="/studio/talk">Say it</a>
+
+  <ul class="areas">
+    {
+      others.map((area) => (
+        <li>
+          <a href={area.href}>{area.name}</a>
+          <span class="quiet">{area.hint}</span>
+        </li>
+      ))
+    }
+  </ul>
+</Studio>
+
+<style>
+  .say-it {
+    display: grid;
+    place-items: center;
+    min-height: calc(var(--tap) * 3);
+    margin: var(--space-4) 0 var(--space-6);
+    border: 2px solid var(--ink);
+    font-size: var(--size-message);
+    font-weight: 700;
+    text-decoration: none;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .say-it:hover {
+      background: var(--hover);
+    }
+  }
+  .areas {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-width: none;
+    border-top: var(--rule-strong) solid var(--ink);
+  }
+  .areas li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-1) var(--space-3);
+    min-height: var(--tap);
+    padding-block: var(--space-3);
+    border-bottom: var(--rule-width) solid var(--rule);
+  }
+  .areas a {
+    font-weight: 700;
+  }
+</style>

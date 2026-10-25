@@ -1,0 +1,60 @@
+---
+// Why: nothing a reader writes shows until Victor says so. The comments waiting and the ones showing sit
+// together here, so a decision on one moves it to the other at once. They are read live from the comments
+// store, not at build time, so this page is as fresh as the moment it opens.
+import Studio from '../../layouts/Studio.astro';
+import { CommentsReview } from '../../islands/CommentsReview';
+---
+
+<Studio description="What readers wrote, waiting for a decision.">
+  <h1>Comments</h1>
+  <CommentsReview client:load />
+</Studio>
+
+<style is:global>
+  .review + .review {
+    margin-top: var(--space-6);
+  }
+  .review .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+  }
+  .review .status {
+    min-height: 1.6em;
+    margin-top: var(--space-2);
+  }
+  .comments-review ul {
+    list-style: none;
+    margin: var(--space-3) 0 0;
+    padding: 0;
+    max-width: none;
+  }
+  .comments-review li {
+    padding-block: var(--space-3);
+    border-bottom: var(--rule-width) solid var(--rule);
+  }
+  .comments-review p {
+    margin: 0;
+    max-width: none;
+  }
+  .comments-review .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-1) var(--space-3);
+  }
+  .comments-review .text {
+    margin-top: var(--space-2);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    max-width: var(--measure);
+  }
+  .comments-review .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+  }
+</style>
