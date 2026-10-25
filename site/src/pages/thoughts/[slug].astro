@@ -11,6 +11,8 @@ import Page from '../../layouts/Page.astro';
 import VersionSwitch from '../../components/VersionSwitch.astro';
 import PostTabs, { type Tab } from '../../components/PostTabs.astro';
 import UnreviewedTag from '../../components/UnreviewedTag.astro';
+import ReadAlong from '../../components/ReadAlong.astro';
+import { z } from 'astro/zod';
 import ideaIcon from '../../assets/icons/idea.png';
 import originIcon from '../../assets/icons/origin.png';
 import roadIcon from '../../assets/icons/road.png';
@@ -34,6 +36,20 @@ import { parseSources } from '../../lib/sources';
 const drawings = import.meta.glob<ImageMetadata>('../../../../thoughts/*/image/*.png', {
   eager: true,
   import: 'default',
+});
+
+// The voice agent's recordings and the time of every word in them, by their path in the thought folder.
+const recordings = import.meta.glob<string>('../../../../thoughts/*/voice/*.mp3', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+});
+const wordTimes = import.meta.glob<unknown>('../../../../thoughts/*/voice/*.json', {
+  eager: true,
+  import: 'default',
+});
+const timingsSchema = z.object({
+  words: z.array(z.tuple([z.string(), z.number(), z.number()])).min(1),
 });
 
 export async function getStaticPaths() {
@@ -69,6 +85,34 @@ const sourceList = showSources ? parseSources(sourcesEntry.body ?? '') : null;
 const sources =
   sourceList && (sourceList.claims.length > 0 || sourceList.unsourced.length > 0)
     ? sourceList
+    : null;
+
+// The idea read aloud, once Victor has listened to it (in local development before, so he can).
+const voiceEntry = (
+  await getCollection('voices', ({ id }) => thoughtSlugOf(id) === slug && leafOf(id) === 'short')
+)[0];
+const inThought = (file: string) => (path: string) =>
+  path.endsWith(`/thoughts/${slug}/voice/${file}`);
+const voiceSrc = voiceEntry
+  ? Object.entries(recordings).find(([path]) => inThought(voiceEntry.data.audio)(path))?.[1]
+  : undefined;
+const voiceTimes = voiceEntry
+  ? timingsSchema.safeParse(
+      Object.entries(wordTimes).find(([path]) => inThought(voiceEntry.data.timings)(path))?.[1],
+    )
+  : undefined;
+const voice =
+  voiceEntry &&
+  short &&
+  voiceSrc &&
+  voiceTimes?.success &&
+  (voiceEntry.data.reviewed || import.meta.env.DEV)
+    ? {
+        src: voiceSrc,
+        words: voiceTimes.data.words,
+        seconds: voiceEntry.data.seconds,
+        name: voiceEntry.data.voice,
+      }
     : null;
 
 const { Content: Structure } = await render(thought);
@@ -248,8 +292,20 @@ const pad = (n: number): string => String(n).padStart(2, '0');
       </nav>
 
       <PostTabs label="Read this thought" tabs={tabs}>
-        <div slot="idea">
+        <div slot="idea" id="idea-body">
           {short && !short.data.reviewed && <UnreviewedTag />}
+          {
+            voice && (
+              <ReadAlong
+                src={voice.src}
+                words={voice.words}
+                seconds={voice.seconds}
+                voice={voice.name}
+                text="idea-body"
+                domain={settings.site.domain}
+              />
+            )
+          }
           {idea ? <idea.Content /> : <Structure />}
         </div>
 
