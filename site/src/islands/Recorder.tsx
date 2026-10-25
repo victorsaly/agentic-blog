@@ -36,6 +36,9 @@ export interface RecorderProps {
   /** 'origin' records a thought; 'feedback' records a note about an output and needs the thought slug. */
   mode: 'origin' | 'feedback';
   thoughtSlug?: string;
+  /** Told whether something said or written is in hand (not yet sent or discarded), so a parent can hold
+   * still around it, as the feedback page does with its choice of thought. */
+  onBusyChange?: (busy: boolean) => void;
 }
 
 async function postJson<T>(url: string, body: BodyInit, contentType?: string): Promise<T> {
@@ -119,8 +122,18 @@ function formatElapsed(since: number, now: number): string {
   return `${minutes}:${seconds}`;
 }
 
-export function Recorder({ mode, thoughtSlug }: RecorderProps): React.JSX.Element {
+export function Recorder({ mode, thoughtSlug, onBusyChange }: RecorderProps): React.JSX.Element {
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
+  const busy = phase.kind !== 'idle' && phase.kind !== 'sent';
+  useEffect(() => {
+    onBusyChange?.(busy);
+  }, [busy, onBusyChange]);
+  useEffect(
+    () => () => {
+      onBusyChange?.(false);
+    },
+    [onBusyChange],
+  );
   const [now, setNow] = useState<number>(() => Date.now());
   const recorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
@@ -131,9 +144,20 @@ export function Recorder({ mode, thoughtSlug }: RecorderProps): React.JSX.Elemen
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const level = useRef<HTMLSpanElement | null>(null);
   const stopListening = useRef<(() => void) | null>(null);
+  // Leaving the page part (another thought chosen, the island removed) never leaves the microphone on:
+  // the recording stops without being sent, and its tracks are released.
   useEffect(
     () => () => {
       stopListening.current?.();
+      const media = recorder.current;
+      if (media) {
+        media.onstop = null;
+        if (media.state !== 'inactive') media.stop();
+        media.stream.getTracks().forEach((track) => {
+          track.stop();
+        });
+        recorder.current = null;
+      }
     },
     [],
   );

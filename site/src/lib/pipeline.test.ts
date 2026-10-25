@@ -36,7 +36,11 @@ describe('pipelineOf', () => {
       ],
       agents,
     );
-    expect(only?.cells).toEqual([null, { ended: 'done', on: '2026-10-25', runs: 2 }, null]);
+    expect(only?.cells).toEqual([
+      null,
+      { id: '2', ended: 'done', on: '2026-10-25', runs: 2 },
+      null,
+    ]);
   });
 
   it('lists the newest thought first', () => {
@@ -58,7 +62,12 @@ describe('standingOf', () => {
     { name: 'security', phase: 5 },
     { name: 'voice', phase: 5 },
   ]);
-  const cell = (ended: RunRow['ended'], on: string) => ({ ended, on, runs: 1 });
+  const cell = (ended: RunRow['ended'], on: string, at = '000000') => ({
+    id: `${on.replaceAll('-', '')}T${at}Z-x`,
+    ended,
+    on,
+    runs: 1,
+  });
 
   it('names the guard that holds a thought before anything else', () => {
     const standing = standingOf(
@@ -67,9 +76,9 @@ describe('standingOf', () => {
         title: 'T',
         cells: [
           cell('done', '2026-10-23'),
-          cell('done', '2026-10-25'),
-          cell('held', '2026-10-25'),
-          cell('done', '2026-10-25'),
+          cell('done', '2026-10-25', '090000'),
+          cell('held', '2026-10-25', '091000'),
+          cell('done', '2026-10-25', '092000'),
         ],
       },
       agents,
@@ -95,6 +104,24 @@ describe('standingOf', () => {
       ran: 1,
     });
     expect(standingOf(row('done'), agents)).toMatchObject({ state: 'moving', at: null });
+  });
+
+  it('orders runs on the same day by when they began, not by working order', () => {
+    // Voice ran at 09:00, then Structure, earlier in working order, was run again at 10:00.
+    const standing = standingOf(
+      {
+        slug: 's',
+        title: 'T',
+        cells: [
+          cell('done', '2026-10-25', '100000'),
+          null,
+          null,
+          cell('done', '2026-10-25', '090000'),
+        ],
+      },
+      agents,
+    );
+    expect(standing.last).toEqual({ agent: 'structure', on: '2026-10-25' });
   });
 
   it('knows a thought no agent has touched', () => {

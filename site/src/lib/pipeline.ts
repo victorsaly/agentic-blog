@@ -9,6 +9,8 @@ export interface PipelineAgent {
 }
 
 export interface PipelineCell {
+  /** The latest run's id; it starts with the moment the run began (20261025T071128Z-…), so ids sort in time. */
+  id: string;
   /** How the latest run of this agent on this thought ended. */
   ended: Ending;
   /** The day it started (YYYY-MM-DD). */
@@ -36,7 +38,9 @@ export function pipelineOf(
         // Rows come newest first, so the first one is the latest run.
         const own = t.rows.filter((r) => r.agent === agent.name);
         const latest = own[0];
-        return latest ? { ended: latest.ended, on: latest.on, runs: own.length } : null;
+        return latest
+          ? { id: latest.id, ended: latest.ended, on: latest.on, runs: own.length }
+          : null;
       }),
     }));
 }
@@ -63,9 +67,9 @@ export function standingOf(row: PipelineRow, agents: readonly PipelineAgent[]): 
   const ran = cells.filter((c) => c.cell !== null);
   const held = ran.find((c) => c.cell?.ended === 'held');
   const stopped = ran.find((c) => c.cell?.ended === 'failed');
-  // The latest day wins; on the same day, the agent later in working order ran later.
+  // The latest run is the one that began last: run ids start with their start time, to the second.
   const latest = ran.reduce<(typeof ran)[number] | null>(
-    (best, c) => (best === null || (c.cell?.on ?? '') >= (best.cell?.on ?? '') ? c : best),
+    (best, c) => (best === null || (c.cell?.id ?? '') > (best.cell?.id ?? '') ? c : best),
     null,
   );
   return {
