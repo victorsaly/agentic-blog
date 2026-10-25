@@ -2,7 +2,8 @@
 // Why: the header and footer offer Topics as a way to read, so there is one page that lists them all. It is
 // an index of topics, not of posts: one ruled row per topic, most written about first, with its name as the
 // one marigold mark (the thing being chosen here), how many thoughts carry it, and one plain line of what it
-// is about, from settings.yml. One link per row. The posts themselves live on each topic's page.
+// is about, from settings.yml. One link per row. The posts themselves live on each topic's page; the same
+// topics drawn with their small ideas are one link away, on /graph.
 import { getCollection } from 'astro:content';
 import Page from '../../layouts/Page.astro';
 import ListHead from '../../components/ListHead.astro';
@@ -45,6 +46,9 @@ const note =
               </li>
             ))}
           </ol>
+          <p class="to-graph">
+            <a href="/graph">See the topics and every small idea in them as one graph</a>
+          </p>
         </section>
       )
     }
@@ -99,6 +103,14 @@ const note =
   }
   .count {
     grid-area: count;
+  }
+  .to-graph {
+    padding-top: var(--space-4);
+  }
+  .to-graph a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
   }
   .describe {
     grid-area: about;

@@ -155,6 +155,33 @@ describe('layoutGraph', () => {
     expect(layoutGraph(graph, phoneLayout).ideas.every((i) => i.tip === undefined)).toBe(true);
   });
 
+  it('gives every topic its own arc, even one whose ideas all sit with another topic', () => {
+    // Order c, a, b, d: the idea on a and d has no neighbouring pair, so d would have had no stretch.
+    const lonely = graphOf(
+      [
+        post('2026-01-01-a', [
+          'AB | ai-changing-work, accountability',
+          'AC | ai-changing-work, credibility',
+          'AD | ai-changing-work, scalable-secure',
+        ]),
+      ],
+      known,
+    );
+    const arcs = layoutGraph(lonely, deskLayout).topics;
+    expect(arcs).toHaveLength(4);
+    const inside = (angle: number, arc: { start: number; end: number }): boolean => {
+      const d = (((angle - arc.start) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      return d > 1e-6 && d < arc.end - arc.start - 1e-6;
+    };
+    for (const p of arcs)
+      for (const q of arcs) {
+        if (p === q) continue;
+        for (const angle of [q.start, q.end, (q.start + q.end) / 2]) {
+          expect(inside(angle, p), `${q.topic} inside ${p.topic}`).toBe(false);
+        }
+      }
+  });
+
   it('draws nothing but the middle when there are no ideas', () => {
     const empty = layoutGraph(graphOf([], known), deskLayout);
     expect(empty.topics).toEqual([]);

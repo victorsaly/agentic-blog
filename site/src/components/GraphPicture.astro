@@ -35,7 +35,7 @@ const markY = showName ? -markHeight * 0.75 : -markHeight / 2;
 ---
 
 <svg
-  class:list={['graph-picture', className]}
+  class:list={['graph-picture', { 'has-tips': o.tipSize > 0 }, className]}
   viewBox={layout.viewBox}
   aria-hidden="true"
   focusable="false"
@@ -201,8 +201,9 @@ const markY = showName ? -markHeight * 0.75 : -markHeight / 2;
     transform-origin: center;
   }
   @media (hover: hover) and (pointer: fine) {
-    .graph-picture:has(.ideas a:hover) .core,
-    .graph-picture:has(.ideas a:hover) .spoke {
+    /* Only a picture that has words to show clears the middle for them. */
+    .has-tips:has(.ideas a:hover) .core,
+    .has-tips:has(.ideas a:hover) .spoke {
       visibility: hidden;
     }
     .ideas a:hover circle:not(.hit) {

@@ -55,14 +55,20 @@ const note =
 // One topic at a time is opened: by its address (#t-topic), by pointing at it, or by tabbing through its
 // part of the list. Everything else steps back. Written out per topic, since CSS cannot compare attributes.
 const safe = graph.topics.map((t) => t.topic).filter((t) => /^[a-z0-9-]+$/.test(t));
-const open = (t: string, pointer: boolean): string[] =>
-  pointer
-    ? [`.walk:has([data-topic="${t}"]:hover)`, `.walk:has(#t-${t}:hover)`]
-    : [`.walk:has(#t-${t}:target)`, `.walk:has(#t-${t}:focus-within)`];
+// Only one topic is open at a time, so the states have an order: pointing at a topic beats tabbing through
+// one, and both beat the topic named in the address. On a touch screen a tap can leave :hover behind, so
+// there the pointer plays no part.
+const hovering = '[data-topic]:hover, .list > section:hover';
+const tabbing = '.list > section:focus-within';
+const openBy = (t: string, pointer: boolean): string[] => [
+  ...(pointer ? [`.walk:has([data-topic="${t}"]:hover)`, `.walk:has(#t-${t}:hover)`] : []),
+  `.walk:has(#t-${t}:focus-within)${pointer ? `:not(:has(${hovering}))` : ''}`,
+  `.walk:has(#t-${t}:target):not(:has(${pointer ? `${hovering}, ` : ''}${tabbing}))`,
+];
 const rules = (pointer: boolean): string =>
   safe
     .map((t) => {
-      const on = open(t, pointer);
+      const on = openBy(t, pointer);
       const dim = on.map((s) => `${s} .graph-picture [data-t]:not([data-t~="${t}"])`).join(',');
       const arc = on.map((s) => `${s} .graph-picture [data-topic="${t}"] .arc`).join(',');
       const name = on.map((s) => `${s} .graph-picture [data-topic="${t}"] text`).join(',');
@@ -86,7 +92,7 @@ const pointing =
         `.graph-picture:has([data-idea][data-p="${p}"]:hover) [data-p]:not([data-p="${p}"]){opacity:.16}`,
     )
     .join('');
-const css = `${rules(false)}@media (hover:hover) and (pointer:fine){${rules(true)}${pointing}}`;
+const css = `@media (hover:none),(pointer:coarse){${rules(false)}}@media (hover:hover) and (pointer:fine){${rules(true)}${pointing}}`;
 ---
 
 <Page

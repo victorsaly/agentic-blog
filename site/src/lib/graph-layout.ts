@@ -205,6 +205,30 @@ export function layoutGraph(
     else single[ks[0] ?? 0]?.push(idea.id);
   }
 
+  // Every topic needs a stretch of its own, or its arc would lie on top of another's. A topic left with no
+  // idea of its own takes one of its ideas from a topic that keeps others: from the fullest first.
+  const owned = (k: number): number =>
+    (single[k]?.length ?? 0) + (between[k]?.length ?? 0) + (between[(k - 1 + n) % n]?.length ?? 0);
+  const topicsOf = new Map(graph.ideas.map((i) => [i.id, i.topics]));
+  for (let k = 0; k < n; k++) {
+    if (owned(k) > 0) continue;
+    const topic = order[k] ?? '';
+    const donors = order
+      .map((_, j) => j)
+      .filter((j) => j !== k && owned(j) > 1)
+      .sort((a, b) => owned(b) - owned(a) || a - b);
+    for (const j of donors) {
+      const from = [single[j], between[j]].find((bucket) =>
+        bucket?.some((id) => topicsOf.get(id)?.includes(topic)),
+      );
+      const id = from?.find((i) => topicsOf.get(i)?.includes(topic));
+      if (from === undefined || id === undefined) continue;
+      from.splice(from.indexOf(id), 1);
+      single[k]?.push(id);
+      break;
+    }
+  }
+
   const sequence: string[] = [];
   const spans: { k: number; a: number; b: number }[] = [];
   const groups: { k: number; next: number; ids: string[]; mid: number }[] = [];
