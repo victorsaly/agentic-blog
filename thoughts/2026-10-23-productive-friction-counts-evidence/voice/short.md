@@ -8,14 +8,14 @@ read_from: versions/short.md
 language: en
 audio: short.mp3
 timings: short.json
-voice: Chris W
-voice_id: hoSRtERLhFa8UfJ6P1JP
+voice: Victor Saly
+voice_id: eHHUhFBxuo0yMYCOGHks
 model: eleven_v3
 text_sha256: e3698c1efdf69771fbf0bbde8ac8d812f71a8abf213ea5c2e2d00b7d4eb7064f
 words: 211
-seconds: 96
-made: '2026-10-24'
-reviewed: true
+seconds: 86
+made: '2026-10-25'
+reviewed: false
 ---
 
 We hide AI-assisted work as if it were cheating. I see it as a better way of producing results.
