@@ -2,6 +2,12 @@
 # workflow by hand with a thought slug) and that one agent runs on that one thought, writing its files to
 # the branch so the pull request shows the diff. Nothing merges by itself; a held result fails the check.
 name: Agents
+# Names every run "agent:<name> · <thought or branch>", so the studio's Agents area can say which agent
+# worked on which thought without opening the run.
+run-name: >-
+  ${{ github.event_name == 'workflow_dispatch'
+  && format('agent:{0} · {1}', inputs.agent, inputs.thought)
+  || format('{0} · {1}', github.event.label.name, github.head_ref) }}
 
 on:
   pull_request:

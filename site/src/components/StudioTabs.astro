@@ -3,8 +3,8 @@
 // like a post's tabs (ruled cells, the open one filled black) so the studio reads as the same site, but each
 // cell is a plain link: every area has its own address, so it works without script, can be bookmarked and
 // linked to, and the keyboard simply tabs along it. The open one says so with aria-current. Nothing moves
-// when an area opens; this row is used many times a day. On a desk the six areas sit in one row; on a phone
-// they fold into two rows of three, so every area stays in sight and the open one is never scrolled away.
+// when an area opens; this row is used many times a day. On a desk the areas sit in one row; on a phone they
+// fold into two rows of four (the last cell widening to close the row), so every area stays in sight.
 // An area with something waiting shows how many: the review count is known at build time; the comments are
 // counted when the page opens, and again whenever a decision on one is made, since readers write any time.
 import { studioAreas, type StudioAreaId } from '../lib/studio-areas';
@@ -26,6 +26,8 @@ const icons: Record<StudioAreaId, string> = {
   feedback: '<path d="M4 5h16v11H9l-5 4z"/><path d="M14 8l-3 2.5 3 2.5"/><path d="M11 10.5h5"/>',
   review: '<rect x="4" y="4" width="16" height="16"/><path d="m8 12 3 3 5-6"/>',
   comments: '<path d="M3 4h12v9H7l-4 3z"/><path d="M18 8h3v11l-4-3h-6v-3"/>',
+  agents:
+    '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>',
   runs: '<path d="M4 20h16"/><path d="M6 20v-6"/><path d="M11 20V9"/><path d="M16 20V5"/>',
 };
 ---
@@ -96,7 +98,7 @@ const icons: Record<StudioAreaId, string> = {
   /* The hairlines between cells are the list's own ink showing through a one-pixel gap. */
   ul {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--rule-width);
     background: var(--ink);
     list-style: none;
@@ -104,9 +106,18 @@ const icons: Record<StudioAreaId, string> = {
     padding: 0;
     max-width: none;
   }
+  /* Seven areas in rows of four: the last one takes the empty place beside it. */
+  li:last-child:nth-child(4n + 3) {
+    grid-column: span 2;
+  }
   @media (min-width: 48rem) {
     ul {
-      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-template-columns: none;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(0, 1fr);
+    }
+    li:last-child:nth-child(4n + 3) {
+      grid-column: auto;
     }
   }
   a {
@@ -118,7 +129,7 @@ const icons: Record<StudioAreaId, string> = {
     gap: var(--space-1);
     height: 100%;
     min-height: 4rem;
-    padding: var(--space-2);
+    padding: var(--space-2) var(--space-1);
     background: var(--paper);
     color: var(--ink);
     font-size: var(--size-small);
