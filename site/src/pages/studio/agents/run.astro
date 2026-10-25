@@ -5,13 +5,25 @@ import Studio from '../../../layouts/Studio.astro';
 import { RunTimeline } from '../../../islands/RunTimeline';
 import { loadCosted } from '../../../lib/studio-data';
 import { settings } from '../../../lib/settings';
+import { layoutOf } from '@roadbook/core/route';
+import project from '../../../../../roadbook.config';
 
-const titles = Object.fromEntries((await loadCosted()).map((t) => [t.slug, t.title]));
+const costed = await loadCosted();
+const titles = Object.fromEntries(costed.map((t) => [t.slug, t.title]));
+const workflow = project.workflows.find((w) => w.id === 'blog-post');
+const layout = workflow ? layoutOf(workflow) : { steps: [], edges: [], columns: 0, rows: 0 };
+const builtStates = Object.fromEntries(costed.map((t) => [t.slug, t.states]));
 const { show, per_usd: perUsd } = settings.publishing.currency;
 ---
 
 <Studio description="One agent run, event for event, while it happens.">
-  <RunTimeline client:load titles={titles} currency={{ show, perUsd }} />
+  <RunTimeline
+    client:load
+    titles={titles}
+    currency={{ show, perUsd }}
+    layout={layout}
+    builtStates={builtStates}
+  />
 </Studio>
 
 <style is:global>

@@ -14,6 +14,8 @@ import { loadCosted } from '../../lib/studio-data';
 import { PipelineLive } from '../../islands/PipelineLive';
 import { inOrder, pipelineOf } from '../../lib/pipeline';
 import { phases, type AgentCardFacts } from '../../lib/agents';
+import { layoutOf } from '@roadbook/core/route';
+import project from '../../../../roadbook.config';
 
 const cards = import.meta.glob<AgentCardFacts>('../../../../agents/*/card.ts', {
   import: 'card',
@@ -23,6 +25,10 @@ const agents = inOrder(Object.values(cards).map(({ name, phase }) => ({ name, ph
 const costed = await loadCosted();
 const rows = pipelineOf(costed, agents);
 const titles = Object.fromEntries(costed.map((t) => [t.slug, t.title]));
+// The route is the workflow's, laid out once; each thought's states fill it.
+const workflow = project.workflows.find((w) => w.id === 'blog-post');
+const layout = workflow ? layoutOf(workflow) : { steps: [], edges: [], columns: 0, rows: 0 };
+const builtStates = Object.fromEntries(costed.map((t) => [t.slug, t.states]));
 
 const { show, per_usd: perUsd } = settings.publishing.currency;
 ---
@@ -40,6 +46,8 @@ const { show, per_usd: perUsd } = settings.publishing.currency;
     agents={agents}
     phaseNames={phases}
     builtAt={new Date().toISOString()}
+    layout={layout}
+    builtStates={builtStates}
   />
 </Studio>
 

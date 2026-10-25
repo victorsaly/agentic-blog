@@ -8,3 +8,4 @@ export * from './providers.js';
 export * from './ledger.js';
 export * from './models.js';
 export * from './gates.js';
+export * from './route.js';

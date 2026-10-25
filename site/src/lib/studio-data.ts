@@ -6,12 +6,15 @@ import { join } from 'node:path';
 import { readRuns } from '@roadbook/core/node';
 import { leafOf, thoughtSlugOf } from './content';
 import { runRows, type RunRow } from './how-made';
+import { builtStepsOf, type BuiltStep } from './route-live';
 import { waitingForReview, type ThoughtWaiting } from './review';
 
 export interface CostedThought {
   slug: string;
   title: string;
   rows: RunRow[];
+  /** Each step's last recorded state on this thought, gates included, with its run, for its route. */
+  states: Record<string, BuiltStep>;
 }
 
 // Typed at the boundary: on a fresh checkout Astro has not generated its content types yet when lint runs.
@@ -96,7 +99,12 @@ export function loadCosted(): Promise<CostedThought[]> {
           `thoughts/${slug}`,
         );
         if (ledger.issues.length > 0) throw new Error(ledger.issues.join('\n'));
-        return { slug, title: t.data.title, rows: runRows(ledger.runs) };
+        return {
+          slug,
+          title: t.data.title,
+          rows: runRows(ledger.runs),
+          states: builtStepsOf(ledger.runs),
+        };
       }),
     );
   })();

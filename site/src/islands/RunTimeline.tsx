@@ -19,6 +19,10 @@ import type { LiveRunRow } from '../lib/live-runs';
 import { moneyOf, type Currency } from '../lib/money';
 import { formatDate } from '../lib/content';
 import { usePoll } from './use-poll';
+import { useRunsFeed } from './runs-feed';
+import { RouteDrawing } from './RouteDrawing';
+import { liveRoute, type BuiltStep } from '../lib/route-live';
+import type { RouteLayout } from '@roadbook/core/route';
 import { GateAnswer } from './GateAnswer';
 import { Markdown } from './Markdown';
 import { gateOf } from '../lib/gates';
@@ -60,9 +64,19 @@ export interface RunTimelineProps {
   /** Thought titles by folder name, so the run names its thought the way the site does. */
   titles: Record<string, string>;
   currency: Currency;
+  /** The workflow's route, laid out at build time, so the run is shown where it sits on it. */
+  layout: RouteLayout;
+  /** Each thought's steps as the ledgers left them at build time, by folder name. */
+  builtStates: Record<string, Record<string, BuiltStep>>;
 }
 
-export function RunTimeline({ titles, currency }: RunTimelineProps): React.JSX.Element {
+export function RunTimeline({
+  titles,
+  currency,
+  layout,
+  builtStates,
+}: RunTimelineProps): React.JSX.Element {
+  const feed = useRunsFeed();
   const [status, setStatus] = useState<Status>({
     run: null,
     events: [],
@@ -211,6 +225,29 @@ export function RunTimeline({ titles, currency }: RunTimelineProps): React.JSX.E
           }}
         />
       )}
+
+      <section aria-labelledby="route-label">
+        <h2 className="label" id="route-label">
+          Where it sits on the route
+        </h2>
+        {(() => {
+          const { route, links } = liveRoute(
+            layout,
+            builtStates[run.thought] ?? {},
+            feed.known?.standing ?? [],
+            run.thought,
+          );
+          return (
+            <RouteDrawing
+              layout={route}
+              states={route.states}
+              links={links}
+              current={run.agent}
+              label={`The route of ${title}, with this run's step marked`}
+            />
+          );
+        })()}
+      </section>
 
       <section aria-labelledby="timeline-label">
         <h2 className="label" id="timeline-label">

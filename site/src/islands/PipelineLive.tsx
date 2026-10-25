@@ -3,7 +3,8 @@
 // script and before the studio answers; then the page's one feed brings each cell up to date from the
 // runner's live copy, so a run on Victor's computer moves its thought's line while it happens. The note
 // above it always says which of the two it shows, and when the live copy cannot be read it says so and
-// keeps the deploy's picture rather than an empty one.
+// keeps the deploy's picture rather than an empty one. Each thought's line opens on its route: the workflow
+// drawn left to right, every step with where it stands (RouteDrawing), brought up to date the same way.
 import { agentName } from '../lib/agent-runs';
 import {
   standingOf,
@@ -15,6 +16,9 @@ import {
 } from '../lib/pipeline';
 import { formatDate } from '../lib/content';
 import { useRunsFeed } from './runs-feed';
+import { RouteDrawing } from './RouteDrawing';
+import { liveRoute, type BuiltStep } from '../lib/route-live';
+import type { RouteLayout } from '@roadbook/core/route';
 
 const words: Record<CellEnding, string> = {
   done: 'Done',
@@ -48,6 +52,10 @@ export interface PipelineLiveProps {
   phaseNames: Record<number, string>;
   /** When the site was built, as an ISO time. */
   builtAt: string;
+  /** The workflow's route, laid out once at build time. */
+  layout: RouteLayout;
+  /** Each thought's steps as the ledgers left them at build time, gates included, by folder name. */
+  builtStates: Record<string, Record<string, BuiltStep>>;
 }
 
 export function PipelineLive({
@@ -55,6 +63,8 @@ export function PipelineLive({
   agents,
   phaseNames,
   builtAt,
+  layout,
+  builtStates,
 }: PipelineLiveProps): React.JSX.Element {
   const { known, error } = useRunsFeed();
   const rows = known === null ? built : withLive(built, known.standing, agents);
@@ -100,6 +110,25 @@ export function PipelineLive({
                   {`${String(s.ran)} of ${String(s.of)} agents have run`}
                 </span>
               </span>
+              <details className="show-route">
+                <summary>Show the route</summary>
+                {(() => {
+                  const { route, links } = liveRoute(
+                    layout,
+                    builtStates[r.slug] ?? {},
+                    known?.standing ?? [],
+                    r.slug,
+                  );
+                  return (
+                    <RouteDrawing
+                      layout={route}
+                      states={route.states}
+                      links={links}
+                      label={`The route of ${r.title}`}
+                    />
+                  );
+                })()}
+              </details>
             </li>
           );
         })}
