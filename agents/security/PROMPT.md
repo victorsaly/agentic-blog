@@ -21,6 +21,14 @@ with a private detail, emails, phone numbers, addresses, dates of birth, employe
 with a school, health details, financial details. Public figures acting in public are fine; a friend in a
 kitchen is not. Also check that no secret, token or internal URL appears anywhere in the post.
 
-Reply with one Markdown file: front matter why, checked (today), verdict: pass or hold. Body: if hold, a
-list of file, the quoted text, the kind of data, and the rule it breaks. Never redact the text yourself;
-the blogger decides what is theirs to share.
+Reply with one Markdown file: front matter why, checked (today), verdict: pass or hold, and held: a list
+of every passage you would hold, each quoted exactly as it stands in the file (an empty list when there is
+none). Body: if hold, a list of file, the quoted text, the kind of data, and the rule it breaks. Never
+redact the text yourself; the blogger decides what is theirs to share.
+
+When the blogger has already decided, you are given the passages he chose to keep, quoted exactly. Still
+quote any of them you would hold in held, so the record is complete, but in the body list them under
+"Kept by the blogger" with the date he decided, not as findings, and do not hold for them alone. Anything
+not inside a kept passage is a new finding, even about the same people: a reworded line, a name added.
+The verdict is set in code from held and the kept passages, not from your word; write the one you believe.
+Never write decided_by, decided or kept yourself. Only a person records a decision.

@@ -30,10 +30,15 @@ export const card = defineAgentCard({
   mustNot: [
     'Redact or rewrite the text itself; the blogger decides what is theirs to share.',
     'Send a secret it finds anywhere, including into its own report.',
+    'Record a decision for the blogger, or release a passage he has not kept word for word.',
   ],
   doneMeans: [
     { id: 'verdict', says: 'The verdict is exactly pass or hold.' },
     { id: 'kind', says: 'Every hold names the kind of data and the rule it breaks.' },
+    {
+      id: 'kept',
+      says: 'A passage the blogger kept is not held again; anything outside it is, and his decision is carried into the new file.',
+    },
   ],
   qualityBar: { approvedWithoutRewrite: 0.95 },
   model: { default: 'writer', allowed: ['writer'] },
@@ -42,6 +47,6 @@ export const card = defineAgentCard({
   metrics: standardMetrics(0.95, 0.05),
   data: { sends: ['text'] },
   owner: 'Victor Saly',
-  version: '1.0.0',
+  version: '1.1.0',
   stage: 'active',
 });
