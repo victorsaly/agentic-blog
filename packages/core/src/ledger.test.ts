@@ -10,6 +10,7 @@ import {
   eventLines,
   readEvents,
   readHead,
+  type LedgerEvent,
   type Receipt,
 } from './ledger.js';
 
@@ -247,5 +248,28 @@ describe('a ledger kept on disk', () => {
     expect(() => readEvents('{"type":"run.started"}\n')).toThrow('line 1 is not a ledger event');
     expect(() => readEvents('\nnot json')).toThrow('line 2 is not JSON');
     expect(() => readHead('{"count":-1,"hash":"x"}')).toThrow(LedgerError);
+  });
+});
+
+describe('hearing about each event', () => {
+  it('tells the listener every event as it is recorded, in order, with a copy it cannot change', async () => {
+    const heard: LedgerEvent[] = [];
+    const ledger = new Ledger({ onAppend: (e) => heard.push(e) });
+    await ledger.append({ type: 'run.started', workflow: 'post', origin: 'o', by: 'owner' });
+    await ledger.append({ type: 'node.state', node: 'n', from: 'idle', to: 'running' });
+    expect(heard.map((e) => e.seq)).toEqual([0, 1]);
+    expect(heard).toEqual(ledger.events);
+    (heard[0] as { by?: string }).by = 'someone else';
+    expect(await Ledger.verify(ledger.events, ledger.head)).toBeNull();
+  });
+
+  it('records the event even when the listener throws', async () => {
+    const ledger = new Ledger({
+      onAppend: () => {
+        throw new Error('the studio is down');
+      },
+    });
+    await ledger.append({ type: 'run.started', workflow: 'post', origin: 'o', by: 'owner' });
+    expect(ledger.head.count).toBe(1);
   });
 });

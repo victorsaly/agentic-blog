@@ -24,6 +24,7 @@
     "test": "vitest run",
     "check:why": "tsx scripts/check-why.ts",
     "roadbook": "tsx packages/cli/src/main.ts",
+    "live:rebuild": "tsx scripts/live-runs.ts",
     "agent": "npm run agent --workspace agents --",
     "dev:fresh": "npm run dev:fresh --workspace site",
     "pitch:voice": "tsx --env-file=site/.env.local scripts/pitch/voice.ts",

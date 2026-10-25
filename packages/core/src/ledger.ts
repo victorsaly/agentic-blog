@@ -113,14 +113,20 @@ function refuse(body: EventBody): string | null {
   }
 }
 
+/** Told about each event the moment it is recorded, with a copy it may keep. A listener that throws or
+ * rejects never stops or undoes the recording: the ledger is the record, the listener only hears about it. */
+export type AppendListener = (event: LedgerEvent) => void;
+
 export class Ledger {
   readonly #events: LedgerEvent[] = [];
   readonly #now: () => Date;
+  readonly #onAppend: AppendListener | undefined;
   /** Appends run one after another, so two at once never read the same position or previous hash. */
   #queue: Promise<unknown> = Promise.resolve();
 
-  constructor(options: { now?: () => Date } = {}) {
+  constructor(options: { now?: () => Date; onAppend?: AppendListener } = {}) {
     this.#now = options.now ?? (() => new Date());
+    this.#onAppend = options.onAppend;
   }
 
   /** A copy of the events: changing it cannot rewrite what was recorded. */
@@ -158,6 +164,11 @@ export class Ledger {
     };
     const event: LedgerEvent = { ...head, hash: await hashOf(head) };
     this.#events.push(event);
+    try {
+      this.#onAppend?.(structuredClone(event));
+    } catch {
+      // Hearing about an event is never a reason to lose it.
+    }
     return structuredClone(event);
   }
 

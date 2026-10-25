@@ -44,6 +44,19 @@ The site deploys as a **Worker with static assets** (`site/wrangler.jsonc`), not
    (site key `1x00000000000000000000AA` in `vars.TURNSTILE_SITE_KEY`, secret
    `1x0000000000000000000000000000000AA`), and apply the table locally:
    `npx wrangler d1 migrations apply COMMENTS_DB --local`.
+8. **Live runs** (the studio sees an agent's run while it happens): the same database holds `runs` and
+   `run_events` (`migrations/0002_runs.sql`; apply it as in step 6). The runner sends each ledger event to
+   `/api/runs/<run>/events` when `STUDIO_URL` is set. To let it through Access:
+   - Zero Trust → Access → Service Auth → **Service Tokens** → create one ("agentic-blog runner"). Copy its
+     client id and secret; the secret is shown once.
+   - In the Access application of step 5, add a policy with action **Service Auth**, include *Service
+     Token* → that token.
+   - GitHub → Settings → Secrets and variables → Actions: variable `STUDIO_URL` =
+     `https://blog.victorsaly.com`, secrets `STUDIO_ACCESS_CLIENT_ID` and `STUDIO_ACCESS_CLIENT_SECRET`.
+   - For runs on your computer, the same three in the root `.env` (see `.env.example`). Against
+     `npm run worker:dev` locally, `STUDIO_URL=http://localhost:8787` needs no token.
+   The tables are only a copy of the ledger files: `npm run live:rebuild` (add `-- --remote` for the live
+   database) empties and refills them from git.
 
 ## Where things are
 
