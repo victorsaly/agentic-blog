@@ -1,6 +1,6 @@
 // Why: the theme row is the site's only classification; a wrong count or label shows on every page.
 import { describe, expect, it } from 'vitest';
-import { themeCounts, themeLabel, thoughtsLabel } from './themes.js';
+import { themeAbout, themeCounts, themeLabel, thoughtsLabel } from './themes.js';
 
 describe('themeLabel', () => {
   it('reads like words, with AI in capitals', () => {
@@ -40,5 +40,19 @@ describe('thoughtsLabel', () => {
   it('says the count with its unit, one in words', () => {
     expect(thoughtsLabel(1)).toBe('One thought');
     expect(thoughtsLabel(12)).toBe('12 thoughts');
+  });
+});
+
+describe('themeAbout', () => {
+  const abouts = { accountability: 'Who answers for the work.' };
+
+  it('gives the line written for a theme, and nothing for one without', () => {
+    expect(themeAbout('accountability', abouts)).toBe('Who answers for the work.');
+    expect(themeAbout('credibility', abouts)).toBeUndefined();
+  });
+
+  it('never takes a line from the object prototype', () => {
+    expect(themeAbout('constructor', abouts)).toBeUndefined();
+    expect(themeAbout('to-string', {})).toBeUndefined();
   });
 });

@@ -10,9 +10,8 @@ import ThoughtIndex from '../../components/ThoughtIndex.astro';
 import TopicStrip from '../../components/TopicStrip.astro';
 import TopicsAside from '../../components/TopicsAside.astro';
 import { thoughtNumbers } from '../../lib/content';
-import { settings } from '../../lib/settings';
 import { themeCounts, thoughtsLabel } from '../../lib/themes';
-import { topicName } from '../../lib/topic-name';
+import { topicAbout, topicName } from '../../lib/topic-name';
 
 export async function getStaticPaths() {
   const thoughts = await getCollection('thoughts', ({ data }) => !data.draft);
@@ -25,7 +24,7 @@ const all = (await getCollection('thoughts', ({ data }) => !data.draft)).sort(
 );
 const thoughts = all.filter((t) => t.data.themes.includes(topic));
 const label = topicName(topic);
-const about = settings.topics[topic];
+const about = topicAbout(topic);
 const count = `${thoughtsLabel(thoughts.length)} so far.`;
 ---
 
