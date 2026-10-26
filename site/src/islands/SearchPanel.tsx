@@ -81,13 +81,32 @@ export interface SearchPanelProps {
 }
 
 export function SearchPanel({ iconSrc, askIconSrc }: SearchPanelProps): React.JSX.Element {
-  const dock = useDock('search');
+  // Taken apart so only the two refs count as refs: the compiler treats a whole object as one once any
+  // field of it is handed to ref=.
+  const {
+    dialog,
+    trigger,
+    isOpen,
+    open: openDock,
+    close: closeDock,
+    dialogProps,
+  } = useDock('search');
   const input = useRef<HTMLInputElement | null>(null);
   const engine = useRef<Pagefind | null>(null);
   const [query, setQuery] = useState('');
   const [origins, setOrigins] = useState(false);
-  const [state, setState] = useState<'idle' | 'looking' | 'done' | 'missing'>('idle');
-  const [hits, setHits] = useState<Hit[]>([]);
+  // What the last finished search found, and for which query; until one finishes for the current query, the
+  // panel is looking, and the hits it shows stay those of the query before.
+  const [result, setResult] = useState<{
+    key: string;
+    state: 'done' | 'missing';
+    hits: Hit[];
+  } | null>(null);
+  const q = query.trim();
+  const key = `${String(origins)}:${q}`;
+  const short = q.length < 2;
+  const state = short ? 'idle' : result?.key === key ? result.state : 'looking';
+  const hits = short ? [] : (result?.hits ?? []);
   const id = useId();
 
   const load = useCallback(async (): Promise<Pagefind | null> => {
@@ -105,21 +124,15 @@ export function SearchPanel({ iconSrc, askIconSrc }: SearchPanelProps): React.JS
   }, []);
 
   useEffect(() => {
-    const q = query.trim();
-    if (q.length < 2) {
-      setState('idle');
-      setHits([]);
-      return;
-    }
+    if (short) return;
     // A newer query makes this one stale; checked after every await.
     const run = { live: true };
     const stale = (): boolean => !run.live;
-    setState('looking');
     void (async () => {
       const pagefind = await load();
       if (stale()) return;
       if (!pagefind) {
-        setState('missing');
+        setResult({ key, state: 'missing', hits: [] });
         return;
       }
       const search = await pagefind.debouncedSearch(
@@ -147,16 +160,15 @@ export function SearchPanel({ iconSrc, askIconSrc }: SearchPanelProps): React.JS
               excerpt: sub.excerpt,
             });
       }
-      setHits(found.slice(0, MAX_HITS));
-      setState('done');
+      setResult({ key, state: 'done', hits: found.slice(0, MAX_HITS) });
     })();
     return () => {
       run.live = false;
     };
-  }, [query, origins, load]);
+  }, [q, key, short, origins, load]);
 
   const openPanel = (): void => {
-    dock.open();
+    openDock();
     input.current?.focus();
     void load();
   };
@@ -177,15 +189,13 @@ export function SearchPanel({ iconSrc, askIconSrc }: SearchPanelProps): React.JS
       <a
         className="control"
         href="/search"
-        ref={(el) => {
-          dock.trigger.current = el;
-        }}
+        ref={trigger}
         onClick={(event) => {
           event.preventDefault();
-          if (dock.isOpen) dock.close();
+          if (isOpen) closeDock();
           else openPanel();
         }}
-        aria-expanded={dock.isOpen}
+        aria-expanded={isOpen}
         aria-controls={`${id}-dock`}
       >
         <img src={iconSrc} alt="" width={20} height={20} />
@@ -193,11 +203,11 @@ export function SearchPanel({ iconSrc, askIconSrc }: SearchPanelProps): React.JS
       </a>
 
       <dialog
-        ref={dock.dialog}
+        ref={dialog}
         id={`${id}-dock`}
         className="dock search"
         aria-labelledby={`${id}-title`}
-        {...dock.dialogProps}
+        {...dialogProps}
       >
         <div className="dock-head">
           <h2 id={`${id}-title`}>Search</h2>
@@ -206,7 +216,7 @@ export function SearchPanel({ iconSrc, askIconSrc }: SearchPanelProps): React.JS
             className="control"
             aria-label="Close search"
             onClick={() => {
-              dock.close();
+              closeDock();
             }}
           >
             <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14">
@@ -234,6 +244,8 @@ export function SearchPanel({ iconSrc, askIconSrc }: SearchPanelProps): React.JS
               autoComplete="off"
               onChange={(event) => {
                 setQuery(event.target.value);
+                // Too short to search: the last hits go, so the next search starts from nothing.
+                if (event.target.value.trim().length < 2) setResult(null);
               }}
             />
             {query !== '' && (
@@ -243,6 +255,7 @@ export function SearchPanel({ iconSrc, askIconSrc }: SearchPanelProps): React.JS
                 aria-label="Clear"
                 onClick={() => {
                   setQuery('');
+                  setResult(null);
                   input.current?.focus();
                 }}
               >

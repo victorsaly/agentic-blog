@@ -31,16 +31,14 @@ export function RouteReplay({
 }: RouteReplayProps): React.JSX.Element {
   const last = frames.length - 1;
   const [at, setAt] = useState(last);
-  const [playing, setPlaying] = useState(false);
+  const [wantsPlay, setPlaying] = useState(false);
+  // Playing stops by itself on the last frame; it is never set back, only seen.
+  const playing = wantsPlay && at < last;
   // True until the reader first plays or steps, so the finished picture says how it ended.
   const [fresh, setFresh] = useState(true);
 
   useEffect(() => {
     if (!playing) return;
-    if (at >= last) {
-      setPlaying(false);
-      return;
-    }
     const timer = window.setTimeout(() => {
       setAt((i) => i + 1);
     }, frames[at]?.hold ?? 0);

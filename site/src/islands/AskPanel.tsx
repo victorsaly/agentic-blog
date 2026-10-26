@@ -136,7 +136,9 @@ export interface AskPanelProps {
 }
 
 export function AskPanel({ iconSrc }: AskPanelProps): React.JSX.Element {
-  const dock = useDock('ask');
+  // Taken apart so only the two refs count as refs: the compiler treats a whole object as one once any
+  // field of it is handed to ref=.
+  const { dialog, trigger, isOpen, open: openDock, close: closeDock, dialogProps } = useDock('ask');
   const input = useRef<HTMLTextAreaElement | null>(null);
   const thread = useRef<HTMLDivElement | null>(null);
   const [draft, setDraft] = useState('');
@@ -155,9 +157,9 @@ export function AskPanel({ iconSrc }: AskPanelProps): React.JSX.Element {
   const asking = turns.some((t) => t.state === 'asking');
 
   const openPanel = useCallback((): void => {
-    dock.open();
+    openDock();
     input.current?.focus();
-  }, [dock]);
+  }, [openDock]);
 
   // On arrival: this page's post, and the conversation this tab was having before a link brought it here.
   useEffect(() => {
@@ -165,6 +167,7 @@ export function AskPanel({ iconSrc }: AskPanelProps): React.JSX.Element {
     setPost(currentPost());
     const kept = readKept();
     if (kept && kept.turns.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- this tab's storage exists only in the browser, after hydration
       setTurns(kept.turns);
       nextId.current = Math.max(...kept.turns.map((t) => t.id)) + 1;
       if (kept.reopen && !matchMedia(NARROW).matches) openPanel();
@@ -210,7 +213,7 @@ export function AskPanel({ iconSrc }: AskPanelProps): React.JSX.Element {
         ]);
         setDraft('');
         if (playable) {
-          if (matchMedia(NARROW).matches) dock.close(false);
+          if (matchMedia(NARROW).matches) closeDock(false);
           dispatchEvent(new CustomEvent('listen:play'));
         }
         return;
@@ -265,7 +268,7 @@ export function AskPanel({ iconSrc }: AskPanelProps): React.JSX.Element {
         });
       }
     },
-    [turns, post, scope, dock],
+    [turns, post, scope, closeDock],
   );
 
   // A new question scrolls to its own top, so its answer is read from the first line, not the last.
@@ -353,7 +356,7 @@ export function AskPanel({ iconSrc }: AskPanelProps): React.JSX.Element {
       return;
     }
     event.preventDefault();
-    if (narrow) dock.close(false);
+    if (narrow) closeDock(false);
     history.pushState(null, '', url.hash || location.pathname);
     const target = url.hash ? document.getElementById(decodeURIComponent(url.hash.slice(1))) : null;
     if (target?.closest('[role="tabpanel"]')) dispatchEvent(new HashChangeEvent('hashchange'));
@@ -427,14 +430,12 @@ export function AskPanel({ iconSrc }: AskPanelProps): React.JSX.Element {
       <button
         type="button"
         className="control ask-open"
-        ref={(el) => {
-          dock.trigger.current = el;
-        }}
+        ref={trigger}
         onClick={() => {
-          if (dock.isOpen) dock.close();
+          if (isOpen) closeDock();
           else openPanel();
         }}
-        aria-expanded={dock.isOpen}
+        aria-expanded={isOpen}
         aria-controls={`${id}-dock`}
       >
         <img src={iconSrc} alt="" width={20} height={20} />
@@ -461,11 +462,11 @@ export function AskPanel({ iconSrc }: AskPanelProps): React.JSX.Element {
       )}
 
       <dialog
-        ref={dock.dialog}
+        ref={dialog}
         id={`${id}-dock`}
         className="dock ask"
         aria-labelledby={`${id}-title`}
-        {...dock.dialogProps}
+        {...dialogProps}
       >
         <div className="dock-head">
           <h2 id={`${id}-title`}>Ask</h2>
@@ -487,7 +488,7 @@ export function AskPanel({ iconSrc }: AskPanelProps): React.JSX.Element {
             className="control"
             aria-label="Close the chat"
             onClick={() => {
-              dock.close();
+              closeDock();
             }}
           >
             <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14">
