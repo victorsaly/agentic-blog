@@ -2,7 +2,7 @@
 // copy the runner fills as it goes (see runs/[id]/events.ts), so a run on Victor's computer shows within
 // seconds instead of after its pull request is merged and deployed. It reads only. Recent history is
 // limited; outstanding work is not: the latest run of each agent on each thought that is still going, needs
-// Victor or holds the post is always sent, however many runs came after it. Each run says whether it is that
+// Victor, holds the post or did not finish is always sent, however many runs came after it. Each run says whether it is that
 // latest one (by when it started), so the board can tell a standing hold from an old one. Beside them, where
 // every thought stands: each agent's latest run on each thought and how many it has made, which is the
 // pipeline, read live instead of as of the last deploy. Behind Cloudflare Access like the rest of /api/*.
@@ -13,7 +13,9 @@ import { json, problem, type Handler } from '../_lib';
 const RUNS = 40;
 
 /** States that still ask something of someone: the run is going, waiting on Victor, or holding the post. */
-const OUTSTANDING = ['idle', 'waiting', 'running', 'needs-you', 'held'];
+// Every state that still asks for something, a run that did not finish included: it stands until the step
+// runs again, however many runs come after it.
+const OUTSTANDING = ['idle', 'waiting', 'running', 'needs-you', 'held', 'failed'];
 
 const LATEST =
   'started_at = (SELECT MAX(r2.started_at) FROM runs r2 WHERE r2.thought = runs.thought AND r2.agent = runs.agent)';

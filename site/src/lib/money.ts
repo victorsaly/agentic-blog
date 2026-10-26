@@ -17,7 +17,10 @@ export function moneyOf(usd: number, currency: Currency = { show: 'USD', perUsd:
   const [major, minor] = currency.show === 'GBP' ? ['£', 'p'] : ['$', '¢'];
   if (amount < 1) {
     const small = amount * 100;
-    return `${small < 0.1 && small > 0 ? '<0.1' : small.toFixed(small < 10 ? 1 : 0)}${minor}`;
+    // "9p", not "9.0p"; a tenth is shown only when it says something.
+    const shown =
+      small < 0.1 && small > 0 ? '<0.1' : small.toFixed(small < 10 ? 1 : 0).replace(/\.0$/, '');
+    return `${shown}${minor}`;
   }
   return `${major}${amount.toFixed(2)}`;
 }

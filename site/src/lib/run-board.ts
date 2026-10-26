@@ -159,6 +159,8 @@ export interface Board {
   needsYou: BoardRun[];
   going: BoardRun[];
   held: BoardRun[];
+  /** The latest run of a step that did not finish: it waits on Victor until it is run again. */
+  stopped: BoardRun[];
   finished: BoardRun[];
 }
 
@@ -173,6 +175,7 @@ export function boardOf(rows: readonly ListedRun[], now: string): Board {
     // A hold stands until the same agent starts again on the same thought; an older hold is history, even
     // when it reported after the newer run had finished.
     held: marked.filter((r) => r.state === 'held' && r.latest),
+    stopped: marked.filter((r) => r.state === 'failed' && r.latest),
     finished: marked.filter((r) => r.state === 'done' || r.state === 'failed').slice(0, RECENT),
   };
 }
@@ -311,7 +314,8 @@ function lineOf(e: ShownEvent, currency: Currency): TimelineLine {
       return {
         ...base,
         what: `spent ${typeof f.usd === 'number' ? moneyOf(f.usd, currency) : 'an unknown amount'} on ${str(f, 'provider') ?? 'a provider'}`,
-        detail: str(f, 'units'),
+        // What the provider counted ("eleven_v3: 458 characters") is for checking, not for reading.
+        raw: str(f, 'units'),
       };
     case 'gate.opened':
       return {

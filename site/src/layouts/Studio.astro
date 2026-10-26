@@ -72,8 +72,9 @@ const title = current === 'today' || !area ? 'Studio' : `${area.name} · Studio`
       transition: none;
     }
   }
+  /* The other way in sits clearly apart from Say it, so a thumb never finds the wrong one. */
   .recorder .alternative {
-    margin-top: var(--space-2);
+    margin-top: var(--space-4);
   }
   /* How loud the microphone hears: a hairline track with an ink line stretched from the left. It moves only
      while recording, which Victor asked for by pressing Say it; it is information, not decoration. */
@@ -315,6 +316,17 @@ const title = current === 'today' || !area ? 'Studio' : `${area.name} · Studio`
     max-width: var(--measure);
   }
 
+  /* Every link on a run's row is a full tap tall; a question's Decide is a filled control, the row's one
+     action. */
+  .runs-list .links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+  }
+  .runs-list .links .decide {
+    padding-inline: var(--space-3);
+    text-decoration: none;
+  }
   .show-route {
     grid-column: 1 / -1;
   }
