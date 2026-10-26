@@ -41,7 +41,10 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: npx tsx scripts/draw-site-prints.ts
+      # Also after a failed draw: the prints that passed are paid for, so they are kept, and the job still
+      # fails on the Draw step for the ones that did not.
       - name: Commit the prints to the branch
+        if: ${{ !cancelled() }}
         run: |
           git config user.name "agentic-blog[bot]"
           git config user.email "agentic-blog[bot]@users.noreply.github.com"

@@ -72,6 +72,7 @@ for (const folder of await readdir(assets)) {
     let problems: string[] = [];
     let attempts = 0;
     let model = '';
+    let kept = false;
     while (attempts < MAX_ATTEMPTS) {
       attempts += 1;
       const picture = await draw(reference ? { prompt, reference } : { prompt });
@@ -91,13 +92,15 @@ for (const folder of await readdir(assets)) {
         await writeFile(file, picture.png);
         Object.assign(image, { model, reviewed_by: 'claude', attempts, prompt });
         changed = true;
+        kept = true;
         console.info(`  drew ${image.file} (${String(attempts)} attempt(s))`);
-        problems = [];
         break;
       }
       problems = review.problems;
     }
-    if (problems.length > 0) failures.push(`${image.file}: ${problems.join(' ')}`);
+    // A rejection can come with no reason given; the print is still missing, so the run still fails.
+    if (!kept)
+      failures.push(`${image.file}: ${problems.join(' ') || 'the review did not pass it'}`);
   }
   if (changed) {
     const drawn = new Date().toISOString().slice(0, 10);
