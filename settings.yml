@@ -47,6 +47,12 @@ publishing:
     per_usd: 0.748 # pounds to one US dollar, ECB reference rates of 23 October 2026 (0.83728 / 1.1193)
     rate_date: 2026-10-23
 
+analytics:
+  # Cloudflare Web Analytics: no cookies, no fingerprint, so no consent banner. The token is the beacon's
+  # site token from the Cloudflare dashboard (Analytics & Logs → Web Analytics → the site → Manage site);
+  # it is public, every page carries it. null loads nothing. Reader pages only; the studio is never counted.
+  cloudflare_token: null
+
 licence:
   code: MIT
   content: all-rights-reserved # change when chosen, e.g. CC-BY-4.0

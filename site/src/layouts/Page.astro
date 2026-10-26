@@ -1,6 +1,7 @@
 ---
 // Why: one layout for every page. It carries the fonts, the theme and font switches (restored before first
-// paint so nothing flashes), the robots rule from settings.yml, and the skip link. Pages add only content.
+// paint so nothing flashes), the robots rule from settings.yml, the skip link, and on reader pages in a
+// production build the cookieless Cloudflare Web Analytics beacon. Pages add only content.
 import '../styles/base.css';
 import { settings } from '../lib/settings';
 import { cleanPath } from '../lib/meta';
@@ -41,6 +42,9 @@ const {
 // The address the page is served at: the build writes .html files, the site serves them without.
 const canonical = new URL(cleanPath(Astro.url.pathname), Astro.site);
 const indexable = settings.publishing.index && !noindex;
+// Counted: reader pages on the live site. Not counted: the studio, and local development.
+const beaconToken =
+  import.meta.env.PROD && room === 'reader' ? settings.analytics.cloudflare_token : null;
 const fullTitle = title === settings.site.name ? title : `${title} — ${settings.site.name}`;
 ---
 
@@ -119,6 +123,16 @@ const fullTitle = title === settings.site.name ? title : `${title} — ${setting
           });
       }
     </script>
+    {
+      beaconToken && (
+        <script
+          is:inline
+          defer
+          src="https://static.cloudflareinsights.com/beacon.min.js"
+          data-cf-beacon={JSON.stringify({ token: beaconToken })}
+        />
+      )
+    }
   </body>
 </html>
 
