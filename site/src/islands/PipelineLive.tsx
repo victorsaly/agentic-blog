@@ -7,27 +7,14 @@
 // workflow drawn left to right, every step with where it stands, gates included, RouteDrawing), so the line
 // and the picture never disagree; a thought with work going on, or waiting on Victor, shows its route open.
 import { agentName } from '../lib/agent-runs';
-import {
-  standingOf,
-  withLive,
-  type CellEnding,
-  type PipelineAgent,
-  type PipelineRow,
-} from '../lib/pipeline';
+import { standingOf, withLive, type PipelineAgent, type PipelineRow } from '../lib/pipeline';
 import { formatDate } from '../lib/content';
 import { useRunsFeed } from './runs-feed';
-import { RouteDrawing, stepName } from './RouteDrawing';
+import { useGithubFeed } from './github-feed';
+import { RouteDrawing, stateWords, stepName } from './RouteDrawing';
 import { liveRoute, standingOfRoute, type BuiltStep, type RouteStanding } from '../lib/route-live';
 import type { RouteLayout } from '@roadbook/core/route';
 
-const words: Record<CellEnding, string> = {
-  done: 'Done',
-  held: 'Held',
-  failed: 'Did not finish',
-  waiting: 'Needs you',
-  running: 'Running',
-  'not-run': 'Not run',
-};
 const standingWords: Record<RouteStanding['state'], string> = {
   held: 'Held',
   stopped: 'Did not finish',
@@ -48,8 +35,6 @@ export interface PipelineLiveProps {
   /** The pipeline from the ledgers, as of the build. */
   rows: PipelineRow[];
   agents: PipelineAgent[];
-  /** Each phase's name, by its number. */
-  phaseNames: Record<number, string>;
   /** When the site was built, as an ISO time. */
   builtAt: string;
   /** The workflow's route, laid out once at build time. */
@@ -61,12 +46,12 @@ export interface PipelineLiveProps {
 export function PipelineLive({
   rows: built,
   agents,
-  phaseNames,
   builtAt,
   layout,
   builtStates,
 }: PipelineLiveProps): React.JSX.Element {
   const { known, error } = useRunsFeed();
+  const github = useGithubFeed();
   const kindOf = (id: string) => layout.steps.find((step) => step.id === id)?.kind ?? 'agent';
   const rows = known === null ? built : withLive(built, known.standing, agents);
   const asOf = `From the ledgers as of ${formatDate(new Date(builtAt))}, the last deploy`;
@@ -79,13 +64,23 @@ export function PipelineLive({
         ? `Live: every run the runner has sent, as of ${clock(known.at)}.`
         : `Live as of ${clock(known.at)}, the last answer. ${error}`;
 
-  // The phase heads span their agents' columns; the first agent of each phase opens it with a rule.
-  const groups = [...new Set(agents.map((a) => a.phase))].map((phase) => ({
-    phase,
-    name: phaseNames[phase] ?? `Phase ${String(phase)}`,
-    span: agents.filter((a) => a.phase === phase).length,
-  }));
-  const opensPhase = agents.map((a, i) => i === 0 || agents[i - 1]?.phase !== a.phase);
+  // Every thought's live route, worked out once: its line, its picture and the grid all read it.
+  const routes = new Map(
+    rows.map((r) => [
+      r.slug,
+      liveRoute(
+        layout,
+        builtStates[r.slug] ?? {},
+        known?.standing ?? [],
+        r.slug,
+        github.known?.runs ?? [],
+      ),
+    ]),
+  );
+  // The grid has the route's steps as its columns, so it can never list a step the route does not.
+  const columns = [...layout.steps]
+    .filter((step) => step.kind === 'agent' || step.kind === 'guard' || step.kind === 'gate')
+    .sort((a, b) => a.column - b.column || a.row - b.row);
 
   return (
     <section className="pipeline" aria-labelledby="pipeline-label">
@@ -97,12 +92,7 @@ export function PipelineLive({
         {rows.map((r) => {
           const s = standingOf(r, agents);
           // The route is the one answer: the line says what the route says, gates included.
-          const { route, links } = liveRoute(
-            layout,
-            builtStates[r.slug] ?? {},
-            known?.standing ?? [],
-            r.slug,
-          );
+          const { route, links } = routes.get(r.slug) ?? liveRoute(layout, {}, [], r.slug);
           const at = standingOfRoute(route);
           const going = at.state !== 'moving' && at.state !== 'untouched';
           return (
@@ -148,50 +138,46 @@ export function PipelineLive({
           <table className="small">
             <thead>
               <tr>
-                <td className="corner" />
-                {groups.map((g) => (
-                  <th key={g.phase} scope="colgroup" colSpan={g.span} className="phase opens">
-                    {g.name}
-                  </th>
-                ))}
-              </tr>
-              <tr>
                 <th scope="col">Thought</th>
-                {agents.map((a, i) => (
-                  <th key={a.name} scope="col" className={opensPhase[i] ? 'opens' : undefined}>
-                    {agentName(a.name)}
+                {columns.map((step) => (
+                  <th key={step.id} scope="col">
+                    {stepName(step)}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
-                <tr key={r.slug}>
-                  <th scope="row">
-                    <a href={`/thoughts/${r.slug}`}>{r.title}</a>
-                  </th>
-                  {r.cells.map((cell, i) => {
-                    const opens = opensPhase[i] ? 'opens' : '';
-                    const key = agents[i]?.name ?? String(i);
-                    return cell === null ? (
-                      <td key={key} className={`none ${opens}`.trim()}>
-                        <span aria-hidden="true">·</span>
-                        <span className="visually-hidden">Not run</span>
-                      </td>
-                    ) : (
-                      <td key={key} className={opens || undefined}>
-                        <span className={`state state-${stateClass(cell.ended)}`}>
-                          {words[cell.ended]}
-                        </span>
-                        <span className="when quiet">
-                          {short(cell.on)}
-                          {cell.runs > 1 && ` · ${String(cell.runs)} runs`}
-                        </span>
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+              {rows.map((r) => {
+                const states = routes.get(r.slug)?.route.states ?? {};
+                return (
+                  <tr key={r.slug}>
+                    <th scope="row">
+                      <a href={`/thoughts/${r.slug}`}>{r.title}</a>
+                    </th>
+                    {columns.map((step) => {
+                      const state = states[step.id] ?? 'not-run';
+                      // When the step is an agent with runs, when it last ran and how often.
+                      const cell = r.cells[agents.findIndex((a) => a.name === step.id)] ?? null;
+                      return state === 'not-run' ? (
+                        <td key={step.id} className="none">
+                          <span aria-hidden="true">·</span>
+                          <span className="visually-hidden">Not run</span>
+                        </td>
+                      ) : (
+                        <td key={step.id}>
+                          <span className={`state state-${state}`}>{stateWords[state]}</span>
+                          {cell !== null && (
+                            <span className="when quiet">
+                              {short(cell.on)}
+                              {cell.runs > 1 && ` · ${String(cell.runs)} runs`}
+                            </span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

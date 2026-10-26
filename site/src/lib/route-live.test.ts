@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { Ledger, type WorkflowInput } from '@roadbook/core';
 import { layoutOf } from '@roadbook/core/route';
-import { builtStepsOf, liveRoute, standingOfRoute } from './route-live';
+import { builtStepsOf, liveRoute, runningBefore, standingOfRoute } from './route-live';
 import type { LiveCell } from './pipeline';
 
 const workflow = {
@@ -124,5 +124,35 @@ describe('standingOfRoute', () => {
     });
     expect(at({ ask: { state: 'done', run: 'r1' } }).state).toBe('moving');
     expect(at({}).state).toBe('untouched');
+  });
+});
+
+describe('what GitHub is getting ready, and the steps before a gate', () => {
+  it('counts a step GitHub has started as at work, before the runner reports it', () => {
+    const { route } = liveRoute(
+      layoutOf(workflow),
+      { ask: { state: 'done', run: 'r1' } },
+      [],
+      't',
+      [
+        { agent: 'write', thought: 't', state: 'running' },
+        { agent: 'write', thought: 'other', state: 'running' },
+      ],
+    );
+    expect(route.states.write).toBe('running');
+  });
+
+  it('names the steps still working before a gate, and none once they are done', () => {
+    const working = liveRoute(layoutOf(workflow), {}, [], 't', [
+      { agent: 'ask', thought: 't', state: 'queued' },
+    ]).route;
+    expect(runningBefore(working, 'answers')).toEqual(['ask']);
+    const quiet = liveRoute(
+      layoutOf(workflow),
+      { ask: { state: 'done', run: 'r1' } },
+      [],
+      't',
+    ).route;
+    expect(runningBefore(quiet, 'answers')).toEqual([]);
   });
 });

@@ -21,8 +21,9 @@ import { moneyOf, type Currency } from '../lib/money';
 import { formatDate } from '../lib/content';
 import { usePoll } from './use-poll';
 import { useRunsFeed } from './runs-feed';
+import { useGithubFeed } from './github-feed';
 import { RouteDrawing } from './RouteDrawing';
-import { liveRoute, type BuiltStep } from '../lib/route-live';
+import { liveRoute, runningBefore, type BuiltStep } from '../lib/route-live';
 import type { RouteLayout } from '@roadbook/core/route';
 import { GateAnswer } from './GateAnswer';
 import { RunAgain } from './RunAgain';
@@ -62,6 +63,15 @@ const timeOf = (iso: string): string =>
     second: '2-digit',
   });
 
+/** What a later run of the same step did, as a verb after "A later Voice run". */
+const laterWords: Record<string, string> = {
+  done: 'finished',
+  failed: 'did not finish either',
+  held: 'was held',
+  running: 'is running now',
+  'needs-you': 'is waiting on you',
+};
+
 export interface RunTimelineProps {
   /** Thought titles by folder name, so the run names its thought the way the site does. */
   titles: Record<string, string>;
@@ -82,6 +92,7 @@ export function RunTimeline({
   allowances,
 }: RunTimelineProps): React.JSX.Element {
   const feed = useRunsFeed();
+  const github = useGithubFeed();
   const [status, setStatus] = useState<Status>({
     run: null,
     events: [],
@@ -182,6 +193,21 @@ export function RunTimeline({
   const lines = timelineOf(events, currency);
 
   const waiting = run.state === 'needs-you';
+  // One route for the whole page: the gate's guard, the later-run note and the picture read the same answer.
+  const { route, links } = liveRoute(
+    layout,
+    builtStates[run.thought] ?? {},
+    feed.known?.standing ?? [],
+    run.thought,
+    github.known?.runs ?? [],
+  );
+  // A later run of the same step on the same thought has replaced this one, whatever this one said.
+  const later =
+    run.state === 'failed' || run.state === 'held'
+      ? feed.known?.standing.find(
+          (c) => c.thought === run.thought && c.agent === run.agent && c.id > run.id,
+        )
+      : undefined;
 
   return (
     <div className="run-page">
@@ -219,14 +245,33 @@ export function RunTimeline({
           gate={gate}
           // The gate before the way out: approving it is the merge.
           merges={layout.steps.some((s) => s.kind === 'sink' && s.after.includes(gate.gate))}
+          // Steps before the gate still at work: the merge stays shut until they finish.
+          workingBefore={runningBefore(route, gate.gate)}
           onSent={() => {
             sent.current = true;
           }}
         />
       )}
 
-      {/* A run that did not finish, or that a guard held, can be run again from here. */}
+      {later !== undefined && (
+        <p className="later">
+          A later {agentName(run.agent)} run{' '}
+          <a href={`/studio/agents/run?id=${encodeURIComponent(later.id)}`}>
+            {laterWords[later.state] ?? 'started'}
+          </a>{' '}
+          on {formatDate(new Date(later.startedAt), 'en-GB', here)}, at{' '}
+          {new Date(later.startedAt).toLocaleTimeString('en-GB', {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+          . Nothing to do here.
+        </p>
+      )}
+
+      {/* A run that did not finish, or that a guard held, can be run again from here, unless a later run
+          of the same step has already replaced it. */}
       {gate === null &&
+        later === undefined &&
         (run.state === 'failed' || run.state === 'held') &&
         allowances[run.agent] !== undefined && (
           <RunAgain
@@ -241,23 +286,13 @@ export function RunTimeline({
         <h2 className="label" id="route-label">
           Where it sits on the route
         </h2>
-        {(() => {
-          const { route, links } = liveRoute(
-            layout,
-            builtStates[run.thought] ?? {},
-            feed.known?.standing ?? [],
-            run.thought,
-          );
-          return (
-            <RouteDrawing
-              layout={route}
-              states={route.states}
-              links={links}
-              current={run.agent}
-              label={`The route of ${title}, with this run's step marked`}
-            />
-          );
-        })()}
+        <RouteDrawing
+          layout={route}
+          states={route.states}
+          links={links}
+          current={run.agent}
+          label={`The route of ${title}, with this run's step marked`}
+        />
       </section>
 
       <section aria-labelledby="timeline-label">

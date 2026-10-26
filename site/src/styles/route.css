@@ -102,9 +102,12 @@
 .route-step.state-not-run text {
   fill: var(--quiet);
 }
-.route-step rect.here {
+/* The step this page is about says so in words under it: a mark of its own, not a rule that could be read
+   as held. */
+.route-picture text.here {
   fill: var(--ink);
-  stroke: none;
+  font-size: 12px;
+  font-weight: 700;
 }
 .route a:focus-visible rect:first-child {
   stroke-width: 3;

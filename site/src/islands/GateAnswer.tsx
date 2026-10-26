@@ -10,6 +10,7 @@
 import { useEffect, useId, useState } from 'react';
 import type { GateView } from '../lib/gates';
 import { Markdown } from './Markdown';
+import { agentName } from '../lib/agent-runs';
 import { Recorder, type Delivery } from './Recorder';
 
 interface Context {
@@ -58,6 +59,8 @@ export interface GateAnswerProps {
   onSent: () => void;
   /** The gate before the way out: approving it merges the pull request once its checks pass. */
   merges?: boolean;
+  /** Steps before the gate still at work; while any is, a merge is not offered. */
+  workingBefore?: readonly string[];
 }
 
 export function GateAnswer({
@@ -65,7 +68,10 @@ export function GateAnswer({
   gate,
   onSent,
   merges = false,
+  workingBefore = [],
 }: GateAnswerProps): React.JSX.Element {
+  // Nothing goes live half-written: the merge waits for every step before it to finish.
+  const shut = merges && workingBefore.length > 0;
   const id = useId();
   const [about, setAbout] = useState<Context | null>(null);
   const [aboutError, setAboutError] = useState<string | null>(null);
@@ -173,6 +179,13 @@ export function GateAnswer({
 
       {gate.asks === 'approve' && (
         <div className="decide">
+          {shut && (
+            <p className="shut" role="status">
+              {workingBefore.map(agentName).join(' and ')}{' '}
+              {workingBefore.length === 1 ? 'is' : 'are'} still working on this post. Merging opens
+              when {workingBefore.length === 1 ? 'it finishes' : 'they finish'}; this page shows it.
+            </p>
+          )}
           {merges && (
             <p className="small">
               Approving merges the pull request once its checks pass on the commit that records your
@@ -183,7 +196,7 @@ export function GateAnswer({
             <button
               type="button"
               className="control filled"
-              disabled={busy}
+              disabled={busy || shut}
               onClick={() => {
                 if (merges && !confirming) setConfirming(true);
                 else void send('approved');
