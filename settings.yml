@@ -51,7 +51,7 @@ analytics:
   # Cloudflare Web Analytics: no cookies, no fingerprint, so no consent banner. The token is the beacon's
   # site token from the Cloudflare dashboard (Analytics & Logs → Web Analytics → the site → Manage site);
   # it is public, every page carries it. null loads nothing. Reader pages only; the studio is never counted.
-  cloudflare_token: null
+  cloudflare_token: 0526b354820545d286eea84eef36b62e
 
 licence:
   code: MIT

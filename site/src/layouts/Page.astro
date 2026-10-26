@@ -127,7 +127,7 @@ const fullTitle = title === settings.site.name ? title : `${title} — ${setting
       beaconToken && (
         <script
           is:inline
-          defer
+          type="module"
           src="https://static.cloudflareinsights.com/beacon.min.js"
           data-cf-beacon={JSON.stringify({ token: beaconToken })}
         />
