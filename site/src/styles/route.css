@@ -187,7 +187,9 @@
   margin: 0;
 }
 @media (max-width: 40rem) {
-  .route-scroll {
+  /* On a phone the route is a list with every step in it: nothing is out of sight to point to. */
+  .route-scroll,
+  .route-hint {
     display: none;
   }
   .route-list {

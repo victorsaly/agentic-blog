@@ -80,14 +80,13 @@ export function RouteDrawing({
   const focus = current ?? reached?.id;
   const focusX = focus === undefined ? 0 : (at.get(focus)?.x ?? 0);
   const scroller = useRef<HTMLDivElement | null>(null);
-  // Steps scrolled out of sight on the left, so a cropped route says what it is hiding.
-  const [hidden, setHidden] = useState<{ count: number; done: boolean }>({ count: 0, done: true });
-  const measure = (el: HTMLDivElement): void => {
-    const out = ordered.filter((s) => (at.get(s.id)?.x ?? 0) + W <= el.scrollLeft);
-    const done = out.every((s) => (states[s.id] ?? 'not-run') === 'done');
-    setHidden((before) =>
-      before.count === out.length && before.done === done ? before : { count: out.length, done },
-    );
+  // How far the frame is scrolled; what that hides is worked out from the states as they are now, so a step
+  // that starts or stops out of sight changes the words at once.
+  const [scrolled, setScrolled] = useState(0);
+  const out = ordered.filter((s) => (at.get(s.id)?.x ?? 0) + W <= scrolled);
+  const hidden = {
+    count: out.length,
+    done: out.every((s) => (states[s.id] ?? 'not-run') === 'done'),
   };
   // Clip ids are page-wide, and the pipeline draws one route per thought.
   const clip = `route-clip${useId().replace(/:/g, '')}`;
@@ -128,7 +127,7 @@ export function RouteDrawing({
         // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
         tabIndex={0}
         onScroll={(event) => {
-          measure(event.currentTarget);
+          setScrolled(event.currentTarget.scrollLeft);
         }}
       >
         <svg
