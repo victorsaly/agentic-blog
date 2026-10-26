@@ -135,6 +135,13 @@ export function RunTimeline({
 
   const { run, events, missing, error } = status;
   const going = run !== null && isGoing(run.state);
+
+  // The tab names this run, so several open runs can be told apart.
+  const named =
+    run === null ? null : `${agentName(run.agent)} on ${titles[run.thought] ?? run.thought}`;
+  useEffect(() => {
+    if (named !== null) document.title = `${named} · Studio — Victor Saly`;
+  }, [named]);
   const gate = run === null ? null : gateOf(events, run.state);
 
   // The clock ticks only while the run is going; a finished run shows how long it took.
@@ -174,6 +181,8 @@ export function RunTimeline({
   const quiet = isQuiet(run, now);
   const lines = timelineOf(events, currency);
 
+  const waiting = run.state === 'needs-you';
+
   return (
     <div className="run-page">
       <p className="small">
@@ -186,9 +195,14 @@ export function RunTimeline({
         <span className={`state state-${quiet ? 'quiet' : run.state}`} aria-live="polite">
           {quiet ? 'Quiet' : stateWord(run.state)}
         </span>
-        <span className="clock">
-          {going ? clockOf(run.startedAt, now) : clockOf(run.startedAt, run.updatedAt)}
-        </span>
+        {/* A run waiting on Victor is not timed against him: it says since when it waits. */}
+        {waiting ? (
+          <span className="since">waiting on you since {timeOf(run.startedAt)}</span>
+        ) : (
+          <span className="clock">
+            {going ? clockOf(run.startedAt, now) : clockOf(run.startedAt, run.updatedAt)}
+          </span>
+        )}
       </p>
       {quiet && (
         <p>
@@ -198,28 +212,18 @@ export function RunTimeline({
       )}
       {error !== null && <p role="alert">{error} The page asks again on its own.</p>}
 
-      <dl className="facts small">
-        <div>
-          <dt>Started</dt>
-          <dd>
-            {formatDate(new Date(run.startedAt), 'en-GB', here)}, {timeOf(run.startedAt)}
-          </dd>
-        </div>
-        <div>
-          <dt>{going ? 'Spent so far' : 'Spent'}</dt>
-          <dd>{moneyOf(run.usd, currency)}</dd>
-        </div>
-        <div>
-          <dt>Events</dt>
-          <dd>{run.events}</dd>
-        </div>
-        <div>
-          <dt>Chain</dt>
-          <dd>
-            <code title={run.head}>{run.head.slice(0, 12)}</code>, checked as each event was kept
-          </dd>
-        </div>
-      </dl>
+      {/* What Victor can do comes first: the decision a gate waits for, or running it again. */}
+      {gate?.open === true && (
+        <GateAnswer
+          run={run.id}
+          gate={gate}
+          // The gate before the way out: approving it is the merge.
+          merges={layout.steps.some((s) => s.kind === 'sink' && s.after.includes(gate.gate))}
+          onSent={() => {
+            sent.current = true;
+          }}
+        />
+      )}
 
       {/* A run that did not finish, or that a guard held, can be run again from here. */}
       {gate === null &&
@@ -232,18 +236,6 @@ export function RunTimeline({
             currency={currency}
           />
         )}
-
-      {gate?.open === true && (
-        <GateAnswer
-          run={run.id}
-          gate={gate}
-          // The gate before the way out: approving it is the merge.
-          merges={layout.steps.some((s) => s.kind === 'sink' && s.after.includes(gate.gate))}
-          onSent={() => {
-            sent.current = true;
-          }}
-        />
-      )}
 
       <section aria-labelledby="route-label">
         <h2 className="label" id="route-label">
@@ -300,14 +292,48 @@ export function RunTimeline({
                   ) : (
                     <span className="detail quiet">{line.detail}</span>
                   ))}
+                {/* The run's own words, when the line put them plainly. */}
+                {line.raw != null && (
+                  <details className="raw small">
+                    <summary>What it said</summary>
+                    <code>{line.raw}</code>
+                  </details>
+                )}
               </div>
             </li>
           ))}
         </ol>
       </section>
-      <p className="small quiet">
-        Run <code>{run.id}</code>. The ledger file in git is the record; this is its live copy.
-      </p>
+
+      {/* The facts of the record, for when they are wanted, not before the decision. */}
+      <details className="facts-more">
+        <summary className="small">Details</summary>
+        <dl className="facts small">
+          <div>
+            <dt>Started</dt>
+            <dd>
+              {formatDate(new Date(run.startedAt), 'en-GB', here)}, {timeOf(run.startedAt)}
+            </dd>
+          </div>
+          <div>
+            <dt>{going ? 'Spent so far' : 'Spent'}</dt>
+            <dd>{moneyOf(run.usd, currency)}</dd>
+          </div>
+          <div>
+            <dt>Events</dt>
+            <dd>{run.events}</dd>
+          </div>
+          <div>
+            <dt>Chain</dt>
+            <dd>
+              <code title={run.head}>{run.head.slice(0, 12)}</code>, checked as each event was kept
+            </dd>
+          </div>
+        </dl>
+        <p className="small quiet">
+          Run <code>{run.id}</code>. The ledger file in git is the record; this is its live copy.
+        </p>
+      </details>
     </div>
   );
 }
