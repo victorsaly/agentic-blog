@@ -209,10 +209,35 @@ const title = current === 'today' || !area ? 'Studio' : `${area.name} · Studio`
     line-height: 1.6;
     white-space: nowrap;
   }
-  .studio .state-running,
   .studio .state-needs-you {
     background: var(--ink);
     color: var(--paper);
+  }
+  /* Working now: marigold, the one colour, with an ink bar sweeping along its foot, the same as on the route,
+     so a run at work looks alive wherever it is listed (Victor's decision, 2026-10-25). Still, and still
+     marigold, when the reader asks for less motion. */
+  .studio .state-running {
+    position: relative;
+    overflow: hidden;
+    padding-bottom: 4px;
+    background: var(--mark);
+    color: var(--mark-ink);
+    border-color: var(--mark-ink);
+  }
+  .studio .state-running::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 33%;
+    height: 3px;
+    background: var(--mark-ink);
+    animation: route-sweep 1.4s linear infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .studio .state-running::after {
+      animation: none;
+    }
   }
   .studio .state-held,
   .studio .state-failed {
@@ -293,7 +318,10 @@ const title = current === 'today' || !area ? 'Studio' : `${area.name} · Studio`
   .show-route {
     grid-column: 1 / -1;
   }
+  /* A thumb finds it: the press that opens a route is a full tap tall. */
   .show-route > summary {
+    min-height: var(--tap);
+    padding-block: 0.6rem;
     cursor: pointer;
     font-size: var(--size-small);
     font-weight: 700;
