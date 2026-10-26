@@ -156,3 +156,16 @@ describe('what GitHub is getting ready, and the steps before a gate', () => {
     expect(runningBefore(quiet, 'answers')).toEqual([]);
   });
 });
+
+describe('a gate shut while a step before it works', () => {
+  it('is not counted as waiting on Victor: the thought is running at that step', () => {
+    const { route } = liveRoute(
+      layoutOf(workflow),
+      { answers: { state: 'needs-you', run: 'r2' } },
+      [],
+      't',
+      [{ agent: 'ask', thought: 't', state: 'running' }],
+    );
+    expect(standingOfRoute(route)).toMatchObject({ state: 'running', at: 'ask' });
+  });
+});

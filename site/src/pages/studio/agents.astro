@@ -35,7 +35,7 @@ const { show, per_usd: perUsd } = settings.publishing.currency;
 
 <Studio description="What the agents are doing, and where each thought stands.">
   <h1>Agents</h1>
-  <RunsBoard client:load titles={titles} currency={{ show, perUsd }} />
+  <RunsBoard client:load titles={titles} currency={{ show, perUsd }} builtStates={builtStates} />
 
   <PipelineLive
     client:load
@@ -48,7 +48,13 @@ const { show, per_usd: perUsd } = settings.publishing.currency;
 
   <details class="earlier">
     <summary class="control">Earlier runs, and GitHub's own list</summary>
-    <RunsBoard client:load titles={titles} currency={{ show, perUsd }} part="earlier" />
+    <RunsBoard
+      client:load
+      titles={titles}
+      currency={{ show, perUsd }}
+      part="earlier"
+      builtStates={builtStates}
+    />
     <div class="on-github">
       <AgentsLive client:load titles={titles} summary={false} />
     </div>

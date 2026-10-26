@@ -212,6 +212,8 @@ export function RunTimeline({
     run.thought,
     github.known?.runs ?? [],
   );
+  // Steps before this gate still at work: until they finish the gate is shut, not waiting on Victor.
+  const shutBy = waiting && gate !== null ? runningBefore(route, gate.gate) : [];
   // A later run of the same step on the same thought has replaced this one, whatever this one said: from the
   // live copy, or from the ledger when the live copy missed it, the same two the route reads.
   const later = ((): { id: string; state: string } | undefined => {
@@ -246,12 +248,30 @@ export function RunTimeline({
         {agentName(run.agent)} on <a href={`/thoughts/${run.thought}`}>{title}</a>
       </h1>
       <p className="summary">
-        <span className={`state state-${quiet ? 'quiet' : run.state}`} aria-live="polite">
-          {quiet ? 'Quiet' : stateWord(run.state)}
-        </span>
+        {/* A gate shut while steps before it work says what it waits for, as the Agents page does. */}
+        {shutBy.length > 0 ? (
+          <span className="state state-shut" aria-live="polite">
+            Waiting on {shutBy.length} {shutBy.length === 1 ? 'step' : 'steps'}
+          </span>
+        ) : (
+          <span className={`state state-${quiet ? 'quiet' : run.state}`} aria-live="polite">
+            {quiet ? 'Quiet' : stateWord(run.state)}
+          </span>
+        )}
         {/* A run waiting on Victor is not timed against him: it says since when it waits. */}
-        {waiting ? (
-          <span className="since">waiting on you since {timeOf(run.startedAt)}</span>
+        {shutBy.length > 0 ? (
+          <span className="since">
+            opens when {shutBy.map(agentName).join(' and ')}{' '}
+            {shutBy.length === 1 ? 'finishes' : 'finish'}
+          </span>
+        ) : waiting ? (
+          <span className="since">
+            waiting on you since{' '}
+            {new Date(run.startedAt).toLocaleTimeString('en-GB', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </span>
         ) : (
           <span className="clock">
             {going ? clockOf(run.startedAt, now) : `took ${clockOf(run.startedAt, run.updatedAt)}`}

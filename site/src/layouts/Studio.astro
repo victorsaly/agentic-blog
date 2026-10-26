@@ -323,9 +323,22 @@ const title = current === 'today' || !area ? 'Studio' : `${area.name} · Studio`
     align-items: center;
     min-height: var(--tap);
   }
+  /* The row's one action, and a gate's or a run's: a bordered box with an icon and a word, on the heavier
+     rule. Black fill is kept for what is on (the open tab) and what waits on Victor (Needs you). */
+  .runs-list .links .decide,
+  .studio .control.strong {
+    border-width: var(--rule-strong);
+    font-weight: 700;
+    text-decoration: none;
+  }
   .runs-list .links .decide {
     padding-inline: var(--space-3);
-    text-decoration: none;
+  }
+  /* Shut, it stays a box with a lock and words, at full strength: not faded like something broken. */
+  .studio .control.strong:disabled {
+    opacity: 1;
+    border-style: dashed;
+    color: var(--quiet);
   }
   .show-route {
     grid-column: 1 / -1;
