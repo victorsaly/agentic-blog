@@ -1,7 +1,7 @@
 // Why: the accountability rules are only real if breaking one stops the project. validate() is the single
 // judge for every way a project can be written: by hand, in the builder, or by Claude through the MCP
 // server. Each rule has a stable id, says what is wrong in plain words, and says how to fix it.
-import type { ZodIssue } from 'zod';
+import type { z } from 'zod';
 import { project as projectSchema, type Node, type Project, type Workflow } from './schema.js';
 import { providersOf } from './providers.js';
 
@@ -67,7 +67,7 @@ function issue(
   return { rule, severity, where, message, fix };
 }
 
-function fromZod(zodIssue: ZodIssue): Issue {
+function fromZod(zodIssue: z.core.$ZodIssue): Issue {
   const path = zodIssue.path.map(String).join('.') || 'the file';
   return issue(
     'RB001',
