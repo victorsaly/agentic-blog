@@ -3,7 +3,7 @@
 // instead: its title, its message marked once in marigold, and its cover print on the right, in the site's
 // own type and tokens, so the preview is the post's front page in miniature. A page with a print of its own
 // (/how-it-works) gets a card with that print, so it never borrows a post's. The site's own card, the
-// newest cover with the name and the tagline, is what every other page shares. The cards are committed to
+// home page's own print with the name and the tagline, is what every other page shares. The cards are committed to
 // site/public/social, so a build never needs a browser; draw them again when a title, a message or a cover
 // changes, and name thoughts to draw only those.
 // Usage: npm run social:cards [-- <thought-slug or page card name> ...]
@@ -125,16 +125,15 @@ const pageCards: Card[] = [
 ];
 
 const thoughts = await thoughtCards();
-const newest = thoughts[0];
 const cards: Card[] = [
-  ...(newest && asked.length === 0
+  ...(asked.length === 0 || asked.includes('site')
     ? [
         {
           name: 'site',
           label: 'Blog',
           title: settings.site.name,
           message: settings.site.tagline,
-          print: newest.print,
+          print: join(root, 'site/src/assets/home/victor-talking-it-out.png'),
         },
       ]
     : []),
