@@ -5,7 +5,7 @@ kind: short
 language: en
 converted_from: ../origin/transcript.md
 converted_by: convert
-reviewed: false
+reviewed: true
 ---
 
 In September last year I tried to build a game with my son. The idea came from him, so we recorded it.

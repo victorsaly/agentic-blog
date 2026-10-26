@@ -16,7 +16,7 @@ text_sha256: d82fe2d1f44bf62cdb636af207beb2b13a0b88218d63028b259a26316d270f05
 words: 210
 seconds: 74.255
 made: '2026-10-25'
-reviewed: false
+reviewed: true
 ---
 
 In September last year I tried to build a game with my son. The idea came from him, so we recorded it.

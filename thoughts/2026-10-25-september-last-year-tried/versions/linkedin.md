@@ -5,7 +5,7 @@ kind: linkedin
 language: en
 converted_from: ../origin/transcript.md
 converted_by: convert
-reviewed: false
+reviewed: true
 ---
 
 A year ago, AI could not build my son's game. Today I am almost sure it would.
