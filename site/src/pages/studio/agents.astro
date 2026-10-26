@@ -13,7 +13,7 @@ import { settings } from '../../lib/settings';
 import { loadCosted } from '../../lib/studio-data';
 import { PipelineLive } from '../../islands/PipelineLive';
 import { inOrder, pipelineOf } from '../../lib/pipeline';
-import { phases, type AgentCardFacts } from '../../lib/agents';
+import type { AgentCardFacts } from '../../lib/agents';
 import { layoutOf } from '@roadbook/core/route';
 import project from '../../../../roadbook.config';
 
@@ -41,7 +41,6 @@ const { show, per_usd: perUsd } = settings.publishing.currency;
     client:load
     rows={rows}
     agents={agents}
-    phaseNames={phases}
     builtAt={new Date().toISOString()}
     layout={layout}
     builtStates={builtStates}
@@ -51,7 +50,7 @@ const { show, per_usd: perUsd } = settings.publishing.currency;
     <summary class="control">Earlier runs, and GitHub's own list</summary>
     <RunsBoard client:load titles={titles} currency={{ show, perUsd }} part="earlier" />
     <div class="on-github">
-      <AgentsLive client:load titles={titles} />
+      <AgentsLive client:load titles={titles} summary={false} />
     </div>
   </details>
 </Studio>

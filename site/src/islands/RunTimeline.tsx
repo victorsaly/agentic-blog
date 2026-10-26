@@ -21,8 +21,9 @@ import { moneyOf, type Currency } from '../lib/money';
 import { formatDate } from '../lib/content';
 import { usePoll } from './use-poll';
 import { useRunsFeed } from './runs-feed';
+import { useGithubFeed } from './github-feed';
 import { RouteDrawing } from './RouteDrawing';
-import { liveRoute, type BuiltStep } from '../lib/route-live';
+import { liveRoute, runningBefore, type BuiltStep } from '../lib/route-live';
 import type { RouteLayout } from '@roadbook/core/route';
 import { GateAnswer } from './GateAnswer';
 import { RunAgain } from './RunAgain';
@@ -62,6 +63,26 @@ const timeOf = (iso: string): string =>
     second: '2-digit',
   });
 
+/** When a run started, read from its id (ids begin with the start, to the second): "26 October, 07:20". */
+function startedOn(id: string): string {
+  const stamp = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/.exec(id);
+  if (!stamp) return 'later';
+  const [, year, month, day, hour, minute] = stamp;
+  const at = new Date(
+    `${year ?? ''}-${month ?? ''}-${day ?? ''}T${hour ?? ''}:${minute ?? ''}:00Z`,
+  );
+  return `${at.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}, ${at.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+/** What a later run of the same step did, as a verb after "A later Voice run". */
+const laterWords: Record<string, string> = {
+  done: 'finished',
+  failed: 'did not finish either',
+  held: 'was held',
+  running: 'is running now',
+  'needs-you': 'is waiting on you',
+};
+
 export interface RunTimelineProps {
   /** Thought titles by folder name, so the run names its thought the way the site does. */
   titles: Record<string, string>;
@@ -82,6 +103,7 @@ export function RunTimeline({
   allowances,
 }: RunTimelineProps): React.JSX.Element {
   const feed = useRunsFeed();
+  const github = useGithubFeed();
   const [status, setStatus] = useState<Status>({
     run: null,
     events: [],
@@ -182,6 +204,38 @@ export function RunTimeline({
   const lines = timelineOf(events, currency);
 
   const waiting = run.state === 'needs-you';
+  // One route for the whole page: the gate's guard, the later-run note and the picture read the same answer.
+  const { route, links } = liveRoute(
+    layout,
+    builtStates[run.thought] ?? {},
+    feed.known?.standing ?? [],
+    run.thought,
+    github.known?.runs ?? [],
+  );
+  // A later run of the same step on the same thought has replaced this one, whatever this one said: from the
+  // live copy, or from the ledger when the live copy missed it, the same two the route reads.
+  const later = ((): { id: string; state: string } | undefined => {
+    if (run.state !== 'failed' && run.state !== 'held') return undefined;
+    const live = feed.known?.standing.find(
+      (c) => c.thought === run.thought && c.agent === run.agent && c.id > run.id,
+    );
+    const ledger = builtStates[run.thought]?.[run.agent];
+    const recorded =
+      ledger !== undefined && ledger.run > run.id
+        ? { id: ledger.run, state: ledger.state }
+        : undefined;
+    if (live && recorded) return live.id >= recorded.id ? live : recorded;
+    return live ?? recorded;
+  })();
+  // What runs is known only once both feeds have answered, and answered last time: not knowing is not idle.
+  const checking =
+    feed.known === null || github.known === null
+      ? feed.error !== null || github.error !== null
+        ? 'failed'
+        : 'loading'
+      : feed.error !== null || github.error !== null
+        ? 'failed'
+        : 'known';
 
   return (
     <div className="run-page">
@@ -219,14 +273,29 @@ export function RunTimeline({
           gate={gate}
           // The gate before the way out: approving it is the merge.
           merges={layout.steps.some((s) => s.kind === 'sink' && s.after.includes(gate.gate))}
+          // Steps before the gate still at work: the merge stays shut until they finish.
+          workingBefore={runningBefore(route, gate.gate)}
+          checking={checking}
           onSent={() => {
             sent.current = true;
           }}
         />
       )}
 
-      {/* A run that did not finish, or that a guard held, can be run again from here. */}
+      {later !== undefined && (
+        <p className="later">
+          A later {agentName(run.agent)} run (started {startedOn(later.id)}){' '}
+          <a href={`/studio/agents/run?id=${encodeURIComponent(later.id)}`}>
+            {laterWords[later.state] ?? 'started'}
+          </a>
+          . Nothing to do here.
+        </p>
+      )}
+
+      {/* A run that did not finish, or that a guard held, can be run again from here, unless a later run
+          of the same step has already replaced it. */}
       {gate === null &&
+        later === undefined &&
         (run.state === 'failed' || run.state === 'held') &&
         allowances[run.agent] !== undefined && (
           <RunAgain
@@ -241,23 +310,13 @@ export function RunTimeline({
         <h2 className="label" id="route-label">
           Where it sits on the route
         </h2>
-        {(() => {
-          const { route, links } = liveRoute(
-            layout,
-            builtStates[run.thought] ?? {},
-            feed.known?.standing ?? [],
-            run.thought,
-          );
-          return (
-            <RouteDrawing
-              layout={route}
-              states={route.states}
-              links={links}
-              current={run.agent}
-              label={`The route of ${title}, with this run's step marked`}
-            />
-          );
-        })()}
+        <RouteDrawing
+          layout={route}
+          states={route.states}
+          links={links}
+          current={run.agent}
+          label={`The route of ${title}, with this run's step marked`}
+        />
       </section>
 
       <section aria-labelledby="timeline-label">

@@ -10,6 +10,7 @@
 import { useEffect, useId, useState } from 'react';
 import type { GateView } from '../lib/gates';
 import { Markdown } from './Markdown';
+import { agentName } from '../lib/agent-runs';
 import { Recorder, type Delivery } from './Recorder';
 
 interface Context {
@@ -58,6 +59,13 @@ export interface GateAnswerProps {
   onSent: () => void;
   /** The gate before the way out: approving it merges the pull request once its checks pass. */
   merges?: boolean;
+  /** Steps before the gate still at work; while any is, a merge is not offered. */
+  workingBefore?: readonly string[];
+  /**
+   * Whether the page knows what is running: still asking, known, or the asking failed. Not knowing is never
+   * taken for nothing running, so a merge waits until it is known.
+   */
+  checking?: 'loading' | 'known' | 'failed';
 }
 
 export function GateAnswer({
@@ -65,9 +73,17 @@ export function GateAnswer({
   gate,
   onSent,
   merges = false,
+  workingBefore = [],
+  checking = 'known',
 }: GateAnswerProps): React.JSX.Element {
+  // Nothing goes live half-written: the merge waits for every step before it to finish.
+  const quiet = workingBefore.length === 0;
+  const shut = merges && !quiet;
   const id = useId();
-  const [about, setAbout] = useState<Context | null>(null);
+  // What the gate is about, and whether it was read with nothing running before the gate: a preview read
+  // while a step was still rewriting it is read again once the step finishes.
+  const [read, setRead] = useState<{ context: Context | null; quiet: boolean } | null>(null);
+  const about = read?.context ?? null;
   const [aboutError, setAboutError] = useState<string | null>(null);
   const [words, setWords] = useState('');
   const [notThis, setNotThis] = useState(false);
@@ -84,7 +100,7 @@ export function GateAnswer({
         });
         const data: unknown = await response.json().catch(() => null);
         if (!response.ok) throw new Error(errorOf(data, 'The studio could not read the gate.'));
-        setAbout(readContext(data));
+        setRead({ context: readContext(data), quiet });
       } catch (error: unknown) {
         if (leaving.signal.aborted) return;
         setAboutError(error instanceof Error ? error.message : 'The studio could not be reached.');
@@ -93,7 +109,10 @@ export function GateAnswer({
     return () => {
       leaving.abort();
     };
-  }, [run]);
+  }, [run, quiet]);
+  // The merge is offered only on what is known: nothing running, and the preview read since.
+  const fresh = read !== null && read.quiet === quiet;
+  const waits = merges && (shut || checking !== 'known' || (!fresh && aboutError === null));
 
   const send = async (decision: 'approved' | 'redirected'): Promise<void> => {
     setSending({ state: 'sending' });
@@ -173,6 +192,25 @@ export function GateAnswer({
 
       {gate.asks === 'approve' && (
         <div className="decide">
+          {merges && !shut && checking !== 'known' && (
+            <p className="shut" role="status">
+              {checking === 'loading'
+                ? 'Checking whether anything before this gate is still working…'
+                : 'Could not check whether anything before this gate is still working, so merging waits. The page asks again on its own.'}
+            </p>
+          )}
+          {merges && aboutError !== null && (
+            <p className="small">
+              The preview could not be read: read the pull request before you merge.
+            </p>
+          )}
+          {shut && (
+            <p className="shut" role="status">
+              {workingBefore.map(agentName).join(' and ')}{' '}
+              {workingBefore.length === 1 ? 'is' : 'are'} still working on this post. Merging opens
+              when {workingBefore.length === 1 ? 'it finishes' : 'they finish'}; this page shows it.
+            </p>
+          )}
           {merges && (
             <p className="small">
               Approving merges the pull request once its checks pass on the commit that records your
@@ -183,7 +221,7 @@ export function GateAnswer({
             <button
               type="button"
               className="control filled"
-              disabled={busy}
+              disabled={busy || waits}
               onClick={() => {
                 if (merges && !confirming) setConfirming(true);
                 else void send('approved');

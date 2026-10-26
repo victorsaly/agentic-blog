@@ -47,6 +47,8 @@ export function readGateRequest(
 export function gateContext(gate: string): { file: string; label: string } | null {
   if (gate === 'answers') return { file: 'interview.md', label: 'The questions' };
   if (gate === 'message') return { file: 'structure.md', label: 'The structure, with the message' };
+  // The gate before the way out shows what goes live, in short, without leaving the studio.
+  if (gate === 'merge') return { file: 'versions/short.md', label: 'What goes live, in short' };
   return null;
 }
 

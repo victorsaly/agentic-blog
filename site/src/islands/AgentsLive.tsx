@@ -21,9 +21,11 @@ const words: Record<LiveState, string> = {
 export interface AgentsLiveProps {
   /** Thought titles by folder name, so a run names its thought the way the site does. */
   titles: Record<string, string>;
+  /** Its own count; left out where the page above already says what runs, so the two never disagree. */
+  summary?: boolean;
 }
 
-export function AgentsLive({ titles }: AgentsLiveProps): React.JSX.Element {
+export function AgentsLive({ titles, summary: counts = true }: AgentsLiveProps): React.JSX.Element {
   // The page's one GitHub asker (github-feed.ts), shared with the board above.
   const status = useGithubFeed();
   const { known, error } = status;
@@ -83,9 +85,11 @@ export function AgentsLive({ titles }: AgentsLiveProps): React.JSX.Element {
 
   return (
     <div className="agents-live">
-      <p className="summary" aria-live="polite">
-        {summary}
-      </p>
+      {counts && (
+        <p className="summary" aria-live="polite">
+          {summary}
+        </p>
+      )}
       {error !== null && <p role="alert">{error} The page asks again on its own.</p>}
 
       <section aria-labelledby="going-label">

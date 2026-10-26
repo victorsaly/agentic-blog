@@ -41,7 +41,8 @@ describe('what a gate shows', () => {
   it('names the file beside each gate, and none where there is nothing to read', () => {
     expect(gateContext('answers')?.file).toBe('interview.md');
     expect(gateContext('message')?.file).toBe('structure.md');
-    expect(gateContext('merge')).toBeNull();
+    expect(gateContext('merge')?.file).toBe('versions/short.md');
+    expect(gateContext('pick-a-title')).toBeNull();
   });
 
   it('shows a file without its front matter', () => {

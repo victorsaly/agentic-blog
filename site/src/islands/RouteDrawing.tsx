@@ -59,7 +59,8 @@ export function RouteDrawing({
   });
   const at = new Map(layout.steps.map((s) => [s.id, box(s)]));
   const width = layout.columns * (W + GAP_X) - GAP_X;
-  const height = layout.rows * (H + GAP_Y) - GAP_Y + 12;
+  // Room under the last row for the words "this run".
+  const height = layout.rows * (H + GAP_Y) - GAP_Y + 20;
   const ordered = [...layout.steps].sort((a, b) => a.column - b.column || a.row - b.row);
   // Where the work is: this page's step, or else the furthest one that has run.
   const reached = ordered.filter((s) => (states[s.id] ?? 'not-run') !== 'not-run').at(-1);
@@ -159,9 +160,6 @@ export function RouteDrawing({
                     {stateWords[state]}
                   </tspan>
                 </text>
-                {current === s.id && (
-                  <rect className="here" x={x} y={y + H + 4} width={W} height={8} />
-                )}
               </g>
             );
             const href = links[s.id];
@@ -177,6 +175,22 @@ export function RouteDrawing({
               </g>
             );
           })}
+          {/* The step this page is about says so under it; its link already says it to a screen reader. */}
+          {current !== undefined &&
+            (() => {
+              const here = at.get(current);
+              return here ? (
+                <text
+                  x={here.x + W / 2}
+                  y={here.y + H + 15}
+                  textAnchor="middle"
+                  className="here"
+                  aria-hidden="true"
+                >
+                  this run
+                </text>
+              ) : null;
+            })()}
         </svg>
       </div>
       <ol className="route-list" aria-label={label}>
@@ -191,6 +205,7 @@ export function RouteDrawing({
             >
               {href ? <a href={href}>{stepName(s)}</a> : <span>{stepName(s)}</span>}
               {s.kind === 'gate' && <span className="small quiet"> · your call</span>}
+              {current === s.id && <span className="small"> · this run</span>}
               <span className={`state state-${state}`}>{stateWords[state]}</span>
             </li>
           );

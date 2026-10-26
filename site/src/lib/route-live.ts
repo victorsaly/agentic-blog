@@ -47,11 +47,20 @@ export interface LiveRoute {
 
 const runLink = (id: string): string => `/studio/agents/run?id=${encodeURIComponent(id)}`;
 
+/** A run GitHub has queued or started, as the page's GitHub feed knows it (agent-runs.ts LiveRun). */
+export interface StartingRun {
+  agent: string | null;
+  thought: string | null;
+  state: string;
+}
+
 export function liveRoute(
   layout: RouteLayout,
   built: Readonly<Record<string, BuiltStep>>,
   standing: readonly LiveCell[],
   thought: string,
+  // GitHub's queued and started runs: a step GitHub is getting ready is at work, before the runner says so.
+  starting: readonly StartingRun[] = [],
 ): LiveRoute {
   const known = new Map<string, NodeState>(
     Object.entries(built).map(([step, { state }]) => [step, state]),
@@ -71,6 +80,14 @@ export function liveRoute(
     if (isNodeState(cell.state)) known.set(cell.agent, cell.state);
     links[cell.agent] = runLink(cell.id);
   }
+  for (const run of starting)
+    if (
+      run.thought === thought &&
+      run.agent !== null &&
+      (run.state === 'running' || run.state === 'queued') &&
+      layout.steps.some((step) => step.id === run.agent)
+    )
+      known.set(run.agent, 'running');
   return { route: routeOf(layout, known), links };
 }
 
@@ -80,7 +97,7 @@ export interface RouteStanding {
   state: 'waiting' | 'stopped' | 'held' | 'running' | 'moving' | 'untouched';
   /** The step it is at, first in working order; null when moving or not started. */
   at: string | null;
-  /** Steps done, of the steps a run can do (agents, guards and gates). */
+  /** Steps done, of every step drawn, so the count and the picture agree. */
   done: number;
   of: number;
 }
@@ -98,10 +115,31 @@ export function standingOfRoute(route: Route): RouteStanding {
     .filter((s) => s.kind === 'agent' || s.kind === 'guard' || s.kind === 'gate')
     .sort((a, b) => a.column - b.column || a.row - b.row);
   const stateOf = (id: string): StepState => route.states[id] ?? 'not-run';
-  const done = ordered.filter((s) => stateOf(s.id) === 'done').length;
+  const done = route.steps.filter((s) => stateOf(s.id) === 'done').length;
+  const of = route.steps.length;
   for (const [step, state] of ranked) {
     const at = ordered.find((s) => stateOf(s.id) === step);
-    if (at) return { state, at: at.id, done, of: ordered.length };
+    if (at) return { state, at: at.id, done, of };
   }
-  return { state: done > 0 ? 'moving' : 'untouched', at: null, done, of: ordered.length };
+  return { state: done > 0 ? 'moving' : 'untouched', at: null, done, of };
+}
+
+/**
+ * The steps before a gate still at work: what a person would agree to before it is finished. The merge gate
+ * stays shut while any is, so nothing goes live half-written.
+ */
+export function runningBefore(route: Route, gate: string): string[] {
+  const before = new Set<string>();
+  const walk = [gate];
+  while (walk.length > 0) {
+    const at = walk.pop() ?? '';
+    for (const id of route.steps.find((s) => s.id === at)?.after ?? [])
+      if (!before.has(id)) {
+        before.add(id);
+        walk.push(id);
+      }
+  }
+  return route.steps
+    .filter((s) => before.has(s.id) && route.states[s.id] === 'running')
+    .map((s) => s.id);
 }
