@@ -49,6 +49,7 @@ export function RunsBoard({ titles, currency, part = 'now' }: RunsBoardProps): R
     board.needsYou.length > 0 &&
       `${String(board.needsYou.length)} need${board.needsYou.length === 1 ? 's' : ''} you`,
     board.held.length > 0 && `${String(board.held.length)} held`,
+    board.stopped.length > 0 && `${String(board.stopped.length)} did not finish`,
     running > 0 && `${String(running)} running`,
     starting.length > 0 && `${String(starting.length)} starting on GitHub`,
     quiet > 0 && `${String(quiet)} gone quiet`,
@@ -64,6 +65,11 @@ export function RunsBoard({ titles, currency, part = 'now' }: RunsBoardProps): R
   const row = (run: BoardRun): React.JSX.Element => {
     const going = isGoing(run.state);
     const asks = run.state === 'needs-you';
+    const opens = asks
+      ? 'Decide'
+      : run.state === 'held' || run.state === 'failed'
+        ? 'Read why'
+        : 'Timeline';
     // A run waiting on Victor has spent nothing; the money is said only when there is some.
     const spent = run.usd > 0 ? ` · ${moneyOf(run.usd, currency)}${going ? ' so far' : ''}` : '';
     // The same run on GitHub, while it works there: its log and its pull request sit on this row.
@@ -87,18 +93,25 @@ export function RunsBoard({ titles, currency, part = 'now' }: RunsBoardProps): R
         </span>
         <span className="what">
           <strong>{agentName(run.agent)}</strong>
-          <a href={`/thoughts/${run.thought}`}>{titles[run.thought] ?? run.thought}</a>
+          {/* A question's row leads to the decision, not out of the studio: its thought is named, not linked. */}
+          {asks ? (
+            <span>{titles[run.thought] ?? run.thought}</span>
+          ) : (
+            <a href={`/thoughts/${run.thought}`}>{titles[run.thought] ?? run.thought}</a>
+          )}
           <span className="small quiet">
             {when}
             {spent}
           </span>
         </span>
         <span className="links small">
+          {/* The one thing to do on the row, said as what it is: decide, read why it held or stopped, or watch. */}
           <a
             href={`/studio/agents/run?id=${encodeURIComponent(run.id)}`}
-            aria-label={`${asks ? 'Decide' : 'Timeline'}: ${agentName(run.agent)} on ${titles[run.thought] ?? run.thought}`}
+            className={asks ? 'control filled decide' : undefined}
+            aria-label={`${opens}: ${agentName(run.agent)} on ${titles[run.thought] ?? run.thought}`}
           >
-            {asks ? 'Decide' : 'Timeline'}
+            {opens}
           </a>
           {onGithub && <a href={onGithub.url}>Log</a>}
           {onGithub?.pr != null && onGithub.prUrl !== null && (
@@ -121,7 +134,7 @@ export function RunsBoard({ titles, currency, part = 'now' }: RunsBoardProps): R
           <a href={`/thoughts/${run.thought}`}>{titles[run.thought] ?? run.thought}</a>
         )}
         <span className="small quiet">
-          on GitHub, before the agent starts: {run.step ?? 'waiting for a runner'} · for{' '}
+          {run.state === 'queued' ? 'Waiting for GitHub' : 'Getting ready on GitHub'} · for{' '}
           {durationOf(run.started, now)}
         </span>
       </span>
@@ -173,6 +186,7 @@ export function RunsBoard({ titles, currency, part = 'now' }: RunsBoardProps): R
       {error !== null && <p role="alert">{error} The page asks again on its own.</p>}
       {group('needs-label', 'Needs you', board.needsYou, null)}
       {group('held-label', 'Held', board.held, null)}
+      {group('stopped-label', 'Did not finish', board.stopped, null)}
       {group(
         'running-label',
         'Running now',

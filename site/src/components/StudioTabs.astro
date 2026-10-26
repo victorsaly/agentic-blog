@@ -56,8 +56,9 @@ const icons: Record<StudioAreaId, string> = {
             />
             <span class="name">{area.name}</span>
             {counted.includes(area.id) && (
+              // Said as "Agents with 2 waiting": words, not a comma, so the spacing around it never matters.
               <span class="count" data-count={area.id} hidden={!counts[area.id]}>
-                <span class="visually-hidden">, </span>
+                <span class="visually-hidden">with</span>
                 <span class="n">{counts[area.id] ?? 0}</span>
                 <span class="visually-hidden"> waiting</span>
               </span>

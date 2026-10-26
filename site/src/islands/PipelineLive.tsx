@@ -5,13 +5,15 @@
 // above it always says which of the two it shows, and when the live copy cannot be read it says so and
 // keeps the deploy's picture rather than an empty one. Each thought's line is read from its route (the
 // workflow drawn left to right, every step with where it stands, gates included, RouteDrawing), so the line
-// and the picture never disagree; a thought with work going on, or waiting on Victor, shows its route open.
+// and the picture never disagree; a thought with work going on, or waiting on Victor, shows its route open
+// (on a phone its line says where it is and the route opens on a tap), and the key is said once for all.
 import { agentName } from '../lib/agent-runs';
 import { standingOf, withLive, type PipelineAgent, type PipelineRow } from '../lib/pipeline';
 import { formatDate } from '../lib/content';
+import { useSyncExternalStore } from 'react';
 import { useRunsFeed } from './runs-feed';
 import { useGithubFeed } from './github-feed';
-import { RouteDrawing, stateWords, stepName } from './RouteDrawing';
+import { RouteDrawing, RouteKey, stateWords, stepName } from './RouteDrawing';
 import { liveRoute, standingOfRoute, type BuiltStep, type RouteStanding } from '../lib/route-live';
 import type { RouteLayout } from '@roadbook/core/route';
 
@@ -20,7 +22,7 @@ const standingWords: Record<RouteStanding['state'], string> = {
   stopped: 'Did not finish',
   waiting: 'Needs you',
   running: 'Running',
-  moving: 'Moving',
+  moving: 'Paused',
   untouched: 'Not started',
 };
 // A run waiting on Victor looks the same here as on the board and on Today.
@@ -30,6 +32,22 @@ const short = (iso: string): string =>
   new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 const clock = (iso: string): string =>
   new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+/** A phone: each thought is one line, its route a tap away, so the page stays short. */
+const PHONE = '(max-width: 40rem)';
+function usePhone(): boolean {
+  return useSyncExternalStore(
+    (changed) => {
+      const query = window.matchMedia(PHONE);
+      query.addEventListener('change', changed);
+      return () => {
+        query.removeEventListener('change', changed);
+      };
+    },
+    () => window.matchMedia(PHONE).matches,
+    () => false,
+  );
+}
 
 export interface PipelineLiveProps {
   /** The pipeline from the ledgers, as of the build. */
@@ -52,17 +70,18 @@ export function PipelineLive({
 }: PipelineLiveProps): React.JSX.Element {
   const { known, error } = useRunsFeed();
   const github = useGithubFeed();
+  const phone = usePhone();
   const kindOf = (id: string) => layout.steps.find((step) => step.id === id)?.kind ?? 'agent';
   const rows = known === null ? built : withLive(built, known.standing, agents);
-  const asOf = `From the ledgers as of ${formatDate(new Date(builtAt))}, the last deploy`;
+  const asOf = `As of the last deploy, ${formatDate(new Date(builtAt))}`;
   const note =
     known === null
       ? error === null
         ? `${asOf}. Reading the live runs…`
         : `${asOf}. The live runs could not be read: ${error}`
       : error === null
-        ? `Live: every run the runner has sent, as of ${clock(known.at)}.`
-        : `Live as of ${clock(known.at)}, the last answer. ${error}`;
+        ? `Updated ${clock(known.at)}.`
+        : `Updated ${clock(known.at)}, the last answer. ${error}`;
 
   // Every thought's live route, worked out once: its line, its picture and the grid all read it.
   const routes = new Map(
@@ -110,20 +129,24 @@ export function PipelineLive({
                   {`${String(at.done)} of ${String(at.of)} steps done`}
                 </span>
               </span>
-              {/* A thought with work going on, or waiting on Victor, shows its route without a press. */}
-              <details className="show-route" open={going}>
+              {/* A thought with work going on, or waiting on Victor, shows its route without a press; on a
+                  phone its line says where it is, and the route opens on a tap. */}
+              <details className="show-route" open={going && !phone}>
                 <summary>{going ? 'The route' : 'Show the route'}</summary>
                 <RouteDrawing
                   layout={route}
                   states={route.states}
                   links={links}
                   label={`The route of ${r.title}`}
+                  keyed={false}
                 />
               </details>
             </li>
           );
         })}
       </ul>
+      {/* What the marks mean, once for every route above. */}
+      <RouteKey />
 
       <details className="every-agent">
         <summary className="control">Show every agent</summary>

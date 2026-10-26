@@ -108,6 +108,7 @@ describe('the board', () => {
     expect(board.needsYou.map((r) => r.id)).toEqual(['a']);
     expect(board.going.map((r) => r.id)).toEqual(['b']);
     expect(board.held.map((r) => r.id)).toEqual(['c']);
+    expect(board.stopped.map((r) => r.id)).toEqual(['e']);
     expect(board.finished.map((r) => r.id).sort()).toEqual(['d', 'e']);
   });
 

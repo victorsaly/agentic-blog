@@ -179,6 +179,10 @@
     animation: none;
   }
 }
+/* A route opened scrolled to where the work is says what is out of sight on the left. */
+.route-hint {
+  margin: var(--space-2) 0 0;
+}
 .route-key {
   margin: 0;
 }

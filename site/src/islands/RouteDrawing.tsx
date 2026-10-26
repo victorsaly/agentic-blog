@@ -9,7 +9,7 @@
 // says something is happening and where (Victor asked for it; still when the reader asks for less motion).
 // A route wider than the frame opens scrolled to where the work is: the
 // step this page is about, or else the furthest step that has run, once the frame is shown.
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { RouteLayout, RouteStep, StepState } from '@roadbook/core/route';
 import { agentName } from '../lib/agent-runs';
 
@@ -37,10 +37,22 @@ export interface RouteDrawingProps {
   states: Record<string, StepState>;
   /** Where each step's latest run opens, by step. */
   links?: Record<string, string>;
-  /** The step this page is about, marked with a heavy rule. */
+  /** The step this page is about, marked "this run" under it. */
   current?: string;
   /** What the picture is of, for a screen reader: "The route of …". */
   label: string;
+  /** Whether the key goes under the picture; a page with many routes says it once instead (RouteKey). */
+  keyed?: boolean;
+}
+
+/** What the marks mean, said once wherever routes are drawn. */
+export function RouteKey(): React.JSX.Element {
+  return (
+    <p className="route-key small quiet">
+      Round: your call. Marigold and moving: working now. Filled: waiting on you. Heavy rule: held
+      or did not finish.
+    </p>
+  );
 }
 
 export function RouteDrawing({
@@ -49,6 +61,7 @@ export function RouteDrawing({
   links = {},
   current,
   label,
+  keyed = true,
 }: RouteDrawingProps): React.JSX.Element {
   // A column with fewer steps sits in the middle of the tallest, so a join reads as one.
   const inColumn = new Map<number, number>();
@@ -67,6 +80,15 @@ export function RouteDrawing({
   const focus = current ?? reached?.id;
   const focusX = focus === undefined ? 0 : (at.get(focus)?.x ?? 0);
   const scroller = useRef<HTMLDivElement | null>(null);
+  // Steps scrolled out of sight on the left, so a cropped route says what it is hiding.
+  const [hidden, setHidden] = useState<{ count: number; done: boolean }>({ count: 0, done: true });
+  const measure = (el: HTMLDivElement): void => {
+    const out = ordered.filter((s) => (at.get(s.id)?.x ?? 0) + W <= el.scrollLeft);
+    const done = out.every((s) => (states[s.id] ?? 'not-run') === 'done');
+    setHidden((before) =>
+      before.count === out.length && before.done === done ? before : { count: out.length, done },
+    );
+  };
   // Clip ids are page-wide, and the pipeline draws one route per thought.
   const clip = `route-clip${useId().replace(/:/g, '')}`;
   useEffect(() => {
@@ -74,6 +96,7 @@ export function RouteDrawing({
     if (!el) return;
     const place = (): boolean => {
       if (el.clientWidth === 0) return false;
+      // Scrolling fires the frame's scroll event, which counts what is out of sight (onScroll below).
       if (focusX > el.clientWidth / 2) el.scrollLeft = focusX - el.clientWidth / 3;
       return true;
     };
@@ -90,9 +113,24 @@ export function RouteDrawing({
 
   return (
     <div className="route">
+      {hidden.count > 0 && (
+        <p className="route-hint small quiet">
+          ← {hidden.count} earlier {hidden.count === 1 ? 'step' : 'steps'}
+          {hidden.done ? ', all done' : ''}; scroll to see {hidden.count === 1 ? 'it' : 'them'}
+        </p>
+      )}
       {/* A route wider than the frame scrolls, and the keyboard can scroll what takes focus. */}
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
-      <div ref={scroller} className="route-scroll" role="region" aria-label={label} tabIndex={0}>
+      <div
+        ref={scroller}
+        className="route-scroll"
+        role="region"
+        aria-label={label}
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+        tabIndex={0}
+        onScroll={(event) => {
+          measure(event.currentTarget);
+        }}
+      >
         <svg
           className="route-picture"
           width={width}
@@ -138,14 +176,11 @@ export function RouteDrawing({
                     <clipPath id={`${clip}-${s.id}`}>
                       <rect x={x} y={y} width={W} height={H} rx={gate ? H / 2 : 0} />
                     </clipPath>
-                    <rect
-                      className="sweep"
-                      clipPath={`url(#${clip}-${s.id})`}
-                      x={x}
-                      y={y + H - 5}
-                      width={W / 3}
-                      height={5}
-                    />
+                    {/* The clip sits on a group that stays still and the bar moves inside it; a clip on the
+                        moving bar would move with it, and the bar would show outside its step. */}
+                    <g clipPath={`url(#${clip}-${s.id})`}>
+                      <rect className="sweep" x={x} y={y + H - 5} width={W / 3} height={5} />
+                    </g>
                   </>
                 )}
                 {/* One text, two lines: read as "Citations Running", the same words its link is named by. */}
@@ -211,10 +246,7 @@ export function RouteDrawing({
           );
         })}
       </ol>
-      <p className="route-key small quiet">
-        Round: your call. Marigold and moving: working now. Filled: waiting on you. Heavy rule: held
-        or did not finish.
-      </p>
+      {keyed && <RouteKey />}
     </div>
   );
 }

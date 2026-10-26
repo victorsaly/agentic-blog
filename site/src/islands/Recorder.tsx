@@ -790,7 +790,8 @@ export function Recorder({
             <p>
               Done. <a href={phase.prUrl}>The pull request is open</a>. The interview starts on it
               now and asks its questions, and the rest of the post is built there too, so
-              don&rsquo;t merge it yet: the studio asks you to merge when the post is ready.
+              don&rsquo;t merge it yet: the studio asks you to merge when the post is ready.{' '}
+              <a href="/studio/agents">Watch it on Agents</a>.
             </p>
           ) : (
             <p>

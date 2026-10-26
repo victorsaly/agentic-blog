@@ -142,7 +142,9 @@ describe('moneyOf', () => {
     expect(moneyOf(0.049224)).toBe('4.9¢');
     expect(moneyOf(0.12)).toBe('12¢');
     expect(moneyOf(0.0003)).toBe('<0.1¢');
-    expect(moneyOf(0)).toBe('0.0¢');
+    expect(moneyOf(0)).toBe('0¢');
+    // A whole number of cents is said without a tenth: 9¢, not 9.0¢.
+    expect(moneyOf(0.09)).toBe('9¢');
     expect(moneyOf(1.2)).toBe('$1.20');
   });
 

@@ -226,7 +226,7 @@ export function RunTimeline({
           <span className="since">waiting on you since {timeOf(run.startedAt)}</span>
         ) : (
           <span className="clock">
-            {going ? clockOf(run.startedAt, now) : clockOf(run.startedAt, run.updatedAt)}
+            {going ? clockOf(run.startedAt, now) : `took ${clockOf(run.startedAt, run.updatedAt)}`}
           </span>
         )}
       </p>
