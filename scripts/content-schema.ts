@@ -10,7 +10,7 @@ export const whySchema = z
   .max(600, 'a why is two or three sentences, not an essay');
 
 /** YAML turns a bare 2026-10-23 into a Date; a quoted one stays a string. Both are a date. */
-const isoDate = z.union([z.string().date(), z.date()]);
+const isoDate = z.union([z.iso.date(), z.date()]);
 
 export const originFrontMatter = z.object({
   why: whySchema,
@@ -45,7 +45,7 @@ export const versionFrontMatter = z.object({
   reviewed: z.boolean(),
 });
 
-export const genericFrontMatter = z.object({ why: whySchema }).passthrough();
+export const genericFrontMatter = z.object({ why: whySchema }).loose();
 
 export type OriginFrontMatter = z.infer<typeof originFrontMatter>;
 export type StructureFrontMatter = z.infer<typeof structureFrontMatter>;

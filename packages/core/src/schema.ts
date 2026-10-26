@@ -51,7 +51,7 @@ export const provider = z.object({
     .regex(/^[A-Z][A-Z0-9_]*$/)
     .optional(),
   /** For openai-compatible and azure-openai: where the endpoint lives. */
-  endpoint: z.string().url().optional(),
+  endpoint: z.url().optional(),
 });
 
 // ---------------------------------------------------------------------------------------------- data
@@ -121,11 +121,7 @@ export const behaviour = z.object({
   escalate: z.object({
     when: z.array(z.enum(['retries-exhausted', 'held', 'over-budget', 'timeout'])).min(1),
     /** Who is told: the owner, a gate in the workflow, or a named person. */
-    to: z.union([
-      z.literal('owner'),
-      z.object({ gate: id }),
-      z.object({ email: z.string().email() }),
-    ]),
+    to: z.union([z.literal('owner'), z.object({ gate: id }), z.object({ email: z.email() })]),
     /** What they are told, in plain words. The live reason is added to it. */
     says: z.string().min(10),
   }),
@@ -281,7 +277,7 @@ export const runtime = z.discriminatedUnion('kind', [
     kind: z.literal('cloudflare'),
     worker: id,
     domain: z.string().min(3),
-    access: z.array(z.string().email()).min(1),
+    access: z.array(z.email()).min(1),
     buckets: z.array(id).default([]),
   }),
   z.object({ kind: z.literal('local') }),
@@ -290,7 +286,7 @@ export const runtime = z.discriminatedUnion('kind', [
 export const project = z.object({
   name: id,
   why,
-  owner: z.object({ name: z.string().min(1), email: z.string().email() }),
+  owner: z.object({ name: z.string().min(1), email: z.email() }),
   accountability,
   data: dataRules,
   providers: z.record(id, provider),
@@ -298,7 +294,7 @@ export const project = z.object({
     monthlyCapUsd: z.number().positive(),
     atCap: z.literal('queue'),
   }),
-  flow: flow.default({}),
+  flow: flow.prefault({}),
   workflows: z.array(workflow).min(1),
   runtime,
 });
