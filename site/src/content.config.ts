@@ -20,6 +20,9 @@ const thoughts = defineCollection({
       language,
       themes: z.array(z.string().min(1)).min(1),
       message: z.string().min(1).max(400),
+      // What search results and link previews show, when the message is too long to cut well (the SEO agent
+      // proposes one in seo.md; Victor takes it here). Without it the message is cut at a whole sentence.
+      description: z.string().min(1).max(155).optional(),
       origins: z.array(z.string().min(1)).min(1),
       draft: z.boolean().default(false),
     })

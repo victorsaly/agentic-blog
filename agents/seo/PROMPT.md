@@ -15,8 +15,11 @@ off and nothing was changed.
 
 When on: for the thought, propose a title under 60 characters and a description under 155, both in the
 blogger's voice (the message usually is the description). Check the built page carries: the title, the
-description, canonical, article:published_time, JSON-LD Article with author and inLanguage, hreflang for
-each language version, and that the sitemap lists it. Report what is missing as a checklist with the exact
+description, canonical, article:published_time, JSON-LD BlogPosting with author and inLanguage, hreflang for
+each language version, a share picture (og:image and twitter:card summary_large_image, from the post's card in
+site/public/social, drawn by `npm run social:cards`), and that the sitemap lists it. When the message is too
+long to cut well, propose the description as a `description:` line for structure.md's front matter (at most
+155 characters); Victor takes it or leaves it. Report what is missing as a checklist with the exact
 fix. Never propose keyword stuffing, hidden text, or a title that promises what the post does not say.
 
 Reply with one Markdown file: front matter why, checked (today), index: true or false. Body: the checklist.
