@@ -1,0 +1,45 @@
+# Why: the drawing keys live in this repository's secrets, not on anyone's machine, so a site print (the home
+# page's portrait, the /how-it-works hero) is drawn here. Add or change a print in a site/src/assets/*/prompts.md
+# on a branch and push: this draws every listed print whose file is missing, keeps only drawings Claude's
+# review passes, and commits them to the same branch, where the pull request shows them before anyone merges.
+name: Site prints
+
+on:
+  push:
+    branches-ignore: [main]
+    paths: ['site/src/assets/*/prompts.md']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: site-prints-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  draw:
+    name: Draw the missing site prints
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref }}
+          # Pushes made with GitHub's own token never start CI; BOT_TOKEN pushes as a person.
+          token: ${{ secrets.BOT_TOKEN || github.token }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+      - run: npm ci --no-audit --no-fund
+      - name: Draw
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: npx tsx scripts/draw-site-prints.ts
+      - name: Commit the prints to the branch
+        run: |
+          git config user.name "agentic-blog[bot]"
+          git config user.email "agentic-blog[bot]@users.noreply.github.com"
+          git add -A site/src/assets site/public
+          if git diff --cached --quiet; then echo "nothing to commit"; exit 0; fi
+          git commit -m "content: draw the missing site prints"
+          git push
