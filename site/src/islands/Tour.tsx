@@ -27,8 +27,9 @@ export function Tour({ stations }: TourProps): React.JSX.Element {
   const [current, setCurrent] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [sound, setSound] = useState(true);
-  // The word being said, while the voice speaks; -1 when no word is.
-  const [said, setSaid] = useState(-1);
+  // The word being said, while the voice speaks, and on which slide; a new slide starts with none underlined.
+  const [saidAt, setSaidAt] = useState({ station: -1, word: -1 });
+  const said = saidAt.station === current ? saidAt.word : -1;
   // True only when the tour ran to the end by itself; then Play starts again from the first station.
   const [finished, setFinished] = useState(false);
   const audio = useRef<HTMLAudioElement | null>(null);
@@ -37,7 +38,9 @@ export function Tour({ stations }: TourProps): React.JSX.Element {
   const region = useRef<HTMLDivElement | null>(null);
   const last = stations.length - 1;
   const currentRef = useRef(current);
-  currentRef.current = current;
+  useEffect(() => {
+    currentRef.current = current;
+  }, [current]);
 
   const clearTimer = useCallback(() => {
     if (timer.current !== null) window.clearTimeout(timer.current);
@@ -102,18 +105,18 @@ export function Tour({ stations }: TourProps): React.JSX.Element {
       return stop;
     }
     const tick = (): void => {
-      if (el.dataset.station === stations[current]?.id && !el.paused)
-        setSaid(wordAt(words, el.currentTime));
+      if (el.dataset.station === stations[current]?.id && !el.paused) {
+        const word = wordAt(words, el.currentTime);
+        // The same word on the same slide is no change, so the frame does not render again.
+        setSaidAt((prev) =>
+          prev.station === current && prev.word === word ? prev : { station: current, word },
+        );
+      }
       frame.current = window.requestAnimationFrame(tick);
     };
     tick();
     return stop;
   }, [current, playing, sound, stations]);
-
-  // A new slide starts with no word underlined.
-  useEffect(() => {
-    setSaid(-1);
-  }, [current]);
 
   useEffect(() => clearTimer, [clearTimer]);
 

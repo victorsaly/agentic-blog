@@ -345,6 +345,7 @@ export function Recorder({
     if (url.searchParams.get('start') !== '1') return;
     url.searchParams.delete('start');
     window.history.replaceState(null, '', url);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- start() sets state only after the microphone opens, never synchronously
     void start();
   }, [mode, start]);
 
@@ -362,40 +363,44 @@ export function Recorder({
   }, [recording]);
 
   const upload = useCallback(
-    async (blob: Blob) => {
-      setPhase({ kind: 'uploading' });
-      try {
-        const form = new FormData();
-        form.set('audio', blob, `${mode}-${new Date().toISOString()}.webm`);
-        form.set('mode', mode);
-        if (thoughtSlug) form.set('thought', thoughtSlug);
-        let saved = false;
+    (blob: Blob) => {
+      // Retry calls this attempt again with the same recording.
+      const attempt = async (): Promise<void> => {
+        setPhase({ kind: 'uploading' });
         try {
-          const { key } = await postJson<UploadResponse>('/api/upload', form);
-          saved = true;
-          setPhase({ kind: 'transcribing', key });
-          const { text } = await postJson<TranscribeResponse>(
-            '/api/transcribe',
-            JSON.stringify({ key }),
-            'application/json',
-          );
-          setPhase({ kind: 'ready', key, transcript: text });
+          const form = new FormData();
+          form.set('audio', blob, `${mode}-${new Date().toISOString()}.webm`);
+          form.set('mode', mode);
+          if (thoughtSlug) form.set('thought', thoughtSlug);
+          let saved = false;
+          try {
+            const { key } = await postJson<UploadResponse>('/api/upload', form);
+            saved = true;
+            setPhase({ kind: 'transcribing', key });
+            const { text } = await postJson<TranscribeResponse>(
+              '/api/transcribe',
+              JSON.stringify({ key }),
+              'application/json',
+            );
+            setPhase({ kind: 'ready', key, transcript: text });
+          } catch (error) {
+            throw new Error(
+              saved
+                ? `The recording is saved, but it could not be written down: ${reasonOf(error)}.`
+                : `The recording could not be saved: ${reasonOf(error)}. It is still in this page; try again.`,
+            );
+          }
         } catch (error) {
-          throw new Error(
-            saved
-              ? `The recording is saved, but it could not be written down: ${reasonOf(error)}.`
-              : `The recording could not be saved: ${reasonOf(error)}. It is still in this page; try again.`,
-          );
+          setPhase({
+            kind: 'failed',
+            message: reasonOf(error),
+            retry: () => {
+              void attempt();
+            },
+          });
         }
-      } catch (error) {
-        setPhase({
-          kind: 'failed',
-          message: reasonOf(error),
-          retry: () => {
-            void upload(blob);
-          },
-        });
-      }
+      };
+      return attempt();
     },
     [mode, thoughtSlug],
   );
@@ -485,34 +490,38 @@ export function Recorder({
   }, [deliver, mode, phase, thoughtSlug]);
 
   const sendText = useCallback(
-    async (text: string) => {
-      setPhase({ kind: 'writing', text, sending: true });
-      try {
-        if (deliver) {
-          setPhase({ kind: 'sent', prUrl: await deliver({ medium: 'text', transcript: text }) });
-          return;
+    (text: string) => {
+      // Retry calls this attempt again with the same words.
+      const attempt = async (): Promise<void> => {
+        setPhase({ kind: 'writing', text, sending: true });
+        try {
+          if (deliver) {
+            setPhase({ kind: 'sent', prUrl: await deliver({ medium: 'text', transcript: text }) });
+            return;
+          }
+          const body = JSON.stringify({
+            medium: 'text',
+            transcript: text,
+            mode,
+            thought: thoughtSlug ?? null,
+          });
+          const { asked, label, list } = await postJson<OriginResponse>(
+            '/api/origin',
+            body,
+            'application/json',
+          );
+          setPhase({ kind: 'opening', asked, label, list, late: false });
+        } catch (error) {
+          setPhase({
+            kind: 'failed',
+            message: `${deliver ? 'It was not sent' : 'The pull request did not open'}: ${reasonOf(error)}. The words are kept; try again.`,
+            retry: () => {
+              void attempt();
+            },
+          });
         }
-        const body = JSON.stringify({
-          medium: 'text',
-          transcript: text,
-          mode,
-          thought: thoughtSlug ?? null,
-        });
-        const { asked, label, list } = await postJson<OriginResponse>(
-          '/api/origin',
-          body,
-          'application/json',
-        );
-        setPhase({ kind: 'opening', asked, label, list, late: false });
-      } catch (error) {
-        setPhase({
-          kind: 'failed',
-          message: `${deliver ? 'It was not sent' : 'The pull request did not open'}: ${reasonOf(error)}. The words are kept; try again.`,
-          retry: () => {
-            void sendText(text);
-          },
-        });
-      }
+      };
+      return attempt();
     },
     [deliver, mode, thoughtSlug],
   );

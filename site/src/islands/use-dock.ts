@@ -9,7 +9,8 @@ export const NARROW = '(max-width: 64rem)';
 
 export interface Dock {
   dialog: React.RefObject<HTMLDialogElement | null>;
-  trigger: React.RefObject<HTMLElement | null>;
+  /** The ref for the button that opens the panel: focus goes back to it on close. */
+  trigger: (element: HTMLElement | null) => void;
   isOpen: boolean;
   open: () => void;
   close: (returnFocus?: boolean) => void;
@@ -81,5 +82,9 @@ export function useDock(name: 'ask' | 'search'): Dock {
     },
   };
 
-  return { dialog, trigger, isOpen, open, close, dialogProps };
+  const setTrigger = useCallback((element: HTMLElement | null): void => {
+    trigger.current = element;
+  }, []);
+
+  return { dialog, trigger: setTrigger, isOpen, open, close, dialogProps };
 }
