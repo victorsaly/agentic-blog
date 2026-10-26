@@ -27,6 +27,11 @@ const entry = z
     subject: z.string().min(1).optional(),
     /** The recurring person (settings.yml's image_character) is in this print. */
     person: z.boolean().optional(),
+    /**
+     * A drawing already in the repository to keep the person's likeness from, from the repository's root.
+     * The real photo stays on the blogger's machine; a cover drawn from it carries the face instead.
+     */
+    reference: z.string().min(1).optional(),
   })
   .loose();
 const manifest = z.object({ images: z.array(entry) }).loose();
@@ -61,13 +66,16 @@ for (const folder of await readdir(assets)) {
       image.person ? settings.media.image_character : undefined,
       image.subject,
     );
+    const reference = image.reference
+      ? new Uint8Array(await readFile(join(root, image.reference)))
+      : undefined;
     let problems: string[] = [];
     let attempts = 0;
     let model = '';
     while (attempts < MAX_ATTEMPTS) {
       attempts += 1;
-      const picture = await draw({ prompt });
-      model = `${picture.provider === 'images' ? 'openai' : picture.provider}/${picture.model}`;
+      const picture = await draw(reference ? { prompt, reference } : { prompt });
+      model = `${picture.provider === 'images' ? 'openai' : picture.provider}/${picture.model}${reference ? ` (from ${image.reference ?? ''})` : ''}`;
       if (!picture.ok) {
         problems = [picture.reason];
         break; // a credentials or service problem; redrawing will not help
