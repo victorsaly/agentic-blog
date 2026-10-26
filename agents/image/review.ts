@@ -40,12 +40,17 @@ export function parseReview(reply: string): Review {
   }
 }
 
+/** What the reviewer is asked about one drawing; scripts/draw-site-prints.ts asks the same. */
+export function reviewPrompt(subject: string): string {
+  return `${CHECKS}\n\nThe subject: ${subject}`;
+}
+
 export async function reviewDrawing(
   ctx: AgentContext,
   png: Uint8Array,
   subject: string,
 ): Promise<Review> {
-  const reply = await ctx.ask(`${CHECKS}\n\nThe subject: ${subject}`, {
+  const reply = await ctx.ask(reviewPrompt(subject), {
     images: [png],
     maxOutputTokens: 1000,
   });

@@ -1,6 +1,6 @@
 ---
-// Why: the front page says whose blog this is before anything else: the portrait print, the name, the one
-// line. Then the newest thought leads with its print and its title, and every thought follows as a
+// Why: the front page says whose blog this is before anything else: its own portrait print (not a post's),
+// the name, the one line. Then the newest thought leads with its print and its title, and every thought follows as a
 // numbered, ruled index, so a reader sees the point of each post and picks one. A side column offers a
 // place to start, a question to ask, the topics and the feed. The graph takes over in phase 3.
 import { getCollection } from 'astro:content';
@@ -8,7 +8,7 @@ import { Image } from 'astro:assets';
 import Page from '../layouts/Page.astro';
 import ThoughtIndex from '../components/ThoughtIndex.astro';
 import { settings } from '../lib/settings';
-import { coversBySlug, firstSectionPrint } from '../lib/covers';
+import { coversBySlug } from '../lib/covers';
 import {
   formatDate,
   leafOf,
@@ -18,12 +18,17 @@ import {
   thoughtSlugOf,
 } from '../lib/content';
 import { picturesFrom } from '../lib/pictures';
+import { parse } from 'yaml';
 import { themeCounts } from '../lib/themes';
 import { topicName } from '../lib/topic-name';
 import ideaIcon from '../assets/icons/idea.png';
 import originIcon from '../assets/icons/origin.png';
 import roadIcon from '../assets/icons/road.png';
 import sourcesIcon from '../assets/icons/sources.png';
+// The portrait is the home page's own print, so it does not change with each new post; prompts.md says how
+// it was drawn and gives its alt text.
+import portraitImage from '../assets/home/victor-portrait.png';
+import homePromptsRaw from '../assets/home/prompts.md?raw';
 
 const all = (await getCollection('thoughts', ({ data }) => !data.draft)).sort(newestFirst);
 const NEWEST = 10;
@@ -34,8 +39,14 @@ const covers = await coversBySlug();
 const themes = themeCounts(all.map((t) => t.data.themes));
 const chatOn = settings.publishing.index || import.meta.env.DEV;
 
-// The portrait: the newest cover, where Victor is drawn.
-const portrait = all.map((t) => covers.get(thoughtSlugOf(t.id))).find((c) => c !== undefined);
+const homePrompts = parse(/^---\r?\n([\s\S]*?)\r?\n---/.exec(homePromptsRaw)?.[1] ?? '') as {
+  images?: { file?: unknown; alt?: unknown }[];
+};
+const portraitAlt = homePrompts.images?.find((i) => i.file === 'victor-portrait.png')?.alt;
+const portrait = {
+  image: portraitImage,
+  alt: typeof portraitAlt === 'string' ? portraitAlt.trim().replace(/\s+/g, ' ') : '',
+};
 
 // What the lead post offers: its ways in, how long the road is, how many drawings.
 const leadSlug = lead ? thoughtSlugOf(lead.id) : '';
@@ -46,12 +57,8 @@ const leadSources = (await getCollection('sources', ({ id }) => thoughtSlugOf(id
 const leadPictures = (
   await getCollection('pictures', ({ id }) => thoughtSlugOf(id) === leadSlug)
 )[0];
-// The masthead already shows the newest cover, so the lead never shows the same print twice.
-const ownCover = covers.get(leadSlug);
-const leadCover =
-  ownCover && ownCover.image === portrait?.image
-    ? ((await firstSectionPrint(leadSlug)) ?? ownCover)
-    : ownCover;
+// The masthead has its own print, so the lead shows its own cover.
+const leadCover = covers.get(leadSlug);
 const drawingCount = picturesFrom(leadPictures?.data).length;
 const leadMinutes = readingMinutes(leadLong?.body ?? leadShort?.body ?? lead?.body ?? '');
 // Each way in opens the post on that tab, in the post's own order: the idea, the road, the origin.
@@ -95,18 +102,14 @@ const jsonLd = {
 >
   <section class="frame masthead">
     <div class="plate">
-      {
-        portrait && (
-          <Image
-            class="portrait"
-            src={portrait.image}
-            alt={portrait.alt}
-            width={560}
-            height={560}
-            loading="eager"
-          />
-        )
-      }
+      <Image
+        class="portrait"
+        src={portrait.image}
+        alt={portrait.alt}
+        width={560}
+        height={560}
+        loading="eager"
+      />
       <div class="name">
         <p class="label-plain">Notes on AI, work and accountability</p>
         <h1>{settings.site.name}</h1>
