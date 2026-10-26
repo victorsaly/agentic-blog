@@ -19,7 +19,7 @@
     "@astrojs/sitemap": "^3.7.4",
     "@roadbook/core": "*",
     "astro": "^7.4.2",
-    "mermaid": "11.17.2",
+    "mermaid": "12.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "satteri": "^0.10.5",
