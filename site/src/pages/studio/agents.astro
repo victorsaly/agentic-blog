@@ -1,11 +1,11 @@
 ---
-// Why: the agents at work, in one place. On top, every run as it happens, wherever it runs, read from the
-// live copy the runner fills event by event; each opens on its timeline. Then what GitHub has queued and
-// running, with logs and pull requests. Below, where every thought stands, one line each: what stops it (a
-// guard's hold, or an agent that did not finish), its latest run, and how many agents have worked on it. That
-// line is the decision; the full grid of every agent against every thought is behind one press. Both start
-// from the ledgers as of the last deploy and are brought up to date from the live copy (PipelineLive). One
-// feed on the page reads the live runs for the board and the pipeline alike.
+// Why: the agents at work, in one place, with one answer. On top, what waits on Victor (a question, or a
+// hold) and what runs now, read from the live copy the runner fills event by event, with GitHub's log and pull
+// request on a running row. Then every thought on its route: its line is read from the route (gates included),
+// so the line, the picture and the tab row never disagree, and a thought with work going on shows its route
+// open, marigold where it works. What finished, and GitHub's own list, wait behind one press; the full grid of
+// every agent against every thought behind another. All start from the ledgers as of the last deploy and are
+// brought up to date from the live copy; one feed on the page reads it for everything.
 import Studio from '../../layouts/Studio.astro';
 import { AgentsLive } from '../../islands/AgentsLive';
 import { RunsBoard } from '../../islands/RunsBoard';
@@ -36,9 +36,6 @@ const { show, per_usd: perUsd } = settings.publishing.currency;
 <Studio description="What the agents are doing, and where each thought stands.">
   <h1>Agents</h1>
   <RunsBoard client:load titles={titles} currency={{ show, perUsd }} />
-  <div class="on-github">
-    <AgentsLive client:load titles={titles} />
-  </div>
 
   <PipelineLive
     client:load
@@ -49,10 +46,34 @@ const { show, per_usd: perUsd } = settings.publishing.currency;
     layout={layout}
     builtStates={builtStates}
   />
+
+  <details class="earlier">
+    <summary class="control">Earlier runs, and GitHub's own list</summary>
+    <RunsBoard client:load titles={titles} currency={{ show, perUsd }} part="earlier" />
+    <div class="on-github">
+      <AgentsLive client:load titles={titles} />
+    </div>
+  </details>
 </Studio>
 
 <style>
-  /* GitHub's own list comes second, so its summary is said at reading size, not as the page's lead. */
+  /* What finished, and GitHub's own list of the same runs, wait behind one press: the page above already
+     says what runs now, once. */
+  .earlier {
+    margin-top: var(--space-6);
+  }
+  .earlier > summary {
+    display: inline-flex;
+    list-style: none;
+    cursor: pointer;
+  }
+  .earlier > summary::-webkit-details-marker {
+    display: none;
+  }
+  .earlier[open] > summary {
+    background: var(--ink);
+    color: var(--paper);
+  }
   .on-github {
     margin-top: var(--space-6);
   }

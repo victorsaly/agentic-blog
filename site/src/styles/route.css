@@ -115,7 +115,8 @@
 .route-list {
   display: none;
   margin: var(--space-3) 0;
-  padding-left: var(--space-5);
+  /* Room for a two-figure number, so "10." never runs into its step. */
+  padding-left: 2.75em;
 }
 .route-list > li {
   padding-block: var(--space-1);
@@ -152,6 +153,8 @@
 .route .route-list .state-running {
   position: relative;
   overflow: hidden;
+  /* The sweeping bar sits under the word, not over it. */
+  padding-bottom: 4px;
   background: var(--mark);
   color: var(--mark-ink);
   border-color: var(--mark-ink);

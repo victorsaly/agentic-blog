@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { Ledger, type WorkflowInput } from '@roadbook/core';
 import { layoutOf } from '@roadbook/core/route';
-import { builtStepsOf, liveRoute } from './route-live';
+import { builtStepsOf, liveRoute, standingOfRoute } from './route-live';
 import type { LiveCell } from './pipeline';
 
 const workflow = {
@@ -98,5 +98,31 @@ describe('builtStepsOf', () => {
       ask: { state: 'done', run: 'r3' },
       answers: { state: 'needs-you', run: 'r2' },
     });
+  });
+});
+
+describe('standingOfRoute', () => {
+  const at = (states: Parameters<typeof liveRoute>[1]) =>
+    standingOfRoute(liveRoute(layoutOf(workflow), states, [], 't').route);
+
+  it('says a thought waits on Victor when a gate does, even while an agent ran before it', () => {
+    expect(
+      at({
+        ask: { state: 'done', run: 'r1' },
+        answers: { state: 'needs-you', run: 'r2' },
+      }),
+    ).toEqual({ state: 'waiting', at: 'answers', done: 1, of: 3 });
+  });
+
+  it('ranks what stopped over what runs, and calls a thought with only done steps moving', () => {
+    expect(at({ ask: { state: 'failed', run: 'r1' } }).state).toBe('stopped');
+    expect(at({ ask: { state: 'running', run: 'r1' } })).toEqual({
+      state: 'running',
+      at: 'ask',
+      done: 0,
+      of: 3,
+    });
+    expect(at({ ask: { state: 'done', run: 'r1' } }).state).toBe('moving');
+    expect(at({}).state).toBe('untouched');
   });
 });

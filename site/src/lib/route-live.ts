@@ -5,7 +5,7 @@
 // report; an older live run never overwrites a newer one. Each step opens the run that won, when the live
 // copy holds it (a run's page reads the live copy). One place does it, so the pipeline and a run's page draw
 // the same route.
-import { routeOf, type Route, type RouteLayout } from '@roadbook/core/route';
+import { routeOf, type Route, type RouteLayout, type StepState } from '@roadbook/core/route';
 import type { LedgerEvent, NodeState } from '@roadbook/core';
 import type { LiveCell } from './pipeline';
 
@@ -72,4 +72,36 @@ export function liveRoute(
     links[cell.agent] = runLink(cell.id);
   }
   return { route: routeOf(layout, known), links };
+}
+
+/** Where a thought stands, read from its route, gates included: the one answer every part of the page gives. */
+export interface RouteStanding {
+  /** Waiting on Victor, did not finish, held, running, moving (some steps done), or not started. */
+  state: 'waiting' | 'stopped' | 'held' | 'running' | 'moving' | 'untouched';
+  /** The step it is at, first in working order; null when moving or not started. */
+  at: string | null;
+  /** Steps done, of the steps a run can do (agents, guards and gates). */
+  done: number;
+  of: number;
+}
+
+/** What wins when steps differ: what needs Victor, then what stopped, then what works, then what is done. */
+const ranked: readonly [StepState, RouteStanding['state']][] = [
+  ['needs-you', 'waiting'],
+  ['failed', 'stopped'],
+  ['held', 'held'],
+  ['running', 'running'],
+];
+
+export function standingOfRoute(route: Route): RouteStanding {
+  const ordered = [...route.steps]
+    .filter((s) => s.kind === 'agent' || s.kind === 'guard' || s.kind === 'gate')
+    .sort((a, b) => a.column - b.column || a.row - b.row);
+  const stateOf = (id: string): StepState => route.states[id] ?? 'not-run';
+  const done = ordered.filter((s) => stateOf(s.id) === 'done').length;
+  for (const [step, state] of ranked) {
+    const at = ordered.find((s) => stateOf(s.id) === step);
+    if (at) return { state, at: at.id, done, of: ordered.length };
+  }
+  return { state: done > 0 ? 'moving' : 'untouched', at: null, done, of: ordered.length };
 }

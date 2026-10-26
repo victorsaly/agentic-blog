@@ -147,11 +147,17 @@ export function RouteDrawing({
                     />
                   </>
                 )}
-                <text x={x + W / 2} y={y + 22} textAnchor="middle" className="name">
-                  {name}
-                </text>
-                <text x={x + W / 2} y={y + 39} textAnchor="middle" className="word">
-                  {stateWords[state]}
+                {/* One text, two lines: read as "Citations Running", the same words its link is named by. */}
+                <text textAnchor="middle">
+                  <tspan x={x + W / 2} y={y + 22} className="name">
+                    {name}
+                  </tspan>
+                  {/* The space between the two words, for the name only: drawn at no size, so a link's
+                      underline does not run past the step's name. */}
+                  <tspan fontSize="0"> </tspan>
+                  <tspan x={x + W / 2} y={y + 39} className="word">
+                    {stateWords[state]}
+                  </tspan>
                 </text>
                 {current === s.id && (
                   <rect className="here" x={x} y={y + H + 4} width={W} height={8} />
@@ -159,7 +165,8 @@ export function RouteDrawing({
               </g>
             );
             const href = links[s.id];
-            const said = `${name}${gate ? ', your call' : ''}: ${stateWords[state]}${current === s.id ? ', this run' : ''}`;
+            // Starts with the words on the step, so what is seen and what is said match.
+            const said = `${name} ${stateWords[state]}${gate ? ', your call' : ''}${current === s.id ? ', this run' : ''}`;
             return href ? (
               <a key={s.id} href={href} aria-label={said}>
                 {drawn}

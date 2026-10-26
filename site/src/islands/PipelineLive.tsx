@@ -3,8 +3,9 @@
 // script and before the studio answers; then the page's one feed brings each cell up to date from the
 // runner's live copy, so a run on Victor's computer moves its thought's line while it happens. The note
 // above it always says which of the two it shows, and when the live copy cannot be read it says so and
-// keeps the deploy's picture rather than an empty one. Each thought's line opens on its route: the workflow
-// drawn left to right, every step with where it stands (RouteDrawing), brought up to date the same way.
+// keeps the deploy's picture rather than an empty one. Each thought's line is read from its route (the
+// workflow drawn left to right, every step with where it stands, gates included, RouteDrawing), so the line
+// and the picture never disagree; a thought with work going on, or waiting on Victor, shows its route open.
 import { agentName } from '../lib/agent-runs';
 import {
   standingOf,
@@ -12,12 +13,11 @@ import {
   type CellEnding,
   type PipelineAgent,
   type PipelineRow,
-  type Standing,
 } from '../lib/pipeline';
 import { formatDate } from '../lib/content';
 import { useRunsFeed } from './runs-feed';
-import { RouteDrawing } from './RouteDrawing';
-import { liveRoute, type BuiltStep } from '../lib/route-live';
+import { RouteDrawing, stepName } from './RouteDrawing';
+import { liveRoute, standingOfRoute, type BuiltStep, type RouteStanding } from '../lib/route-live';
 import type { RouteLayout } from '@roadbook/core/route';
 
 const words: Record<CellEnding, string> = {
@@ -28,7 +28,7 @@ const words: Record<CellEnding, string> = {
   running: 'Running',
   'not-run': 'Not run',
 };
-const standingWords: Record<Standing['state'], string> = {
+const standingWords: Record<RouteStanding['state'], string> = {
   held: 'Held',
   stopped: 'Did not finish',
   waiting: 'Needs you',
@@ -67,6 +67,7 @@ export function PipelineLive({
   builtStates,
 }: PipelineLiveProps): React.JSX.Element {
   const { known, error } = useRunsFeed();
+  const kindOf = (id: string) => layout.steps.find((step) => step.id === id)?.kind ?? 'agent';
   const rows = known === null ? built : withLive(built, known.standing, agents);
   const asOf = `From the ledgers as of ${formatDate(new Date(builtAt))}, the last deploy`;
   const note =
@@ -95,39 +96,39 @@ export function PipelineLive({
       <ul className="runs-list standings">
         {rows.map((r) => {
           const s = standingOf(r, agents);
+          // The route is the one answer: the line says what the route says, gates included.
+          const { route, links } = liveRoute(
+            layout,
+            builtStates[r.slug] ?? {},
+            known?.standing ?? [],
+            r.slug,
+          );
+          const at = standingOfRoute(route);
+          const going = at.state !== 'moving' && at.state !== 'untouched';
           return (
             <li key={r.slug}>
               <span
-                className={`state state-${stateClass(s.state === 'stopped' ? 'failed' : s.state)}`}
+                className={`state state-${stateClass(at.state === 'stopped' ? 'failed' : at.state)}`}
               >
-                {standingWords[s.state]}
+                {standingWords[at.state]}
               </span>
               <span className="what">
                 <a href={`/thoughts/${r.slug}`}>{r.title}</a>
                 <span className="small quiet">
-                  {s.at !== null && `at ${agentName(s.at)} · `}
+                  {at.at !== null && `at ${stepName({ id: at.at, kind: kindOf(at.at) })} · `}
                   {s.last !== null && `last: ${agentName(s.last.agent)}, ${day(s.last.on)} · `}
-                  {`${String(s.ran)} of ${String(s.of)} agents have run`}
+                  {`${String(at.done)} of ${String(at.of)} steps done`}
                 </span>
               </span>
-              <details className="show-route">
-                <summary>Show the route</summary>
-                {(() => {
-                  const { route, links } = liveRoute(
-                    layout,
-                    builtStates[r.slug] ?? {},
-                    known?.standing ?? [],
-                    r.slug,
-                  );
-                  return (
-                    <RouteDrawing
-                      layout={route}
-                      states={route.states}
-                      links={links}
-                      label={`The route of ${r.title}`}
-                    />
-                  );
-                })()}
+              {/* A thought with work going on, or waiting on Victor, shows its route without a press. */}
+              <details className="show-route" open={going}>
+                <summary>{going ? 'The route' : 'Show the route'}</summary>
+                <RouteDrawing
+                  layout={route}
+                  states={route.states}
+                  links={links}
+                  label={`The route of ${r.title}`}
+                />
               </details>
             </li>
           );
