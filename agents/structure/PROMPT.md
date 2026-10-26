@@ -22,6 +22,10 @@ You have the raw transcript, and when they exist, the blogger's spoken answers t
   minute's reading. Between three and fifteen rows. An idea may carry two themes.
 - Title: short, no colon tricks, no clickbait, in the blogger's language.
 - Keep the blogger's odd prepositions and their favourite words. Cut only the circling and the "you know".
+- Add no phrases of your own. To join two of the blogger's sentences, use their words; a line or image
+  they never said ("the proof of the feeling") is a new fact about how they think.
+- A name the transcriber misheard (profile.md, "Words the transcriber gets wrong") is fixed, not cut, and
+  the why says which. A word not on that list stays as it came, or is cut with the rest of a passage.
 - If the transcript cut off mid-sentence, say so in the why and do not finish the sentence for them.
 
 Reply with one Markdown file and nothing else, in this exact front matter order:

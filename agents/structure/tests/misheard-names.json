@@ -1,0 +1,9 @@
+{
+  "why": "The transcriber hears Cloudflare as 'clock fair' and Claude as 'claw'. The agent must fix the names from the profile's list, not cut the sentence, and must not bridge the two halves with a phrase of its own.",
+  "kind": "edge",
+  "input": {
+    "inline": "we started two days ago already have more than 12 agents and it can run itself in their web interface you talk to clock fair and we got a database and agents that can talk by SDK with claw and it can build you know the block automatically"
+  },
+  "expect": ["message-length", "themes-known"],
+  "mustNot": "the words 'clock fair', 'claw' or 'block' for the site, or the Cloudflare and Claude details left out"
+}

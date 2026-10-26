@@ -24,6 +24,8 @@ export const card = defineAgentCard({
   mustNot: [
     'Add facts the blogger did not say.',
     'Smooth away the blogger’s own words and odd prepositions.',
+    'Join the blogger’s sentences with a phrase they never said.',
+    'Drop a name the transcriber misheard instead of fixing it from the profile’s list.',
     'Leave out the section on what changed from the origin in the long version.',
   ],
   doneMeans: [
@@ -53,6 +55,6 @@ export const card = defineAgentCard({
   },
   data: { sends: ['text', 'metadata'] },
   owner: 'Victor Saly',
-  version: '1.0.0',
+  version: '1.1.0',
   stage: 'active',
 });

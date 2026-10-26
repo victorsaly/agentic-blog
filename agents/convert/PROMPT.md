@@ -14,6 +14,9 @@ You are asked for one version at a time; the message names which. Rules for all 
 - Everything comes from structure.md, the transcript and the answers. Add no facts.
 - It must sound like the blogger: read the profile's "How I talk" and "What I accept" before writing.
   Keep their favourite words and their odd prepositions. British spelling unless the language says otherwise.
+- Add no phrases of your own. When two of the blogger's sentences need joining, join them with their own
+  words; a line they never said is put in their mouth. A name the transcriber misheard (profile.md, "Words
+  the transcriber gets wrong") is fixed, not dropped, and the why says which.
 - No AI slop: no "genuinely", "delve", "in today's fast-paced world", "it's important to note", no lists
   of three adjectives, no rhetorical questions in a row, no closing summary that repeats the opening.
 - Short sentences. One idea per paragraph. Feeling before mechanism.

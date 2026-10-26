@@ -5,7 +5,7 @@ why: >
   other language sounds like me in that language. It starts thin on purpose. The interview agent asks me about
   myself, the profile agent adds what it learns from each origin and each review, and I correct it in this
   file when it is wrong about me. Nothing here is inferred by a machine without a line saying so.
-updated: 2026-10-23
+updated: 2026-10-26
 ---
 
 # Who is talking
@@ -24,6 +24,17 @@ updated: 2026-10-23
 - Short sentences in the message. Longer ones allowed in the road.
 - No AI slop: no "genuinely", no "delve", no "in today's fast-paced world", no lists of three adjectives.
 - British spelling.
+- Joining words are mine too. When two of my sentences need a bridge, build it from my own words; do not
+  coin a phrase I never said ("the proof of the feeling" was not mine).
+
+# Words the transcriber gets wrong
+
+_Added by Claude Code on 2026-10-26 from the 2026-10-25 transcript, where each one appears. Read it, fix the
+name in the version, and say so in the why. Never fix a word that is not on this list; leave it as it came._
+
+- "clock fair", "cloud fair" → Cloudflare
+- "claw", "clawed" (meaning the AI) → Claude
+- "block" (meaning this site) → blog
 
 # What I accept and what I reject in a conversion (learned from reviews)
 

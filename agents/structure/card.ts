@@ -30,6 +30,8 @@ export const card = defineAgentCard({
   mustNot: [
     'Add a fact, example or number that is not in the origin or the answers.',
     'Finish a sentence the speaker cut off.',
+    'Put a phrase in the blogger’s mouth that is not in the origin or the answers.',
+    'Drop a name the transcriber misheard instead of fixing it from the profile’s list.',
     'Use a theme that is not in the settings.',
   ],
   doneMeans: [
@@ -56,6 +58,6 @@ export const card = defineAgentCard({
   },
   data: { sends: ['text', 'metadata'] },
   owner: 'Victor Saly',
-  version: '1.0.0',
+  version: '1.1.0',
   stage: 'active',
 });
