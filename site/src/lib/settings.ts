@@ -45,6 +45,15 @@ const settingsSchema = z
         })
         .default({ show: 'USD', per_usd: 1, rate_date: new Date('2026-10-23') }),
     }),
+    // The token goes into an attribute on every reader page, so only plain letters and digits pass.
+    analytics: z
+      .object({
+        cloudflare_token: z
+          .string()
+          .regex(/^[A-Za-z0-9]+$/, 'the Web Analytics token is letters and digits only')
+          .nullable(),
+      })
+      .default({ cloudflare_token: null }),
     licence: z.object({ code: z.string(), content: z.string() }),
     media: z.object({
       audio_bucket: z.string().min(1),
