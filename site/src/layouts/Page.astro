@@ -54,7 +54,8 @@ const indexable = settings.publishing.index && !noindex;
 // Counted: reader pages on the live site. Not counted: the studio, and local development.
 const beaconToken =
   import.meta.env.PROD && room === 'reader' ? settings.analytics.cloudflare_token : null;
-const fullTitle = title === settings.site.name ? title : `${title} — ${settings.site.name}`;
+// A title that already leads with the name (the home page's) is not signed twice.
+const fullTitle = title.startsWith(settings.site.name) ? title : `${title} — ${settings.site.name}`;
 const share =
   image ??
   shareCard(

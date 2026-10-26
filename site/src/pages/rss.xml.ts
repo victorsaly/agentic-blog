@@ -5,11 +5,14 @@ import { getCollection } from 'astro:content';
 import { rssXml } from '../lib/feed';
 import { thoughtSlugOf } from '../lib/content';
 import { settings } from '../lib/settings';
+import { join } from 'node:path';
+import { shareCard } from '../lib/social';
+import { topicName } from '../lib/topic-name';
 
 // Typed at the boundary: on a fresh checkout Astro has not generated its content types yet when lint runs.
 interface ThoughtEntry {
   id: string;
-  data: { title: string; message: string; date: Date; draft: boolean };
+  data: { title: string; message: string; date: Date; draft: boolean; themes: string[] };
 }
 
 export const GET: APIRoute = async ({ site }) => {
@@ -23,12 +26,19 @@ export const GET: APIRoute = async ({ site }) => {
     self: new URL('/rss.xml', base).href,
     description: settings.site.tagline,
     language: settings.languages.origin,
-    items: thoughts.map((t) => ({
-      title: t.data.title,
-      link: new URL(`/thoughts/${thoughtSlugOf(t.id)}`, base).href,
-      description: t.data.message.trim(),
-      date: t.data.date,
-    })),
+    items: thoughts.map((t) => {
+      const slug = thoughtSlugOf(t.id);
+      const card = shareCard(slug, t.data.title, join(process.cwd(), 'public'));
+      return {
+        title: t.data.title,
+        link: new URL(`/thoughts/${slug}`, base).href,
+        description: t.data.message.trim(),
+        date: t.data.date,
+        author: settings.site.author,
+        categories: t.data.themes.map(topicName),
+        ...(card ? { image: { ...card, url: new URL(card.src, base).href } } : {}),
+      };
+    }),
   });
   return new Response(xml, { headers: { 'content-type': 'application/rss+xml; charset=utf-8' } });
 };
