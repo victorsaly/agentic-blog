@@ -61,13 +61,33 @@ const ways = [
   { id: 'origin', name: 'Origin', icon: originIcon },
   ...(leadSources?.data.reviewed ? [{ id: 'sources', name: 'Sources', icon: sourcesIcon }] : []),
 ];
+
+// What a search engine or an answer engine reads about the site as a whole: whose it is and what it is.
+const home = new URL('/', Astro.site).href;
+const description = `${settings.site.tagline}. Thoughts by ${settings.site.author}, each one starting as an unedited note, the origin.`;
+const jsonLd = {
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': `${home}#site`,
+      name: settings.site.name,
+      url: home,
+      description,
+      inLanguage: settings.languages.origin,
+      author: { '@id': `${home}#author` },
+    },
+    {
+      '@type': 'Person',
+      '@id': `${home}#author`,
+      name: settings.site.author,
+      url: home,
+      ...(settings.site.linkedin ? { sameAs: [settings.site.linkedin] } : {}),
+    },
+  ],
+};
 ---
 
-<Page
-  title={settings.site.name}
-  description={`${settings.site.tagline}. Thoughts by ${settings.site.author}, each one starting as an unedited note, the origin.`}
-  width="wide"
->
+<Page title={settings.site.name} description={description} jsonLd={jsonLd} width="wide">
   <section class="frame masthead">
     <div class="plate">
       {

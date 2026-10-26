@@ -45,6 +45,7 @@ npm run typecheck      # tsc --noEmit for site and agents
 npm run test           # Vitest
 npm run check:why      # every content and agent file has a why
 npm run agent -- <name> <thought-slug>   # run one agent locally
+npm run social:cards [-- <slug>]        # draw the 1200×630 share cards into site/public/social
 ```
 
 ## Code standards
