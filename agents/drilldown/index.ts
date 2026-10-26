@@ -4,6 +4,7 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import matter from 'gray-matter';
+import { z } from 'zod';
 import {
   IN_THE_REPLY,
   fencedFiles,
@@ -14,8 +15,20 @@ import {
 } from '../_lib/generic.js';
 import type { AgentRun, OutputFile } from '../_lib/types.js';
 
-const KINDS = new Set(['book', 'person', 'tool', 'project', 'other']);
 const MAX_WORDS = 300;
+
+/**
+ * The front matter the site's wiki collection accepts (site/src/content.config.ts), kept in step by hand: a
+ * page it would refuse breaks the whole site build, reviewed or not, so it is never written.
+ */
+export const wikiFront = z.object({
+  why: z.string().trim().min(20).max(600),
+  title: z.string().min(1).max(120),
+  kind: z.enum(['book', 'person', 'tool', 'project', 'other']),
+  first_mentioned: z.string().min(1),
+  aliases: z.array(z.string().min(1)),
+  reviewed: z.literal(false),
+});
 
 const namesOf = (data: Record<string, unknown>): string[] => {
   const aliases: unknown[] = Array.isArray(data['aliases']) ? data['aliases'] : [];
@@ -87,24 +100,27 @@ export function pagesFrom(
     const { data, content: body } = matter(block.content);
     const title: unknown = data['title'];
     if (typeof title !== 'string' || title.trim() === '') continue;
-    const kind: unknown = data['kind'];
-    if (typeof kind !== 'string' || !KINDS.has(kind)) {
-      skipped.push(`${title} (kind "${String(kind)}" is not one the wiki knows)`);
-      continue;
-    }
     const words = body.split(/\s+/).filter(Boolean).length;
     if (words >= MAX_WORDS) {
       skipped.push(`${title} (${String(words)} words, over ${String(MAX_WORDS)})`);
       continue;
     }
-    const name = `${kebab(title)}.md`;
-    const names = namesOf(data);
-    if (existing.includes(name) || names.some((n) => taken.has(n))) continue;
-    for (const n of names) taken.add(n);
     // Whatever the model wrote, the page waits for Victor and names this thought as where it came from.
     let content = setFrontMatterField(block.content, 'reviewed', 'false');
     content = setFrontMatterField(content, 'first_mentioned', slug);
     if (!Array.isArray(data['aliases'])) content = setFrontMatterField(content, 'aliases', '[]');
+    const front = wikiFront.safeParse(matter(content).data);
+    if (!front.success) {
+      const issue = front.error.issues[0];
+      skipped.push(
+        `${title} (${issue ? `${issue.path.join('.')}: ${issue.message}` : 'bad front matter'})`,
+      );
+      continue;
+    }
+    const name = `${kebab(title)}.md`;
+    const names = namesOf(front.data);
+    if (existing.includes(name) || names.some((n) => taken.has(n))) continue;
+    for (const n of names) taken.add(n);
     files.push({ path: `wiki/${name}`, content, base: 'repo' });
   }
   return { files, skipped };

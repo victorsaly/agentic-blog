@@ -50,6 +50,26 @@ describe('drilldown pages', () => {
     expect(skipped).toHaveLength(2);
   });
 
+  it('leaves out a page the site would refuse, so the build never breaks on an unreviewed page', () => {
+    const numbered = page(
+      'why: The post leans on this tool.\ntitle: Number Alias\nkind: tool\naliases: [123]',
+    );
+    const blank = page(
+      'why: The post leans on this tool.\ntitle: Blank Alias\nkind: tool\naliases: [""]',
+    );
+    const long = page(`why: The post leans on this book.\ntitle: ${'A'.repeat(121)}\nkind: book`);
+    const short = page('why: Too short.\ntitle: Short Why\nkind: book');
+    const { files, skipped } = pagesFrom(
+      [numbered, blank, long, short].join('\n\n'),
+      [],
+      new Set(),
+      's',
+    );
+    expect(files).toEqual([]);
+    expect(skipped).toHaveLength(4);
+    expect(skipped[0]).toContain('aliases');
+  });
+
   it('adds an empty list of other names when the model left it out', () => {
     const bare = page('why: The post tells his story.\ntitle: Ray Kurzweil\nkind: person');
     const { data } = matter(pagesFrom(bare, [], new Set(), 's').files[0]?.content ?? '');
