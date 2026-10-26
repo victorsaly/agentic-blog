@@ -193,7 +193,7 @@ describe('the timeline', () => {
       USD,
     );
     expect(lines.map((l) => `${l.who ?? ''} ${l.what}`)).toEqual([
-      'Victor started the run (blog-post)',
+      'Victor started this run from your note',
       'Safety started',
       'Safety spent 1.2¢ on claude',
       'Safety held the post',
@@ -219,8 +219,32 @@ describe('the timeline', () => {
     ]);
   });
 
-  it('shows an event it does not know by its type, rather than hiding it', () => {
-    expect(timelineOf([event(0, { type: 'something.new' })], USD)[0]?.what).toBe('something.new');
+  it('says plainly when it has no words for an event, and keeps its type, rather than hiding it', () => {
+    const [line] = timelineOf([event(0, { type: 'something.new' })], USD);
+    expect(line?.what).toBe('recorded something the studio has no words for yet');
+    expect(line?.raw).toBe('something.new');
+  });
+
+  it('names GitHub as GitHub, and says why a run did not finish with what to do, keeping its words', () => {
+    const lines = timelineOf(
+      [
+        event(0, { type: 'run.started', origin: 'o.md', by: 'github:github-actions[bot]' }),
+        event(1, {
+          type: 'node.state',
+          node: 'voice',
+          from: 'running',
+          to: 'failed',
+          reason: 'ffmpeg could not change the pace (is it installed?): spawn ffmpeg ENOENT',
+        }),
+        event(2, { type: 'node.state', node: 'seo', from: 'running', to: 'failed', reason: 'odd' }),
+      ],
+      USD,
+    );
+    expect(lines[0]?.who).toBe('GitHub');
+    expect(lines[1]?.detail).toMatch(/A tool it needs \(ffmpeg\) was missing/);
+    expect(lines[1]?.raw).toMatch(/spawn ffmpeg ENOENT/);
+    expect(lines[2]?.detail).toBe('odd');
+    expect(lines[2]?.raw).toBeNull();
   });
 });
 

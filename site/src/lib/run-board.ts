@@ -211,6 +211,8 @@ export interface TimelineLine {
   link: string | null;
   /** Streamed text, shown as it was written. */
   text: boolean;
+  /** What the run said in its own words, when the line puts it plainly: kept, behind a press. */
+  raw?: string | null;
 }
 
 const str = (fields: Record<string, unknown>, key: string): string | null => {
@@ -223,9 +225,37 @@ const agent = (fields: Record<string, unknown>): string | null => {
   return node === null ? null : agentName(node);
 };
 
-/** "local" and "owner" are how the runner names Victor; anyone else is named as the ledger names them. */
-const person = (by: string | null): string | null =>
-  by === null ? null : by === 'local' || by === 'owner' ? 'Victor' : by;
+/**
+ * Who, as Victor would say it: "local" and "owner" are how the runner names him; GitHub's own runner is
+ * GitHub, and a GitHub account is its name. Anyone else is named as the ledger names them.
+ */
+const person = (by: string | null): string | null => {
+  if (by === null) return null;
+  if (by === 'local' || by === 'owner') return 'Victor';
+  if (by.startsWith('github:')) {
+    const name = by.slice('github:'.length);
+    return name.endsWith('[bot]') ? 'GitHub' : name;
+  }
+  return by;
+};
+
+/**
+ * Why a run did not finish, in plain words with what to do, for the reasons runs have given so far; null
+ * when it is one the studio has no words for yet, and the run's own words are shown as they are.
+ */
+export function plainReason(reason: string): string | null {
+  if (/ffmpeg/i.test(reason) && /ENOENT|not installed/i.test(reason))
+    return 'A tool it needs (ffmpeg) was missing where it ran. Once it is installed there, running it again should work.';
+  if (reason.includes('replied without front matter'))
+    return 'The model replied without the file it was asked for. Running it again usually works; if it does not, the prompt needs a look.';
+  if (reason.includes('stopped at the monthly cap'))
+    return 'It stopped at the monthly cap before a call that could have passed it. What it spent before is counted; nothing more was spent.';
+  if (reason.startsWith('no price for '))
+    return 'A model it uses has no price in the list yet, so it was not called and nothing was spent.';
+  if (reason.includes('the model declined'))
+    return 'The model declined the request. Read what it was given before running it again.';
+  return null;
+}
 
 const stateMoves: Record<string, string> = {
   idle: 'is idle',
@@ -252,12 +282,19 @@ function lineOf(e: ShownEvent, currency: Currency): TimelineLine {
       return {
         ...base,
         who: person(str(f, 'by')),
-        what: `started the run (${str(f, 'workflow') ?? 'a workflow'})`,
-        detail: str(f, 'origin'),
+        what: 'started this run from your note',
+        raw: str(f, 'origin'),
       };
     case 'node.state': {
       const to = str(f, 'to') ?? '';
-      return { ...base, what: stateMoves[to] ?? `moved to ${to}`, detail: str(f, 'reason') };
+      const reason = str(f, 'reason');
+      const plain = reason === null ? null : plainReason(reason);
+      return {
+        ...base,
+        what: stateMoves[to] ?? `moved to ${to}`,
+        detail: plain ?? reason,
+        raw: plain === null ? null : reason,
+      };
     }
     case 'node.output': {
       const receipt = isRecord(f.receipt) ? f.receipt : {};
@@ -330,7 +367,7 @@ function lineOf(e: ShownEvent, currency: Currency): TimelineLine {
         text: true,
       };
     default:
-      return { ...base, what: e.type };
+      return { ...base, what: 'recorded something the studio has no words for yet', raw: e.type };
   }
 }
 

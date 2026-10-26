@@ -52,6 +52,40 @@ const { show, per_usd: perUsd } = settings.publishing.currency;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
   }
+  /* The route's key closes its section; the timeline opens a new one, with room between. */
+  .run-page .route-key {
+    margin-bottom: var(--space-5);
+  }
+  /* A gate waiting on Victor says since when, at reading size: it is not a clock running against him. */
+  .run-page .since {
+    color: var(--quiet);
+  }
+  /* The record's facts wait behind Details, at the foot, so the decision comes first. */
+  .run-page .facts-more {
+    margin: var(--space-5) 0 0;
+    padding-top: var(--space-2);
+    border-top: var(--rule-width) solid var(--rule);
+  }
+  .run-page .facts-more > summary {
+    min-height: var(--tap);
+    padding-block: 0.6rem;
+    cursor: pointer;
+    font-weight: 700;
+  }
+  /* A run's own words, kept when a line puts them plainly. */
+  .timeline .raw {
+    margin-top: var(--space-1);
+  }
+  .timeline .raw > summary {
+    cursor: pointer;
+    color: var(--quiet);
+  }
+  .timeline .raw code {
+    display: block;
+    margin-top: var(--space-1);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
   .run-page .facts {
     display: flex;
     flex-wrap: wrap;
