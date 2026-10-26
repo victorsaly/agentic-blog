@@ -244,7 +244,7 @@ const envelope = z
     prev: hex64,
     hash: hex64,
   })
-  .passthrough();
+  .loose();
 const headShape = z.object({ count: z.number().int().min(0), hash: hex64 });
 
 /** The events in a ledger.jsonl file, oldest first. Throws on a line that is not an event. */
