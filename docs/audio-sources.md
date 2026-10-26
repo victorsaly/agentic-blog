@@ -28,16 +28,19 @@ One clip per station, named by the station's `id`. The exact words of every clip
 station in [`site/src/lib/tour.ts`](../site/src/lib/tour.ts); the page shows the same text, and underlines the
 word being said. To change a line: edit it there, then `npm run tour:voice -- <id>`.
 
+`structure`, `makers` and `you` were made again on 25 October 2026, when the route began to run by itself
+and the merge moved into the studio.
+
 | File            | Words | Length |
 | --------------- | ----- | ------ |
 | `studio.mp3`    | 32    | 10.9 s |
 | `origin.mp3`    | 24    | 7.7 s  |
 | `interview.mp3` | 22    | 8.2 s  |
-| `structure.mp3` | 27    | 9.2 s  |
-| `makers.mp3`    | 45    | 15.1 s |
+| `structure.mp3` | 37    | 11.7 s |
+| `makers.mp3`    | 56    | 18.3 s |
 | `gates.mp3`     | 34    | 11.1 s |
 | `publish.mp3`   | 43    | 13.7 s |
-| `you.mp3`       | 20    | 5.7 s  |
+| `you.mp3`       | 33    | 10.0 s |
 | `feedback.mp3`  | 31    | 9.3 s  |
 | `close.mp3`     | 18    | 5.9 s  |
 
@@ -53,7 +56,7 @@ screen, when, and the exact words of every voice line. Same voice as the tour.
 | ----- | ------------------------------------------------------------------------------------------ |
 | Voice | "Chris W" (`hoSRtERLhFa8UfJ6P1JP`), model `eleven_v3`, one clip per line: `vo-<key>.mp3`   |
 | Music | `music.mp3`, model `music_v2_5`, instrumental; the prompt is `music.prompt` in `scenes.ts` |
-| Made  | 24 October 2026, one take each                                                             |
+| Made  | 24 October 2026, one take each; `agents` and `you` again on 25 October 2026                |
 
 ```
 npm run pitch:voice   # makes any clip or the music that is missing (spends credits)
