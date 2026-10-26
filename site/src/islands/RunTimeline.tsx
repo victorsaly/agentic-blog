@@ -63,6 +63,17 @@ const timeOf = (iso: string): string =>
     second: '2-digit',
   });
 
+/** When a run started, read from its id (ids begin with the start, to the second): "26 October, 07:20". */
+function startedOn(id: string): string {
+  const stamp = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/.exec(id);
+  if (!stamp) return 'later';
+  const [, year, month, day, hour, minute] = stamp;
+  const at = new Date(
+    `${year ?? ''}-${month ?? ''}-${day ?? ''}T${hour ?? ''}:${minute ?? ''}:00Z`,
+  );
+  return `${at.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}, ${at.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+}
+
 /** What a later run of the same step did, as a verb after "A later Voice run". */
 const laterWords: Record<string, string> = {
   done: 'finished',
@@ -201,13 +212,30 @@ export function RunTimeline({
     run.thought,
     github.known?.runs ?? [],
   );
-  // A later run of the same step on the same thought has replaced this one, whatever this one said.
-  const later =
-    run.state === 'failed' || run.state === 'held'
-      ? feed.known?.standing.find(
-          (c) => c.thought === run.thought && c.agent === run.agent && c.id > run.id,
-        )
-      : undefined;
+  // A later run of the same step on the same thought has replaced this one, whatever this one said: from the
+  // live copy, or from the ledger when the live copy missed it, the same two the route reads.
+  const later = ((): { id: string; state: string } | undefined => {
+    if (run.state !== 'failed' && run.state !== 'held') return undefined;
+    const live = feed.known?.standing.find(
+      (c) => c.thought === run.thought && c.agent === run.agent && c.id > run.id,
+    );
+    const ledger = builtStates[run.thought]?.[run.agent];
+    const recorded =
+      ledger !== undefined && ledger.run > run.id
+        ? { id: ledger.run, state: ledger.state }
+        : undefined;
+    if (live && recorded) return live.id >= recorded.id ? live : recorded;
+    return live ?? recorded;
+  })();
+  // What runs is known only once both feeds have answered, and answered last time: not knowing is not idle.
+  const checking =
+    feed.known === null || github.known === null
+      ? feed.error !== null || github.error !== null
+        ? 'failed'
+        : 'loading'
+      : feed.error !== null || github.error !== null
+        ? 'failed'
+        : 'known';
 
   return (
     <div className="run-page">
@@ -247,6 +275,7 @@ export function RunTimeline({
           merges={layout.steps.some((s) => s.kind === 'sink' && s.after.includes(gate.gate))}
           // Steps before the gate still at work: the merge stays shut until they finish.
           workingBefore={runningBefore(route, gate.gate)}
+          checking={checking}
           onSent={() => {
             sent.current = true;
           }}
@@ -255,15 +284,10 @@ export function RunTimeline({
 
       {later !== undefined && (
         <p className="later">
-          A later {agentName(run.agent)} run{' '}
+          A later {agentName(run.agent)} run (started {startedOn(later.id)}){' '}
           <a href={`/studio/agents/run?id=${encodeURIComponent(later.id)}`}>
             {laterWords[later.state] ?? 'started'}
-          </a>{' '}
-          on {formatDate(new Date(later.startedAt), 'en-GB', here)}, at{' '}
-          {new Date(later.startedAt).toLocaleTimeString('en-GB', {
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
+          </a>
           . Nothing to do here.
         </p>
       )}
