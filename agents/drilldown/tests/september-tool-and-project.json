@@ -1,0 +1,10 @@
+{
+  "why": "The post tells the story of building WorldLeadersGame with only Copilot; both are leaned on, not passing names, and each gets one short page with doors from sources.md.",
+  "kind": "edge",
+  "input": {
+    "thought": "2026-10-25-september-last-year-tried",
+    "files": ["sources.md", "versions/short.md", "versions/long.md"]
+  },
+  "expect": ["length", "sourced", "unreviewed"],
+  "mustNot": "a page for large language models, pull requests or SWE-bench, or a door out that is not in sources.md"
+}

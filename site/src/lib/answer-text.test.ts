@@ -56,29 +56,30 @@ describe('plainText', () => {
 });
 
 describe("isPlace, the site's own pages", () => {
-  it('accepts how it works, the topics, the graph and a wiki file in the repository', () => {
+  it('accepts how it works, the topics, the graph and the wiki', () => {
     for (const href of [
       '/how-it-works',
       '/how-it-works#route',
       '/topics',
       '/topics/credibility',
       '/graph#t-credibility',
-      'https://github.com/victorsaly/agentic-blog/blob/main/wiki/kurzweil.md',
+      '/wiki',
+      '/wiki/the-age-of-spiritual-machines',
     ])
       expect(isPlace(href), href).toBe(true);
     for (const href of [
       '/studio',
       '/topics/../studio',
       'https://github.com/victorsaly/agentic-blog/blob/main/.env',
-      'https://github.com/someone-else/agentic-blog/blob/main/wiki/x.md',
+      '/wiki/../studio',
+      'https://github.com/victorsaly/agentic-blog/blob/main/wiki/x.md',
     ])
       expect(isPlace(href), href).toBe(false);
   });
 
-  it('keeps a wiki address whole when the answer is copied', () => {
-    const wiki = 'https://github.com/victorsaly/agentic-blog/blob/main/wiki/kurzweil.md';
-    expect(plainText(`See [the wiki](${wiki}).`, 'https://blog.example.com')).toBe(
-      `See the wiki (${wiki}).`,
+  it('gives a wiki page its full address when the answer is copied', () => {
+    expect(plainText('See [the wiki](/wiki/claude).', 'https://blog.example.com')).toBe(
+      'See the wiki (https://blog.example.com/wiki/claude).',
     );
   });
 });

@@ -10,17 +10,16 @@ export type Inline =
 export type Block = { kind: 'para'; parts: Inline[] } | { kind: 'list'; items: Inline[][] };
 
 /**
- * A post, its origin page, a place inside either, the site's own pages (how it works, the topics, the graph),
- * or a wiki file in the blog's own repository; nothing else.
+ * A post, its origin page, a place inside either, or the site's own pages (how it works, the topics, the graph,
+ * the wiki); nothing else.
  */
 const PLACE =
-  /^(\/thoughts\/[a-z0-9-]+(\/origin)?|\/how-it-works|\/topics(\/[a-z0-9-]+)?|\/graph)(#[\p{L}\p{N}_-]+)?$/u;
-const WIKI = /^https:\/\/github\.com\/victorsaly\/agentic-blog\/blob\/main\/wiki\/[a-z0-9-]+\.md$/;
+  /^(\/thoughts\/[a-z0-9-]+(\/origin)?|\/how-it-works|\/topics(\/[a-z0-9-]+)?|\/wiki(\/[a-z0-9-]+)?|\/graph)(#[\p{L}\p{N}_-]+)?$/u;
 const INLINE = /\*\*([^*\n]+)\*\*|\[([^\]\n]+)\]\(([^)\s]+)\)/g;
 const ITEM = /^\s*(?:[-*•]|\d+[.)])\s+/;
 
 export function isPlace(href: string): boolean {
-  return PLACE.test(href) || WIKI.test(href);
+  return PLACE.test(href);
 }
 
 export function inlineOf(line: string): Inline[] {

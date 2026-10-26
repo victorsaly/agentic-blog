@@ -5,22 +5,28 @@ import { optionalStep, standardMetrics } from '../_lib/card-presets.js';
 export const card = defineAgentCard({
   name: 'drilldown',
   phase: 4,
-  reads: ['sources.md', 'versions/long.md', 'wiki/'],
+  reads: ['sources.md', 'versions/short.md', 'versions/long.md', 'wiki/'],
   writes: ['wiki/<slug>.md'],
-  purpose: 'Write a short wiki page for each book or person a post leans on.',
+  purpose: 'Write a short wiki page for each book, person, tool or project a post leans on.',
   why: 'A name a reader does not know should open onto a short, checked page instead of a dead end.',
   inputs: [
     { name: 'sources', type: 'markdown' },
+    { name: 'short', type: 'markdown' },
     { name: 'long', type: 'markdown' },
   ],
   outputs: [{ name: 'wiki pages', type: 'markdown', limit: 'under 300 words each' }],
   mustNot: [
     'Use a door out that is not in the sources file.',
     'Add opinions the blogger did not express.',
+    'Write a page for a passing name, a general term, or something that already has a page.',
   ],
   doneMeans: [
     { id: 'length', says: 'Each page is under 300 words.' },
     { id: 'sourced', says: 'Each page lists two or three doors out from the sources file.' },
+    {
+      id: 'unreviewed',
+      says: 'Each page says reviewed: false, so it waits for Victor before /wiki shows it.',
+    },
   ],
   qualityBar: { approvedWithoutRewrite: 0.8 },
   model: { default: 'writer', allowed: ['writer'] },
@@ -29,6 +35,6 @@ export const card = defineAgentCard({
   metrics: standardMetrics(0.8, 0.1),
   data: { sends: ['text'] },
   owner: 'Victor Saly',
-  version: '1.0.0',
+  version: '1.1.0',
   stage: 'active',
 });

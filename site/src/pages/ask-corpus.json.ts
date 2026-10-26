@@ -42,9 +42,7 @@ const renderEntry = render as unknown as (entry: Entry) => Promise<{ headings: H
 const headingsOf = async (entry: Entry | undefined, depth: number): Promise<Heading[]> =>
   entry ? (await renderEntry(entry)).headings.filter((h) => h.depth === depth) : [];
 
-const repo = 'https://github.com/victorsaly/agentic-blog';
-
-// The interview questions and the wiki have no content collection; they are read as the agents' prompts are.
+// The interview questions have no content collection, and the wiki pages are wanted whole; both are read raw.
 const interviews = import.meta.glob<string>('../../../thoughts/*/interview.md', {
   query: '?raw',
   import: 'default',
@@ -121,7 +119,7 @@ async function madeText(slug: string): Promise<string | undefined> {
     .join(' ');
 }
 
-/** The site's own pages: how it works (from the agents' own cards), the topics, and every wiki page. */
+/** The site's own pages: how it works (from the agents' own cards), the topics, and every reviewed wiki page. */
 function sitePages(): CorpusPage[] {
   const roster = rosterFrom(Object.values(agentCards), Object.values(agentPrompts));
   const agents = roster
@@ -147,8 +145,9 @@ function sitePages(): CorpusPage[] {
     const { front, body } = split(raw);
     const name = file.replace(/\.md$/, '');
     const title = typeof front.title === 'string' ? front.title : name;
-    // The wiki has no page on the site yet; until it does, the door out is the file itself.
-    return [{ href: `${repo}/blob/main/wiki/${file}`, title: `Wiki: ${title}`, text: body }];
+    // The same pages /wiki shows: a page Victor has not reviewed has no address yet, so the chat leaves it out.
+    if (front.reviewed !== true) return [];
+    return [{ href: `/wiki/${name}`, title: `Wiki: ${title}`, text: body }];
   });
 
   return [

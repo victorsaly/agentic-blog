@@ -4,6 +4,7 @@
 import { defineCollection } from 'astro:content';
 import { z } from 'astro/zod';
 import { glob } from 'astro/loaders';
+import { WIKI_KINDS } from './lib/wiki';
 
 const why = z.string().trim().min(20).max(600);
 const language = z.string().min(2).max(5);
@@ -97,4 +98,19 @@ const voices = defineCollection({
     .loose(),
 });
 
-export const collections = { thoughts, versions, origins, pictures, sources, voices };
+// The drill-down agent's pages: one book, person, tool or project a post leans on. Shown at /wiki once
+// reviewed is true, that is, once Victor has read the page and checked its doors out.
+const wiki = defineCollection({
+  loader: glob({ pattern: ['*.md', '!README.md'], base: '../wiki' }),
+  schema: z.object({
+    why,
+    title: z.string().min(1).max(120),
+    kind: z.enum(WIKI_KINDS),
+    first_mentioned: z.string().min(1),
+    // Other names a post may use for it ("Copilot" for "GitHub Copilot"), so the page knows which posts name it.
+    aliases: z.array(z.string().min(1)).default([]),
+    reviewed: z.boolean().default(false),
+  }),
+});
+
+export const collections = { thoughts, versions, origins, pictures, sources, voices, wiki };

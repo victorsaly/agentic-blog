@@ -1,0 +1,80 @@
+---
+// Why: one wiki page, read at the post's measure: what kind of thing it is, the page itself (under 300 words,
+// with its doors out, as the drill-down agent wrote it and Victor checked it), then the thoughts that name it,
+// in the same ruled index as every other list, so a reader can go back to where they met the name. The label
+// above the title links back to the whole wiki. An unreviewed page has no address at all.
+import { getCollection, render } from 'astro:content';
+import Page from '../../layouts/Page.astro';
+import ListHead from '../../components/ListHead.astro';
+import ThoughtIndex from '../../components/ThoughtIndex.astro';
+import { newestFirst, thoughtSlugOf } from '../../lib/content';
+import { breadcrumbs } from '../../lib/meta';
+import { settings } from '../../lib/settings';
+import { thoughtsLabel } from '../../lib/themes';
+import { kindLabel, mentions, summaryOf } from '../../lib/wiki';
+
+export async function getStaticPaths() {
+  const pages = await getCollection('wiki', ({ data }) => data.reviewed);
+  return pages.map((page) => ({ params: { slug: page.id }, props: { page } }));
+}
+
+const { page } = Astro.props;
+const { Content } = await render(page);
+const names = [page.data.title, ...page.data.aliases];
+
+const thoughts = (await getCollection('thoughts', ({ data }) => !data.draft)).sort(newestFirst);
+const versions = await getCollection('versions');
+const named = thoughts.filter((t) => {
+  const slug = thoughtSlugOf(t.id);
+  if (slug === page.data.first_mentioned) return true;
+  return versions.some((v) => thoughtSlugOf(v.id) === slug && mentions(v.body ?? '', names));
+});
+
+const kind = kindLabel(page.data.kind);
+const note =
+  named.length === 0
+    ? `${kind}.`
+    : `${kind}, named in ${thoughtsLabel(named.length).toLowerCase()}.`;
+const jsonLd = breadcrumbs([
+  { name: settings.site.name, url: new URL('/', Astro.site).href },
+  { name: 'Wiki', url: new URL('/wiki', Astro.site).href },
+  { name: page.data.title, url: new URL(`/wiki/${page.id}`, Astro.site).href },
+]);
+const description = summaryOf(page.body ?? '', 20);
+---
+
+<Page title={`${page.data.title} — Wiki`} description={description} jsonLd={jsonLd}>
+  <ListHead
+    parent={{ href: '/wiki', name: 'Wiki' }}
+    label={kind}
+    title={page.data.title}
+    note={note}
+  />
+  <div class="frame body">
+    <article class="page">
+      <Content />
+    </article>
+    {
+      named.length > 0 && (
+        <section class="named" aria-labelledby="named-label">
+          <h2 class="label" id="named-label">
+            Where it comes up
+          </h2>
+          <ThoughtIndex thoughts={named} />
+        </section>
+      )
+    }
+  </div>
+</Page>
+
+<style>
+  .body {
+    padding-top: var(--space-5);
+  }
+  .page :global(h2) {
+    margin-top: var(--space-5);
+  }
+  .named {
+    margin-top: var(--space-6);
+  }
+</style>

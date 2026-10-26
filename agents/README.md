@@ -35,7 +35,7 @@ the written files into a pull request. See `.github/workflows/agents.yml`.
 | image     | one picture in the house style                                                      | 4     | real |
 | diagram   | describes a flow or a before-and-after, when a section earns one; the site draws it | 4     | real |
 | citations | finds what each claim rests on, links out                                           | 4     | real |
-| drilldown | wiki pages for books and people                                                     | 4     | real |
+| drilldown | wiki pages for the books, people, tools and projects a post leans on                | 4     | real |
 | feedback  | turns a note about the output into a rework, and a pattern into a route change      | 5     | real |
 | security  | patches, and other people's data; can hold                                          | 5     | real |
 | seo       | metadata when the index switch is on                                                | 5     | real |
