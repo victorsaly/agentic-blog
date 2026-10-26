@@ -5,7 +5,7 @@
     "jsxImportSource": "react",
     "baseUrl": ".",
     "paths": { "@/*": ["src/*"] },
-    "types": ["astro/client", "@cloudflare/workers-types/2023-07-01"],
+    "types": ["astro/client", "@cloudflare/workers-types"],
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true
   },
