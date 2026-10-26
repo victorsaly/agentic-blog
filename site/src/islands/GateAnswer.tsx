@@ -9,6 +9,7 @@
 // announced once.
 import { useEffect, useId, useState } from 'react';
 import type { GateView } from '../lib/gates';
+import { ActionIcon } from './ActionIcon';
 import { Markdown } from './Markdown';
 import { agentName } from '../lib/agent-runs';
 import { Recorder, type Delivery } from './Recorder';
@@ -193,7 +194,7 @@ export function GateAnswer({
       {gate.asks === 'approve' && (
         <div className="decide">
           {merges && !shut && checking !== 'known' && (
-            <p className="shut" role="status">
+            <p className="shut" role="status" id={`${id}-shut`}>
               {checking === 'loading'
                 ? 'Checking whether anything before this gate is still working…'
                 : 'Could not check whether anything before this gate is still working, so merging waits. The page asks again on its own.'}
@@ -205,7 +206,7 @@ export function GateAnswer({
             </p>
           )}
           {shut && (
-            <p className="shut" role="status">
+            <p className="shut" role="status" id={`${id}-shut`}>
               {workingBefore.map(agentName).join(' and ')}{' '}
               {workingBefore.length === 1 ? 'is' : 'are'} still working on this post. Merging opens
               when {workingBefore.length === 1 ? 'it finishes' : 'they finish'}; this page shows it.
@@ -220,8 +221,11 @@ export function GateAnswer({
           <div className="row">
             <button
               type="button"
-              className="control filled"
+              // The action is a bordered box with an icon and a word, heavier than the rest; black fill is
+              // kept for what is on. Shut, it says so with a lock rather than fading away.
+              className="control strong"
               disabled={busy || waits}
+              aria-describedby={waits ? `${id}-shut` : undefined}
               onClick={() => {
                 if (merges && !confirming) setConfirming(true);
                 else void send('approved');
@@ -230,11 +234,14 @@ export function GateAnswer({
                 setConfirming(false);
               }}
             >
-              {!merges
-                ? 'Approve'
-                : confirming
-                  ? 'Yes, merge: it goes live on the site'
-                  : 'Approve and merge'}
+              <ActionIcon name={waits ? 'lock' : 'approve'} />
+              {waits
+                ? 'Opens when they finish'
+                : !merges
+                  ? 'Approve'
+                  : confirming
+                    ? 'Yes, merge: it goes live on the site'
+                    : 'Approve and merge'}
             </button>
             <button
               type="button"
@@ -246,6 +253,7 @@ export function GateAnswer({
                 setNotThis((now) => !now);
               }}
             >
+              <ActionIcon name="back" />
               Not this
             </button>
           </div>

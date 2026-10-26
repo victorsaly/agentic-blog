@@ -118,7 +118,11 @@ export function standingOfRoute(route: Route): RouteStanding {
   const done = route.steps.filter((s) => stateOf(s.id) === 'done').length;
   const of = route.steps.length;
   for (const [step, state] of ranked) {
-    const at = ordered.find((s) => stateOf(s.id) === step);
+    // A gate shut while a step before it still works is not Victor's yet: the line says what works.
+    const at = ordered.find(
+      (s) =>
+        stateOf(s.id) === step && (step !== 'needs-you' || runningBefore(route, s.id).length === 0),
+    );
     if (at) return { state, at: at.id, done, of };
   }
   return { state: done > 0 ? 'moving' : 'untouched', at: null, done, of };

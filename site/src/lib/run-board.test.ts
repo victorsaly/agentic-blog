@@ -11,6 +11,7 @@ import {
   readRunsAnswer,
   startingOn,
   waitingOnVictor,
+  workingOn,
   timelineOf,
   type ListedRun,
   type ShownEvent,
@@ -90,6 +91,16 @@ describe('what waits on Victor', () => {
     });
     expect(waiting.asking.map((r) => r.id)).toEqual(['asks']);
     expect(waiting.holds.map((c) => c.id)).toEqual(['h']);
+  });
+
+  it('does not count a gate shut while a step on its thought still works', () => {
+    const merge = aRow({ id: 'merge', agent: 'merge', state: 'needs-you' });
+    const citing = aRow({ id: 'citing', agent: 'citations', state: 'running' });
+    expect(waitingOnVictor({ runs: [merge, citing], standing: [] }, NOW).asking).toEqual([]);
+    expect(waitingOnVictor({ runs: [merge], standing: [] }, NOW).asking.map((r) => r.id)).toEqual([
+      'merge',
+    ]);
+    expect(workingOn(merge.thought, [merge, citing], [], NOW)).toEqual(['citations']);
   });
 });
 

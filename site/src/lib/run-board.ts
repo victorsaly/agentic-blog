@@ -111,12 +111,51 @@ export interface WaitingOnVictor {
   asking: ListedRun[];
 }
 
-export function waitingOnVictor(answer: RunsAnswer): WaitingOnVictor {
+/**
+ * The steps at work on a thought now: runs the live copy has going (not ones waiting on Victor, not ones gone
+ * quiet), and what GitHub has queued or started there. A gate on that thought is shut while any is: it asks
+ * about work that is not finished, so it is not yet Victor's to answer.
+ */
+export function workingOn(
+  thought: string,
+  runs: readonly ListedRun[],
+  github: readonly LiveRun[] = [],
+  now: string = new Date().toISOString(),
+): string[] {
+  const names = new Set<string>();
+  for (const run of runs)
+    if (
+      run.thought === thought &&
+      isGoing(run.state) &&
+      run.state !== 'needs-you' &&
+      !isQuiet(run, now)
+    )
+      names.add(run.agent);
+  for (const run of github)
+    if (
+      run.thought === thought &&
+      run.agent !== null &&
+      (run.state === 'running' || run.state === 'queued')
+    )
+      names.add(run.agent);
+  return [...names];
+}
+
+export function waitingOnVictor(
+  answer: RunsAnswer,
+  now: string = new Date().toISOString(),
+): WaitingOnVictor {
   return {
     holds: answer.standing
       .filter((c) => c.state === 'held')
       .sort((a, b) => b.startedAt.localeCompare(a.startedAt)),
-    asking: answer.runs.filter((r) => r.state === 'needs-you' && r.latest),
+    // Only a question Victor can answer now: a gate shut while steps on its thought work is not counted.
+    asking: answer.runs.filter(
+      (r) =>
+        r.state === 'needs-you' &&
+        r.latest &&
+        workingOn(r.thought, answer.runs, [], now).length === 0,
+    ),
   };
 }
 

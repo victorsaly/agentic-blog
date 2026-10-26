@@ -3,6 +3,7 @@
 // refuses it when that would pass the month's cap (functions/api/runs/again.ts). Starting only asks GitHub,
 // so the page says it was started and where to watch, never that it is done.
 import { useState } from 'react';
+import { ActionIcon } from './ActionIcon';
 import { agentName } from '../lib/agent-runs';
 import { moneyOf, type Currency } from '../lib/money';
 
@@ -76,10 +77,11 @@ export function RunAgain({
       </p>
       <button
         type="button"
-        className="control filled"
+        className="control strong"
         disabled={asking.state === 'asking' || asking.state === 'started'}
         onClick={() => void start()}
       >
+        <ActionIcon name="again" />
         {asking.state === 'asking' ? 'Starting…' : 'Run again'}
       </button>
       <p role="status" className="small">

@@ -9,7 +9,16 @@
 // says so, and what it showed before keeps the time it was true. Only the summary line is announced, so a
 // screen reader is not talked over by each refresh.
 import { agentName, durationOf, type LiveRun } from '../lib/agent-runs';
-import { boardOf, isGoing, startingOn, stateWord, type BoardRun } from '../lib/run-board';
+import {
+  boardOf,
+  isGoing,
+  startingOn,
+  stateWord,
+  workingOn,
+  type BoardRun,
+} from '../lib/run-board';
+import type { BuiltStep } from '../lib/route-live';
+import { ActionIcon } from './ActionIcon';
 import { moneyOf, type Currency } from '../lib/money';
 import { useGithubFeed } from './github-feed';
 import { useRunsFeed } from './runs-feed';
@@ -23,9 +32,16 @@ export interface RunsBoardProps {
   currency: Currency;
   /** Now: the summary, what waits on Victor and what runs. Earlier: what finished, behind a press. */
   part?: 'now' | 'earlier';
+  /** Each thought's steps as the ledgers left them, so a failure a later run replaced is not listed. */
+  builtStates?: Record<string, Record<string, BuiltStep>>;
 }
 
-export function RunsBoard({ titles, currency, part = 'now' }: RunsBoardProps): React.JSX.Element {
+export function RunsBoard({
+  titles,
+  currency,
+  part = 'now',
+  builtStates = {},
+}: RunsBoardProps): React.JSX.Element {
   const { known, error } = useRunsFeed();
   const github = useGithubFeed();
   if (known === null && error === null) return <p className="quiet">Reading the runs…</p>;
@@ -42,16 +58,30 @@ export function RunsBoard({ titles, currency, part = 'now' }: RunsBoardProps): R
   const now = new Date().toISOString();
   const board = boardOf(known.runs, now);
   const starting = startingOn(github.known?.runs ?? [], known.runs);
+  // A gate is Victor's to answer only once nothing on its thought still works; until then it is shut, and
+  // says what it waits for. The same rule the tab row and Today count by (workingOn).
+  const workingFor = (run: BoardRun): string[] =>
+    workingOn(run.thought, known.runs, github.known?.runs ?? [], now);
+  const answerable = board.needsYou.filter((r) => workingFor(r).length === 0);
+  const shut = board.needsYou.filter((r) => workingFor(r).length > 0);
+  const firstShut = shut[0] === undefined ? [] : workingFor(shut[0]);
+  // A failure a later run of the same step replaced, in the live copy or the ledger, is not listed.
+  const stopped = board.stopped.filter(
+    (r) => (builtStates[r.thought]?.[r.agent]?.run ?? '') <= r.id,
+  );
   const quiet = board.going.filter((r) => r.quiet).length;
   const running = board.going.length - quiet;
   // What waits on Victor is a question or a hold, the same two the tab row counts.
   const parts = [
-    board.needsYou.length > 0 &&
-      `${String(board.needsYou.length)} need${board.needsYou.length === 1 ? 's' : ''} you`,
+    answerable.length > 0 &&
+      `${String(answerable.length)} need${answerable.length === 1 ? 's' : ''} you`,
+    shut.length === 1 &&
+      `1 waiting on ${String(firstShut.length)} ${firstShut.length === 1 ? 'step' : 'steps'}`,
+    shut.length > 1 && `${String(shut.length)} waiting on steps`,
     board.held.length > 0 && `${String(board.held.length)} held`,
-    board.stopped.length > 0 && `${String(board.stopped.length)} did not finish`,
+    stopped.length > 0 && `${String(stopped.length)} did not finish`,
     running > 0 && `${String(running)} running`,
-    starting.length > 0 && `${String(starting.length)} starting on GitHub`,
+    starting.length > 0 && `${String(starting.length)} getting ready on GitHub`,
     quiet > 0 && `${String(quiet)} gone quiet`,
   ].filter((p): p is string => p !== false);
   const counted = parts.length === 0 ? 'No run is going' : parts.join(', ');
@@ -64,12 +94,15 @@ export function RunsBoard({ titles, currency, part = 'now' }: RunsBoardProps): R
 
   const row = (run: BoardRun): React.JSX.Element => {
     const going = isGoing(run.state);
-    const asks = run.state === 'needs-you';
+    const waitsOn = run.state === 'needs-you' ? workingFor(run) : [];
+    const asks = run.state === 'needs-you' && waitsOn.length === 0;
     const opens = asks
       ? 'Decide'
-      : run.state === 'held' || run.state === 'failed'
-        ? 'Read why'
-        : 'Timeline';
+      : waitsOn.length > 0
+        ? 'Timeline'
+        : run.state === 'held' || run.state === 'failed'
+          ? 'Read why'
+          : 'Timeline';
     // A run waiting on Victor has spent nothing; the money is said only when there is some.
     const spent = run.usd > 0 ? ` · ${moneyOf(run.usd, currency)}${going ? ' so far' : ''}` : '';
     // The same run on GitHub, while it works there: its log and its pull request sit on this row.
@@ -81,16 +114,24 @@ export function RunsBoard({ titles, currency, part = 'now' }: RunsBoardProps): R
     );
     const when = run.quiet
       ? `nothing sent for ${durationOf(run.updatedAt, now)}; it may have stopped without saying so`
-      : asks
-        ? `your call, waiting since ${timeOf(run.startedAt)}`
-        : going
-          ? `for ${durationOf(run.startedAt, now)}`
-          : `took ${durationOf(run.startedAt, run.updatedAt)} · ${durationOf(run.updatedAt, now)} ago`;
+      : waitsOn.length > 0
+        ? `${agentName(run.agent)}: opens when ${waitsOn.map(agentName).join(' and ')} ${waitsOn.length === 1 ? 'finishes' : 'finish'}`
+        : asks
+          ? `your call, waiting since ${timeOf(run.startedAt)}`
+          : going
+            ? `for ${durationOf(run.startedAt, now)}`
+            : `took ${durationOf(run.startedAt, run.updatedAt)} · ${durationOf(run.updatedAt, now)} ago`;
     return (
       <li key={run.id}>
-        <span className={`state state-${run.quiet ? 'quiet' : run.state}`}>
-          {run.quiet ? 'Quiet' : stateWord(run.state)}
-        </span>
+        {waitsOn.length > 0 ? (
+          <span className="state state-shut">
+            Waiting on {waitsOn.length} {waitsOn.length === 1 ? 'step' : 'steps'}
+          </span>
+        ) : (
+          <span className={`state state-${run.quiet ? 'quiet' : run.state}`}>
+            {run.quiet ? 'Quiet' : stateWord(run.state)}
+          </span>
+        )}
         <span className="what">
           <strong>{agentName(run.agent)}</strong>
           {/* A question's row leads to the decision, not out of the studio: its thought is named, not linked. */}
@@ -108,9 +149,10 @@ export function RunsBoard({ titles, currency, part = 'now' }: RunsBoardProps): R
           {/* The one thing to do on the row, said as what it is: decide, read why it held or stopped, or watch. */}
           <a
             href={`/studio/agents/run?id=${encodeURIComponent(run.id)}`}
-            className={asks ? 'control filled decide' : undefined}
+            className={asks ? 'control decide' : undefined}
             aria-label={`${opens}: ${agentName(run.agent)} on ${titles[run.thought] ?? run.thought}`}
           >
+            {asks && <ActionIcon name="decide" />}
             {opens}
           </a>
           {onGithub && <a href={onGithub.url}>Log</a>}
@@ -126,7 +168,8 @@ export function RunsBoard({ titles, currency, part = 'now' }: RunsBoardProps): R
   const startingRow = (run: LiveRun): React.JSX.Element => (
     <li key={`github-${String(run.id)}`}>
       <span className={`state state-${run.state}`}>
-        {run.state === 'queued' ? 'Queued' : 'Starting'}
+        {/* The same word the route uses for it. */}
+        {run.state === 'queued' ? 'Queued' : 'Running'}
       </span>
       <span className="what">
         <strong>{run.agent === null ? run.title : agentName(run.agent)}</strong>
@@ -184,9 +227,10 @@ export function RunsBoard({ titles, currency, part = 'now' }: RunsBoardProps): R
         {summary}
       </p>
       {error !== null && <p role="alert">{error} The page asks again on its own.</p>}
-      {group('needs-label', 'Needs you', board.needsYou, null)}
+      {group('needs-label', 'Needs you', answerable, null)}
+      {group('shut-label', 'Opens when they finish', shut, null)}
       {group('held-label', 'Held', board.held, null)}
-      {group('stopped-label', 'Did not finish', board.stopped, null)}
+      {group('stopped-label', 'Did not finish', stopped, null)}
       {group(
         'running-label',
         'Running now',
