@@ -535,6 +535,45 @@ const jsonLd = {
     .themes {
       display: none;
     }
+
+    /* On a phone the first screen has to reach a post: the portrait sits small beside the name, the
+       spacing tightens, and the newest thought shows its title before its print. */
+    .masthead {
+      padding-top: var(--space-4);
+    }
+    .plate {
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: var(--space-3);
+      padding-top: var(--space-4);
+    }
+    .portrait {
+      width: 6.5rem;
+    }
+    .name {
+      flex: 1 1 auto;
+      padding-bottom: 0;
+    }
+    .name h1 {
+      margin-top: var(--space-2);
+      font-size: clamp(2.25rem, 9.5vw, 3rem);
+    }
+    .tagline {
+      margin-top: var(--space-4);
+      font-size: 1.375rem;
+    }
+    .band {
+      margin-top: var(--space-4);
+    }
+    .body {
+      padding-top: var(--space-5);
+    }
+    .lead {
+      padding-block: var(--space-4);
+    }
+    .print {
+      order: 1;
+    }
   }
 </style>
 
