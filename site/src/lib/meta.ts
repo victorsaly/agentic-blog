@@ -25,3 +25,16 @@ export function cleanPath(pathname: string): string {
   const path = pathname.replace(/\.html$/, '').replace(/\/index$/, '/');
   return path === '' ? '/' : path;
 }
+
+/** The path a search result shows instead of the address: home, then each step down, as BreadcrumbList. */
+export function breadcrumbs(steps: { name: string; url: string }[]): Record<string, unknown> {
+  return {
+    '@type': 'BreadcrumbList',
+    itemListElement: steps.map((step, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: step.name,
+      item: step.url,
+    })),
+  };
+}

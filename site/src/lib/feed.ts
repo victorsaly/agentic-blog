@@ -1,5 +1,6 @@
 // Why: a reader who wants the next thought without checking back can follow the blog in any feed reader.
-// The feed is a few lines of RSS 2.0, built here as a pure function (no dependency) so it can be tested.
+// The feed is a few lines of RSS 2.0 (with the author, the topics and the share card for readers that show
+// them), built here as a pure function (no dependency) so it can be tested.
 
 export interface FeedItem {
   title: string;
@@ -8,6 +9,12 @@ export interface FeedItem {
   /** The message: what a reader gets in three lines. */
   description: string;
   date: Date;
+  /** Who wrote it, as dc:creator: RSS's own author field wants an email address. */
+  author?: string;
+  /** Its topics, one category each. */
+  categories?: string[];
+  /** The picture a reader or an aggregator shows beside it (Media RSS). */
+  image?: { url: string; type: string; width: number; height: number };
 }
 
 export interface Feed {
@@ -35,17 +42,25 @@ export function escapeXml(text: string): string {
 export function rssXml(feed: Feed): string {
   const items = [...feed.items]
     .sort((a, b) => b.date.getTime() - a.date.getTime())
-    .map(
-      (item) => `    <item>
-      <title>${escapeXml(item.title)}</title>
-      <link>${escapeXml(item.link)}</link>
-      <guid isPermaLink="true">${escapeXml(item.link)}</guid>
-      <description>${escapeXml(item.description)}</description>
-      <pubDate>${item.date.toUTCString()}</pubDate>
-    </item>`,
-    );
+    .map((item) => {
+      const lines = [
+        `<title>${escapeXml(item.title)}</title>`,
+        `<link>${escapeXml(item.link)}</link>`,
+        `<guid isPermaLink="true">${escapeXml(item.link)}</guid>`,
+        `<description>${escapeXml(item.description)}</description>`,
+        `<pubDate>${item.date.toUTCString()}</pubDate>`,
+        ...(item.author ? [`<dc:creator>${escapeXml(item.author)}</dc:creator>`] : []),
+        ...(item.categories ?? []).map((c) => `<category>${escapeXml(c)}</category>`),
+        ...(item.image
+          ? [
+              `<media:content url="${escapeXml(item.image.url)}" type="${escapeXml(item.image.type)}" medium="image" width="${String(item.image.width)}" height="${String(item.image.height)}" />`,
+            ]
+          : []),
+      ];
+      return `    <item>\n${lines.map((l) => `      ${l}`).join('\n')}\n    </item>`;
+    });
   return `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/">
   <channel>
     <title>${escapeXml(feed.title)}</title>
     <link>${escapeXml(feed.link)}</link>

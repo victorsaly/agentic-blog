@@ -87,7 +87,12 @@ const jsonLd = {
 };
 ---
 
-<Page title={settings.site.name} description={description} jsonLd={jsonLd} width="wide">
+<Page
+  title={`${settings.site.name} — ${settings.site.tagline}`}
+  description={description}
+  jsonLd={jsonLd}
+  width="wide"
+>
   <section class="frame masthead">
     <div class="plate">
       {

@@ -23,7 +23,7 @@ import originIcon from '../../assets/icons/origin.png';
 import roadIcon from '../../assets/icons/road.png';
 import askIcon from '../../assets/icons/ask.png';
 import { settings } from '../../lib/settings';
-import { metaDescription } from '../../lib/meta';
+import { breadcrumbs, metaDescription } from '../../lib/meta';
 import { postShareImage, shareCard } from '../../lib/social';
 import {
   excerpt,
@@ -181,7 +181,9 @@ const author = {
   url: new URL('/', Astro.site).href,
   ...(settings.site.linkedin ? { sameAs: [settings.site.linkedin] } : {}),
 };
-const jsonLd = {
+const home = new URL('/', Astro.site).href;
+const originUrl = new URL(originHref, Astro.site).href;
+const posting = {
   '@type': 'BlogPosting',
   headline: thought.data.title,
   description,
@@ -192,7 +194,9 @@ const jsonLd = {
   keywords: topics.join(', '),
   url: postUrl,
   mainEntityOfPage: postUrl,
-  isPartOf: { '@type': 'Blog', name: settings.site.name, url: new URL('/', Astro.site).href },
+  isPartOf: { '@type': 'Blog', name: settings.site.name, url: home },
+  // The post is a conversion; the origin is what it was made from, kept as it arrived.
+  isBasedOn: { '@type': 'CreativeWork', name: `Origin: ${thought.data.title}`, url: originUrl },
   ...(share
     ? {
         image: {
@@ -203,6 +207,19 @@ const jsonLd = {
         },
       }
     : {}),
+};
+const firstTheme = thought.data.themes[0];
+const jsonLd = {
+  '@graph': [
+    posting,
+    breadcrumbs([
+      { name: settings.site.name, url: home },
+      ...(firstTheme
+        ? [{ name: topicName(firstTheme), url: new URL(`/topics/${firstTheme}`, Astro.site).href }]
+        : []),
+      { name: thought.data.title, url: postUrl },
+    ]),
+  ],
 };
 // The highlight covers the first sentence, the one a reader must get; the rest stands in plain ink.
 const message = splitFirstSentence(thought.data.message);
@@ -265,7 +282,7 @@ const pad = (n: number): string => String(n).padStart(2, '0');
             thought.data.themes.map((theme, i) => (
               <>
                 {i > 0 && ', '}
-                <a href={`/themes/${theme}`}>{topicName(theme)}</a>
+                <a href={`/topics/${theme}`}>{topicName(theme)}</a>
               </>
             ))
           }

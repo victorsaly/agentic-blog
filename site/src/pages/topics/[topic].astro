@@ -12,6 +12,8 @@ import TopicsAside from '../../components/TopicsAside.astro';
 import { newestFirst } from '../../lib/content';
 import { themeCounts, thoughtsLabel } from '../../lib/themes';
 import { topicAbout, topicName } from '../../lib/topic-name';
+import { breadcrumbs } from '../../lib/meta';
+import { settings } from '../../lib/settings';
 
 export async function getStaticPaths() {
   const thoughts = await getCollection('thoughts', ({ data }) => !data.draft);
@@ -24,11 +26,17 @@ const thoughts = all.filter((t) => t.data.themes.includes(topic));
 const label = topicName(topic);
 const about = topicAbout(topic);
 const count = `${thoughtsLabel(thoughts.length)} so far.`;
+const jsonLd = breadcrumbs([
+  { name: settings.site.name, url: new URL('/', Astro.site).href },
+  { name: 'Topics', url: new URL('/topics', Astro.site).href },
+  { name: label, url: new URL(`/topics/${topic}`, Astro.site).href },
+]);
 ---
 
 <Page
   title={`${label} — Topics`}
   description={about ?? `Every thought about ${label.toLowerCase()}.`}
+  jsonLd={jsonLd}
   width="wide"
 >
   <ListHead

@@ -3,26 +3,50 @@
 import { defineConfig, passthroughImageService } from 'astro/config';
 import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { parse } from 'yaml';
 import { satteri } from '@astrojs/markdown-satteri';
 import { sectionPictures } from './src/lib/section-pictures-plugin';
 import { sectionDiagrams } from './src/lib/section-diagrams-plugin';
 import { dropLeadHeading } from './src/lib/lead-heading-plugin';
 import { sourceNotes } from './src/lib/source-notes-plugin';
+import { lastmodFor } from './src/lib/sitemap-dates';
 
 const settings = parse(readFileSync(new URL('../settings.yml', import.meta.url), 'utf8'));
 const domain = settings.site.domain;
+
+// Each published thought's date, by its folder, so the sitemap can say when each page last changed.
+const thoughtsDir = new URL('../thoughts/', import.meta.url);
+const postDates = new Map(
+  readdirSync(thoughtsDir)
+    .map((slug) => [slug, new URL(`${slug}/structure.md`, thoughtsDir)])
+    .filter(([, file]) => existsSync(file))
+    .map(([slug, file]) => {
+      const front = parse(readFileSync(file, 'utf8').split(/^---$/m)[1] ?? '') ?? {};
+      return [slug, front.draft ? undefined : new Date(front.date)];
+    })
+    .filter(([, date]) => date instanceof Date && !Number.isNaN(date.getTime())),
+);
 
 export default defineConfig({
   site: `https://${domain}`,
   output: 'static',
   trailingSlash: 'never',
   build: { format: 'file' },
-  // The studio is private (behind Cloudflare Access) and never belongs in the sitemap.
+  // The studio is private (behind Cloudflare Access) and never belongs in the sitemap; nor does search,
+  // which is empty until a reader types. Every entry carries the date its page last changed.
   integrations: [
     react(),
-    sitemap({ filter: (page) => !new URL(page).pathname.startsWith('/studio') }),
+    sitemap({
+      filter: (page) => {
+        const path = new URL(page).pathname;
+        return !path.startsWith('/studio') && path !== '/search';
+      },
+      serialize: (item) => {
+        const lastmod = lastmodFor(new URL(item.url).pathname, postDates);
+        return lastmod ? { ...item, lastmod } : item;
+      },
+    }),
   ],
   // The drawings are already small black-and-white PNGs; served as they are, no image library needed.
   image: { service: passthroughImageService() },

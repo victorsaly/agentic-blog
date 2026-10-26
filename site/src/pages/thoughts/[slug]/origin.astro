@@ -19,6 +19,7 @@ import {
   thoughtSlugOf,
 } from '../../../lib/content';
 import { settings } from '../../../lib/settings';
+import { breadcrumbs } from '../../../lib/meta';
 
 export async function getStaticPaths() {
   const thoughts = await getCollection('thoughts', ({ data }) => !data.draft);
@@ -50,6 +51,29 @@ const pad = (n: number): string => String(n).padStart(2, '0');
 const capital = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
 // "Origin 3 — the look, and what it does" is listed as "The look, and what it does" beside its number.
 const noteName = (text: string): string => capital(text.replace(/^origin \d+\s*[—–-]\s*/i, ''));
+
+// What a search engine reads: the words as they arrived, by the blogger, that the post was made from.
+const home = new URL('/', Astro.site).href;
+const postUrl = new URL(postHref, Astro.site).href;
+const originUrl = new URL(`${postHref}/origin`, Astro.site).href;
+const jsonLd = {
+  '@graph': [
+    {
+      '@type': 'CreativeWork',
+      name: `Origin: ${thought.data.title}`,
+      url: originUrl,
+      inLanguage: thought.data.language,
+      author: { '@type': 'Person', name: settings.site.author, url: home },
+      ...(first ? { dateCreated: new Date(first.data.recorded).toISOString().slice(0, 10) } : {}),
+      workExample: { '@type': 'BlogPosting', headline: thought.data.title, url: postUrl },
+    },
+    breadcrumbs([
+      { name: settings.site.name, url: home },
+      { name: thought.data.title, url: postUrl },
+      { name: 'Origin', url: originUrl },
+    ]),
+  ],
+};
 ---
 
 <Page
@@ -57,6 +81,7 @@ const noteName = (text: string): string => capital(text.replace(/^origin \d+\s*[
   description={`The unedited origin behind “${thought.data.title}”.`}
   lang={thought.data.language}
   type="article"
+  jsonLd={jsonLd}
   width="wide"
   reading={`The origin of ${thought.data.title}`}
 >

@@ -19,6 +19,14 @@ const feed: Feed = {
       link: 'https://blog.example.com/thoughts/newer',
       description: 'It\'s "quoted".',
       date: new Date('2026-10-23T09:00:00Z'),
+      author: 'Victor Saly',
+      categories: ['Accountability', 'AI & work'],
+      image: {
+        url: 'https://blog.example.com/social/newer.png',
+        type: 'image/png',
+        width: 1200,
+        height: 630,
+      },
     },
   ],
 };
@@ -43,6 +51,15 @@ describe('rssXml', () => {
 
   it('dates each item the way feed readers expect', () => {
     expect(xml).toContain('<pubDate>Fri, 23 Oct 2026 09:00:00 GMT</pubDate>');
+  });
+
+  it('names the author, the topics and the picture where an item has them', () => {
+    expect(xml).toContain('<dc:creator>Victor Saly</dc:creator>');
+    expect(xml).toContain('<category>AI &amp; work</category>');
+    expect(xml).toContain(
+      '<media:content url="https://blog.example.com/social/newer.png" type="image/png" medium="image" width="1200" height="630" />',
+    );
+    expect(xml.match(/<dc:creator>/g)).toHaveLength(1);
   });
 
   it('points at itself, so readers can tell where it lives', () => {
