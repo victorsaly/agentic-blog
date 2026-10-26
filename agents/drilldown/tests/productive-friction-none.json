@@ -1,0 +1,10 @@
+{
+  "why": "The Kurzweil book was cut from this post and every other name is a passing one or a general term; the agent must write no page.",
+  "kind": "edge",
+  "input": {
+    "thought": "2026-10-23-productive-friction-counts-evidence",
+    "files": ["sources.md", "versions/short.md", "versions/long.md"]
+  },
+  "expect": [],
+  "mustNot": "a page for Ray Kurzweil, The Age of Spiritual Machines, large language models or AI slop"
+}

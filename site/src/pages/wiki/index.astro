@@ -1,0 +1,120 @@
+---
+// Why: the footer offers the wiki as a way to read, so there is one page that lists every page in it: the
+// books, people, tools and projects the posts lean on, each one short, checked and kept in the repo. It reads
+// like /topics, one ruled row per page, A to Z, the page's name as the one marigold mark (the thing being
+// chosen), what kind of thing it is, and its opening words. Only pages Victor has reviewed are listed; a
+// wiki with none says so and says how a page gets here.
+import { getCollection } from 'astro:content';
+import Page from '../../layouts/Page.astro';
+import ListHead from '../../components/ListHead.astro';
+import { byTitle, kindLabel, pagesLabel, summaryOf } from '../../lib/wiki';
+
+const pages = (await getCollection('wiki', ({ data }) => data.reviewed)).sort(byTitle);
+const about = 'Short pages on the books, people, tools and projects the thoughts lean on.';
+const note = pages.length === 0 ? about : `${about} ${pagesLabel(pages.length)} so far, A to Z.`;
+---
+
+<Page
+  title="Wiki"
+  description="Short, checked pages on the books, people, tools and projects the thoughts lean on."
+  width="wide"
+>
+  <ListHead label="Wiki" title="What the thoughts lean on" note={note} />
+  <div class="frame body">
+    {
+      pages.length === 0 && (
+        <p class="quiet">
+          No pages yet. A page is written when a thought leans on a book, a person, a tool or a
+          project, and it appears here once Victor has read it and opened its links.
+        </p>
+      )
+    }
+    {
+      pages.length > 0 && (
+        <section aria-labelledby="wiki-label">
+          <h2 class="label" id="wiki-label">
+            Every page
+          </h2>
+          <ol class="pages">
+            {pages.map((page) => (
+              <li>
+                <h3>
+                  <a href={`/wiki/${page.id}`}>
+                    <mark>{page.data.title}</mark>
+                  </a>
+                </h3>
+                <p class="small quiet kind">{kindLabel(page.data.kind)}</p>
+                <p class="describe">{summaryOf(page.body ?? '')}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )
+    }
+  </div>
+</Page>
+
+<style>
+  .body {
+    padding-top: var(--space-5);
+  }
+  .pages {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-width: none;
+  }
+  li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+    grid-template-areas:
+      'name about'
+      'kind about';
+    gap: var(--space-1) var(--space-5);
+    align-items: baseline;
+    padding-block: var(--space-4);
+    border-bottom: var(--rule-width) solid var(--ink);
+  }
+  h3 {
+    grid-area: name;
+    margin: 0;
+    font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.25rem);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+  h3 a {
+    text-decoration: none;
+  }
+  mark {
+    background: var(--mark);
+    color: var(--mark-ink);
+    padding: 0.05em 0.2em;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+  h3 a:hover mark,
+  h3 a:focus-visible mark {
+    text-decoration: underline;
+    text-decoration-thickness: 0.1em;
+  }
+  p {
+    margin: 0;
+  }
+  .kind {
+    grid-area: kind;
+  }
+  .describe {
+    grid-area: about;
+    font-size: 1.1875rem;
+  }
+
+  @media (max-width: 48rem) {
+    li {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: 'name' 'kind' 'about';
+    }
+    .describe {
+      margin-top: var(--space-2);
+    }
+  }
+</style>
