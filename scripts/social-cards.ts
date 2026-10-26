@@ -13,7 +13,7 @@ import { parse } from 'yaml';
 import { chromium } from 'playwright';
 import { structureFrontMatter } from './content-schema.js';
 import { coverOf, picturesFrom } from '../site/src/lib/pictures.js';
-import { splitFirstSentence } from '../site/src/lib/content.js';
+import { newestFirst, splitFirstSentence } from '../site/src/lib/content.js';
 import { CARD, cardPath } from '../site/src/lib/social.js';
 
 const root = new URL('..', import.meta.url).pathname;
@@ -48,9 +48,9 @@ async function dataUrl(file: string): Promise<string> {
   return `data:image/png;base64,${(await readFile(file)).toString('base64')}`;
 }
 
-/** Every published thought with a drawn cover, newest first. */
-async function thoughtCards(): Promise<(Card & { date: Date })[]> {
-  const cards: (Card & { date: Date })[] = [];
+/** Every published thought with a drawn cover, newest first, in the home page's order. */
+async function thoughtCards(): Promise<(Card & { data: { date: Date; number?: number } })[]> {
+  const cards: (Card & { data: { date: Date; number?: number } })[] = [];
   for (const slug of await readdir(thoughtsDir)) {
     const structure = join(thoughtsDir, slug, 'structure.md');
     const prompts = join(thoughtsDir, slug, 'image', 'prompts.md');
@@ -66,10 +66,10 @@ async function thoughtCards(): Promise<(Card & { date: Date })[]> {
       title: data.title,
       message: splitFirstSentence(data.message).first,
       print,
-      date: new Date(data.date),
+      data: { date: new Date(data.date), ...(data.number ? { number: data.number } : {}) },
     });
   }
-  return cards.sort((a, b) => b.date.getTime() - a.date.getTime());
+  return cards.sort(newestFirst);
 }
 
 async function html(card: Card): Promise<string> {

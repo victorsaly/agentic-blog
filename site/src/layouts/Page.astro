@@ -113,7 +113,14 @@ const shareSrc = share ? new URL(share.src, Astro.site).href : undefined;
       )
     }
     {publishedAt && <meta property="article:published_time" content={publishedAt.toISOString()} />}
-    {type === 'article' && <meta property="article:author" content={settings.site.author} />}
+    {
+      type === 'article' && (
+        <meta
+          property="article:author"
+          content={settings.site.linkedin ?? new URL('/', Astro.site).href}
+        />
+      )
+    }
     {tags.map((tag) => <meta property="article:tag" content={tag} />)}
     {
       jsonLd && (
