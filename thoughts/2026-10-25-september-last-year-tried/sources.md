@@ -2,7 +2,7 @@
 why: >
   Every claim in a post should have a door out, and nothing should be published until Victor has opened the link himself. This file lists each name or claim the post leans on, in order of first mention, with the best door I found. Where I found none, it says so.
 checked: 2026-10-25
-reviewed: false
+reviewed: true
 ---
 
 # Sources for "Same idea, a year later"

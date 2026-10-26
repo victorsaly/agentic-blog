@@ -5,7 +5,7 @@ kind: long
 language: en
 converted_from: ../origin/transcript.md
 converted_by: convert
-reviewed: false
+reviewed: true
 ---
 
 # Same idea, a year later
