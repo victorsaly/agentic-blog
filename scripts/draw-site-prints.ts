@@ -12,6 +12,7 @@ import { z } from 'zod';
 import { claudeAdapter } from '../agents/_lib/claude.js';
 import { loadSettings } from '../agents/_lib/context.js';
 import { openAiImagesAdapter } from '../agents/_lib/openai-images.js';
+import { hasFfmpeg } from '../agents/_lib/workers-ai.js';
 import { drawingPrompt } from '../agents/image/index.js';
 import { parseReview, reviewPrompt } from '../agents/image/review.js';
 
@@ -35,6 +36,9 @@ const writer = claudeAdapter('writer', { kind: 'claude', model: 'claude-sonnet-5
 const images = openAiImagesAdapter('images', { kind: 'openai-images' });
 if (!writer.available() || !images.available() || !writer.write || !images.draw)
   throw new Error('OPENAI_API_KEY and ANTHROPIC_API_KEY must both be set; nothing was drawn');
+// Every drawing is made black on white with ffmpeg after it is paid for, so it must be there first.
+if (!(await hasFfmpeg()))
+  throw new Error('ffmpeg is not installed here, and every drawing needs it; nothing was spent');
 const write = writer.write;
 const draw = images.draw;
 

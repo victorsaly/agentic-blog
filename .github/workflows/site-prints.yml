@@ -7,7 +7,11 @@ name: Site prints
 on:
   push:
     branches-ignore: [main]
-    paths: ['site/src/assets/*/prompts.md']
+    # The drawer too, so a fix to it tries again; with nothing missing, nothing is drawn or spent.
+    paths:
+      - 'site/src/assets/*/prompts.md'
+      - scripts/draw-site-prints.ts
+      - .github/workflows/site-prints.yml
 
 permissions:
   contents: write
@@ -30,6 +34,8 @@ jobs:
         with:
           node-version-file: .node-version
       - run: npm ci --no-audit --no-fund
+      # Every drawing is made black on white with ffmpeg, which the runner does not have.
+      - run: sudo apt-get update -q && sudo apt-get install -yq ffmpeg
       - name: Draw
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
