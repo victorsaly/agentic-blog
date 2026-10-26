@@ -133,7 +133,7 @@ const cards: Card[] = [
           label: 'Blog',
           title: settings.site.name,
           message: settings.site.tagline,
-          print: join(root, 'site/src/assets/home/victor-talking-it-out.png'),
+          print: join(root, 'site/src/assets/home/victor-portrait.png'),
         },
       ]
     : []),

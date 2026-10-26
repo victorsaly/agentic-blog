@@ -27,7 +27,7 @@ import roadIcon from '../assets/icons/road.png';
 import sourcesIcon from '../assets/icons/sources.png';
 // The portrait is the home page's own print, so it does not change with each new post; prompts.md says how
 // it was drawn and gives its alt text.
-import portraitImage from '../assets/home/victor-talking-it-out.png';
+import portraitImage from '../assets/home/victor-portrait.png';
 import homePromptsRaw from '../assets/home/prompts.md?raw';
 
 const all = (await getCollection('thoughts', ({ data }) => !data.draft)).sort(newestFirst);
@@ -42,7 +42,7 @@ const chatOn = settings.publishing.index || import.meta.env.DEV;
 const homePrompts = parse(/^---\r?\n([\s\S]*?)\r?\n---/.exec(homePromptsRaw)?.[1] ?? '') as {
   images?: { file?: unknown; alt?: unknown }[];
 };
-const portraitAlt = homePrompts.images?.find((i) => i.file === 'victor-talking-it-out.png')?.alt;
+const portraitAlt = homePrompts.images?.find((i) => i.file === 'victor-portrait.png')?.alt;
 const portrait = {
   image: portraitImage,
   alt: typeof portraitAlt === 'string' ? portraitAlt.trim().replace(/\s+/g, ' ') : '',
