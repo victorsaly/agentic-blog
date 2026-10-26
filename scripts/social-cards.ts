@@ -1,11 +1,12 @@
 // Why: a shared link is often how a reader first meets a post, and the preview LinkedIn, X or Slack draws
 // is 1200×630. A square cover print alone is cropped into it; this draws a card for each published thought
 // instead: its title, its message marked once in marigold, and its cover print on the right, in the site's
-// own type and tokens, so the preview is the post's front page in miniature. The site's own card, the
+// own type and tokens, so the preview is the post's front page in miniature. A page with a print of its own
+// (/how-it-works) gets a card with that print, so it never borrows a post's. The site's own card, the
 // newest cover with the name and the tagline, is what every other page shares. The cards are committed to
 // site/public/social, so a build never needs a browser; draw them again when a title, a message or a cover
 // changes, and name thoughts to draw only those.
-// Usage: npm run social:cards [-- <thought-slug> ...]
+// Usage: npm run social:cards [-- <thought-slug or page card name> ...]
 import { mkdir, readdir, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -112,6 +113,17 @@ async function html(card: Card): Promise<string> {
 </body></html>`;
 }
 
+// Pages that are not posts but have a print of their own; the name is the card's file and what to ask for.
+const pageCards: Card[] = [
+  {
+    name: 'how-it-works',
+    label: 'How it works',
+    title: 'Talk it out. Publish something you can stand behind.',
+    message: 'Nothing goes live until you say so.',
+    print: join(root, 'site/src/assets/how-it-works/hands-around-one-page.png'),
+  },
+];
+
 const thoughts = await thoughtCards();
 const newest = thoughts[0];
 const cards: Card[] = [
@@ -126,6 +138,7 @@ const cards: Card[] = [
         },
       ]
     : []),
+  ...pageCards.filter((p) => asked.length === 0 || asked.includes(p.name)),
   ...thoughts.filter((t) => asked.length === 0 || asked.includes(t.name)),
 ];
 

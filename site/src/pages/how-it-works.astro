@@ -21,12 +21,19 @@ import { tour, tourWordsFrom } from '../lib/tour';
 import tourWords from '../lib/tour-words.json';
 import { firstSentence, phases, rosterFrom, type AgentCardFacts } from '../lib/agents';
 import { settings } from '../lib/settings';
+import { shareCard } from '../lib/social';
 // The hero print shows the route, not the blogger; site/src/assets/how-it-works/prompts.md says how it was drawn.
 import cover from '../assets/how-it-works/hands-around-one-page.png';
 import originRaw from '../../../thoughts/2026-10-23-productive-friction-counts-evidence/origin/text.md?raw';
 import structureRaw from '../../../thoughts/2026-10-23-productive-friction-counts-evidence/structure.md?raw';
 
 const repo = 'https://github.com/victorsaly/agentic-blog';
+// This page shares its own card (its print, drawn by scripts/social-cards.ts), not the site's newest cover.
+const share = shareCard(
+  'how-it-works',
+  'How it works: hands hold one sheet of paper, one with a microphone, one with a rubber stamp.',
+  join(process.cwd(), 'public'),
+);
 const proofSlug = '2026-10-23-productive-friction-counts-evidence';
 
 // The proof: the first lines of the note exactly as written, and the message and why the post was given.
@@ -138,6 +145,7 @@ const trailSteps = [
   title="How it works"
   description="Talk or paste a thought; a team of AI agents makes it a complete blog post that keeps your words, shows every change and why, and names its sources. Nothing goes live without you."
   width="wide"
+  image={share}
 >
   <section class="hero frame" aria-labelledby="hero-title">
     <div class="hero-text">
