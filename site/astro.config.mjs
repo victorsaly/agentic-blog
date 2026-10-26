@@ -34,13 +34,13 @@ export default defineConfig({
   trailingSlash: 'never',
   build: { format: 'file' },
   // The studio is private (behind Cloudflare Access) and never belongs in the sitemap; nor does search,
-  // which is empty until a reader types. Every entry carries the date its page last changed.
+  // which is empty until a reader types, or /latest, which only points at the newest thought. Every entry carries the date its page last changed.
   integrations: [
     react(),
     sitemap({
       filter: (page) => {
         const path = new URL(page).pathname;
-        return !path.startsWith('/studio') && path !== '/search';
+        return !path.startsWith('/studio') && path !== '/search' && path !== '/latest';
       },
       serialize: (item) => {
         const lastmod = lastmodFor(new URL(item.url).pathname, postDates);

@@ -1,0 +1,24 @@
+---
+// Why: one address that always opens the newest thought, so the README, a bio or a slide can link to "the
+// newest post" without going stale the day the next one is published. The site is static, so the move is a
+// meta refresh written at build time; Astro's own redirect page waits two seconds, this one goes at once.
+import { getCollection } from 'astro:content';
+import { newestFirst, thoughtSlugOf } from '../lib/content';
+
+const newest = (await getCollection('thoughts', ({ data }) => !data.draft)).sort(newestFirst)[0];
+const to = newest ? `/thoughts/${thoughtSlugOf(newest.id)}` : '/';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>The newest thought</title>
+    <meta name="robots" content="noindex" />
+    <meta http-equiv="refresh" content={`0;url=${to}`} />
+    <link rel="canonical" href={new URL(to, Astro.site).href} />
+  </head>
+  <body>
+    <p><a href={to}>The newest thought</a></p>
+  </body>
+</html>
