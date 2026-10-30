@@ -60,7 +60,18 @@ export function claudeAdapter(name: string, provider: Provider): ModelAdapter {
             data: Buffer.from(png).toString('base64'),
           },
         })),
-        { type: 'text', text: request.user },
+        {
+          type: 'text',
+          text: request.user,
+          // A search sends the question again on every round, so it is worth caching then; a question asked
+          // once costs more to cache than to send.
+          ...(tools ? { cache_control: { type: 'ephemeral' as const } } : {}),
+        },
+      ];
+      // The system message (the profile, then the agent's prompt) is the same for every ask of a run: the image
+      // agent's reviews, a search's rounds. Cached, Claude reads it again at a tenth of the price for five minutes.
+      const system: Anthropic.TextBlockParam[] = [
+        { type: 'text', text: request.system, cache_control: { type: 'ephemeral' } },
       ];
       const messages: Anthropic.MessageParam[] = [{ role: 'user', content }];
       const texts: string[] = [];
@@ -73,7 +84,7 @@ export function claudeAdapter(name: string, provider: Provider): ModelAdapter {
           response = await client.messages.create({
             model,
             max_tokens: request.maxOutputTokens,
-            system: request.system,
+            system,
             messages,
             ...(tools ? { tools } : {}),
           });

@@ -2,6 +2,7 @@
 // still hand back what the earlier rounds used. The SDK is stubbed; nothing is spent.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ModelCallError } from '@roadbook/core';
+import type Anthropic from '@anthropic-ai/sdk';
 
 const create = vi.fn();
 vi.mock('@anthropic-ai/sdk', () => ({
@@ -56,6 +57,43 @@ describe('claudeAdapter', () => {
     expect(reply?.text).toBe(
       "I'll look for sources.\n\n---\nwhy: the sources\n---\n\nA claim, cited.",
     );
+  });
+
+  it('caches the system message, which every ask of a run sends again', async () => {
+    vi.stubEnv('ANTHROPIC_API_KEY', 'key');
+    create.mockResolvedValueOnce({
+      stop_reason: 'end_turn',
+      content: [{ type: 'text', text: 'done' }],
+      usage: { input_tokens: 100, output_tokens: 20 },
+    });
+    const adapter = claudeAdapter('writer', { kind: 'claude' });
+    await adapter.write?.({ system: 's', user: 'u', maxOutputTokens: 100 });
+    const sent = create.mock.calls[0]?.[0] as Anthropic.MessageCreateParamsNonStreaming;
+    expect(sent.system).toEqual([
+      { type: 'text', text: 's', cache_control: { type: 'ephemeral' } },
+    ]);
+    // A question asked once is not cached: writing it costs more than sending it.
+    expect(sent.messages[0]?.content).toEqual([{ type: 'text', text: 'u' }]);
+  });
+
+  it('caches the question too when the web is searched, since every search round sends it again', async () => {
+    vi.stubEnv('ANTHROPIC_API_KEY', 'key');
+    create.mockResolvedValueOnce({
+      stop_reason: 'end_turn',
+      content: [{ type: 'text', text: 'done' }],
+      usage: { input_tokens: 100, output_tokens: 20 },
+    });
+    const adapter = claudeAdapter('writer', { kind: 'claude' });
+    await adapter.write?.({
+      system: 's',
+      user: 'u',
+      maxOutputTokens: 100,
+      webSearch: { maxUses: 2 },
+    });
+    const sent = create.mock.calls[0]?.[0] as Anthropic.MessageCreateParamsNonStreaming;
+    expect(sent.messages[0]?.content).toEqual([
+      { type: 'text', text: 'u', cache_control: { type: 'ephemeral' } },
+    ]);
   });
 
   it('lets a first-round failure through as it is, since nothing was billed', async () => {
