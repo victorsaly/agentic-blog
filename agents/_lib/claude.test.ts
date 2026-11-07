@@ -67,4 +67,20 @@ describe('claudeAdapter', () => {
       .catch((e: unknown) => e);
     expect(error).not.toBeInstanceOf(ModelCallError);
   });
+
+  it('fails, still costed, when the reply was cut off at the output limit', async () => {
+    vi.stubEnv('ANTHROPIC_API_KEY', 'key');
+    create.mockResolvedValueOnce({
+      stop_reason: 'max_tokens',
+      content: [{ type: 'text', text: '---\nwhy: x\n---\n\nTechnology freed us from an' }],
+      usage: { input_tokens: 100, output_tokens: 4000 },
+    });
+    const adapter = claudeAdapter('writer', { kind: 'claude' });
+    const error: unknown = await adapter
+      .write?.({ system: 's', user: 'u', maxOutputTokens: 4000 })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ModelCallError);
+    expect((error as ModelCallError).message).toMatch(/cut off at the 4000-token limit/);
+    expect((error as ModelCallError).metered.usage).toMatchObject({ outputTokens: 4000 });
+  });
 });
