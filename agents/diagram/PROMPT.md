@@ -32,4 +32,5 @@ For each diagram give:
 - for compare, before and after: each with label (a few words) and items (two to five, under 10 words each).
 
 Reply with YAML front matter only, between --- lines: why (why these diagrams, or why none, in one or two
-sentences), then diagrams, the list above (an empty list when none).
+sentences), then diagrams, the list above (an empty list when none). Put every text value in double
+quotes, so a title or label with a colon in it stays one value.
