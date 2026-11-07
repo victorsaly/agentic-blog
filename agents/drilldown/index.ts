@@ -13,6 +13,7 @@ import {
   setFrontMatterField,
   userMessage,
 } from '../_lib/generic.js';
+import { repairFrontMatter } from '../_lib/front-matter.js';
 import type { AgentRun, OutputFile } from '../_lib/types.js';
 
 const MAX_WORDS = 300;
@@ -97,7 +98,15 @@ export function pagesFrom(
   const files: OutputFile[] = [];
   const skipped: string[] = [];
   for (const block of fencedFiles(reply)) {
-    const { data, content: body } = matter(block.content);
+    // A colon in a title (`Simone Weil: attention`) is quoted, and the page is written as repaired.
+    let page: string;
+    try {
+      page = repairFrontMatter(block.content, (data) => typeof data['title'] === 'string');
+    } catch {
+      skipped.push(`${block.label ?? 'a page'} (its front matter did not read as YAML)`);
+      continue;
+    }
+    const { data, content: body } = matter(page);
     const title: unknown = data['title'];
     if (typeof title !== 'string' || title.trim() === '') continue;
     const words = body.split(/\s+/).filter(Boolean).length;
@@ -106,7 +115,7 @@ export function pagesFrom(
       continue;
     }
     // Whatever the model wrote, the page waits for Victor and names this thought as where it came from.
-    let content = setFrontMatterField(block.content, 'reviewed', 'false');
+    let content = setFrontMatterField(page, 'reviewed', 'false');
     content = setFrontMatterField(content, 'first_mentioned', slug);
     if (!Array.isArray(data['aliases'])) content = setFrontMatterField(content, 'aliases', '[]');
     const front = wikiFront.safeParse(matter(content).data);

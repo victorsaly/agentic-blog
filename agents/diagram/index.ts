@@ -1,10 +1,10 @@
 // Why: see PROMPT.md. The model describes each diagram as data; the code checks it (a known section, the
 // right number of steps or items, nothing empty) and writes diagram/diagrams.md. The site draws it, so no
 // markup the model wrote ever reaches a page.
-import matter from 'gray-matter';
 import { z } from 'zod';
 import { unfence } from '../_lib/claude.js';
 import { markdownFile } from '../_lib/files.js';
+import { readFrontMatter } from '../_lib/front-matter.js';
 import { readOrThrow, userMessage } from '../_lib/generic.js';
 import type { AgentRun } from '../_lib/types.js';
 import { sectionsOf } from '../image/index.js';
@@ -38,41 +38,9 @@ export const plan = z.object({
 
 export type Diagram = z.infer<typeof plan>['diagrams'][number];
 
-/**
- * A plain YAML value that holds ": " (or ends in ":", or has " #") stops being one string: the model wrote
- * `title: Support agent: two ways to design it` and the whole plan failed. This wraps such a value in
- * double quotes, on a `key: value` line or a bare `- item` line, and leaves every other line alone.
- */
-export function quoteColonValues(yaml: string): string {
-  const needsQuotes = (value: string) =>
-    !/^["'>|[{&*!]/.test(value) && (/: |:$| #/.test(value) || value.startsWith('- '));
-  const quoted = (value: string) => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
-  return yaml
-    .split('\n')
-    .map((line) => {
-      const keyed =
-        /^(\s*(?:-\s+)?(?:why|section|kind|title|caption|label|detail):\s+)(.+?)\s*$/.exec(line);
-      if (keyed?.[1] !== undefined && keyed[2] !== undefined)
-        return needsQuotes(keyed[2]) ? keyed[1] + quoted(keyed[2]) : line;
-      const item = /^(\s*-\s+)(.+?)\s*$/.exec(line);
-      if (item?.[1] !== undefined && item[2] !== undefined && needsQuotes(item[2]))
-        return item[1] + quoted(item[2]);
-      return line;
-    })
-    .join('\n');
-}
-
 /** Reads the model's reply as written; only when YAML refuses it, quotes colon-holding values and tries once more. */
 export function readPlan(reply: string): unknown {
-  try {
-    return matter(reply).data;
-  } catch (first) {
-    try {
-      return matter(quoteColonValues(reply)).data;
-    } catch {
-      throw first;
-    }
-  }
+  return readFrontMatter(reply, (data) => plan.safeParse(data).success).data;
 }
 
 /** Keeps only diagrams whose section really is a heading of the long version. */

@@ -5,6 +5,7 @@
 import matter from 'gray-matter';
 import { z } from 'zod';
 import { markdownFile } from '../_lib/files.js';
+import { readFrontMatter } from '../_lib/front-matter.js';
 
 /** What the blogger decided: who, when, and the exact passages he chose to keep. */
 export interface Decision {
@@ -90,7 +91,10 @@ export function finalFile(
   reply: string,
   decision: Decision | null,
 ): { content: string; verdict: Verdict } {
-  const { data, content } = matter(reply);
+  const { data, content } = readFrontMatter(
+    reply,
+    (data) => heldSchema.safeParse(data['held']).success,
+  );
   const parsedHeld = heldSchema.safeParse(data['held']);
   if (!parsedHeld.success)
     throw new Error(
