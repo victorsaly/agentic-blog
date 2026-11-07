@@ -4,7 +4,7 @@ kind: short
 language: en
 converted_from: ../origin/transcript.md
 converted_by: convert
-reviewed: false
+reviewed: true
 ---
 
 It bothers me.

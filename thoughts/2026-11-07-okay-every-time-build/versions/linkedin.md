@@ -5,7 +5,7 @@ kind: linkedin
 language: en
 converted_from: ../origin/transcript.md
 converted_by: convert
-reviewed: false
+reviewed: true
 ---
 
 Every AI agent takes something away. Decide what, before you build it.
