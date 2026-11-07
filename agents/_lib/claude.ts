@@ -97,7 +97,7 @@ export function claudeAdapter(name: string, provider: Provider): ModelAdapter {
         // mid-sentence (it did: "Technology freed us from an"). Nothing cut off is ever kept.
         if ((response.stop_reason as string) === 'max_tokens')
           throw new ModelCallError(
-            `the reply was cut off at the ${String(request.maxOutputTokens)}-token limit; raise max_output_tokens in this agent's PROMPT.md and run it again`,
+            `the reply was cut off at the ${String(request.maxOutputTokens)}-token limit; raise the agent's maxOutputTokens where its index.ts sets one for this call, or else max_output_tokens in its PROMPT.md, then run it again`,
             { provider: name, model, usage },
           );
         // Text that runs on (a cited sentence comes in pieces) is joined as it is; text after a search, or
