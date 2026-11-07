@@ -16,7 +16,7 @@ text_sha256: 46c041f79433b5bbe673bc20578e19149a78d0f83b3725368323a90ed00e862f
 words: 236
 seconds: 87.274
 made: '2026-11-07'
-reviewed: false
+reviewed: true
 ---
 
 It bothers me.
