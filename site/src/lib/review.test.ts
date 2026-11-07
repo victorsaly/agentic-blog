@@ -7,6 +7,7 @@ import {
   readReviewRequest,
   reviewableIn,
   reviewableName,
+  reviewableRank,
   waitingForReview,
 } from './review.js';
 
@@ -192,12 +193,37 @@ describe('marking with the merge approval', () => {
     expect(isUnreviewed('---\nwhy: x\nreviewed: true\n---\nBody')).toBe(false);
   });
 
-  it('names each kind of file the way the gate lists it', () => {
-    expect(reviewableName(`thoughts/${slug}/versions/long.md`)).toBe('The long version');
-    expect(reviewableName(`thoughts/${slug}/voice/short.md`)).toBe(
-      'The recording of the short version',
-    );
-    expect(reviewableName(`thoughts/${slug}/sources.md`)).toBe('The sources');
+  it('names each kind of file the way the review list does', () => {
+    const name = (f: string) => reviewableName(`thoughts/${slug}/${f}`);
+    expect(name('versions/short.md')).toBe('The idea');
+    expect(name('versions/long.md')).toBe('The road');
+    expect(name('versions/linkedin.md')).toBe('The LinkedIn post');
+    expect(name('versions/es.md')).toBe('The version in es');
+    expect(name('voice/short.md')).toBe('The idea, read aloud');
+    expect(name('sources.md')).toBe('The sources');
+  });
+
+  it('orders them the way the review list does', () => {
+    const files = [
+      'sources.md',
+      'versions/linkedin.md',
+      'voice/short.md',
+      'versions/es.md',
+      'versions/long.md',
+      'versions/short.md',
+    ].map((f) => `thoughts/${slug}/${f}`);
+    expect(
+      [...files]
+        .sort((a, b) => reviewableRank(a) - reviewableRank(b))
+        .map((f) => f.split(`${slug}/`)[1]),
+    ).toEqual([
+      'versions/short.md',
+      'versions/long.md',
+      'versions/linkedin.md',
+      'versions/es.md',
+      'voice/short.md',
+      'sources.md',
+    ]);
   });
 
   it("takes only this post's reviewable files", () => {

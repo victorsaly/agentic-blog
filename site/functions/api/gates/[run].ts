@@ -8,7 +8,12 @@
 import { closeGate, isPerson, type LedgerEvent } from '@roadbook/core';
 import { isRunId } from '../../../src/lib/live-runs';
 import { bodyOf, gateContext, readGateRequest } from '../../../src/lib/gates';
-import { isUnreviewed, reviewableIn, reviewableName } from '../../../src/lib/review';
+import {
+  isUnreviewed,
+  reviewableIn,
+  reviewableName,
+  reviewableRank,
+} from '../../../src/lib/review';
 import { fileOn, githubHeaders, namesIn, pullHolding } from '../../_github';
 import { json, problem, signedInEmail, type Env, type Handler } from '../../_lib';
 
@@ -50,7 +55,8 @@ async function unreviewedOn(
   const read = await Promise.all(files.map(async (f) => ({ f, text: await fileOn(env, f, ref) })));
   return read
     .filter(({ text }) => text !== null && isUnreviewed(text))
-    .map(({ f }) => ({ file: f, name: reviewableName(f) }));
+    .map(({ f }) => ({ file: f, name: reviewableName(f) }))
+    .sort((a, b) => reviewableRank(a.file) - reviewableRank(b.file));
 }
 
 function runOf(params: Record<string, string | string[]>): string | null {

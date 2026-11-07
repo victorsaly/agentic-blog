@@ -160,12 +160,25 @@ export function isUnreviewed(markdown: string): boolean {
   return markReviewed(markdown) !== null;
 }
 
-/** What to call a reviewable file in a list: `versions/long.md` is "The long version". */
+/** What to call a reviewable file in a list, in the review list's own words: `versions/long.md` is "The road". */
 export function reviewableName(path: string): string {
   const leaf = path.split('/').pop()?.replace(/\.md$/, '') ?? path;
   if (path.endsWith('/sources.md')) return 'The sources';
-  if (path.includes('/voice/')) return `The recording of the ${leaf} version`;
-  return `The ${leaf} version`;
+  if (path.includes('/voice/'))
+    return leaf === 'short' ? 'The idea, read aloud' : `The ${leaf} version, read aloud`;
+  if (leaf === 'short') return 'The idea';
+  if (leaf === 'long') return 'The road';
+  if (leaf === 'linkedin') return 'The LinkedIn post';
+  return `The version in ${leaf}`;
+}
+
+/** The review list's order: the idea, the road, the LinkedIn post, other languages, recordings, sources. */
+export function reviewableRank(path: string): number {
+  if (path.endsWith('/sources.md')) return 5;
+  if (path.includes('/voice/')) return 4;
+  const leaf = path.split('/').pop()?.replace(/\.md$/, '') ?? '';
+  const known = ['short', 'long', 'linkedin'].indexOf(leaf);
+  return known === -1 ? 3 : known;
 }
 
 /** Only the given thought's reviewable files, each once, in order: anything else is refused. */
