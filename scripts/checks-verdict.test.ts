@@ -1,7 +1,7 @@
 // Why: this decides whether Victor's approval merges the post now, waits, or keeps it out; merging on a
 // failing check would publish what a check stopped.
 import { describe, expect, it } from 'vitest';
-import { readCheckRuns, verdictOf } from './checks-verdict';
+import { headVerdict, readCheckRuns, verdictOf } from './checks-verdict';
 
 const run = (name: string, status: string, conclusion: string | null) => ({
   name,
@@ -47,5 +47,21 @@ describe('readCheckRuns', () => {
       }),
     ).toEqual([{ name: 'build', status: 'completed', conclusion: 'success' }]);
     expect(readCheckRuns({ message: 'Not Found' })).toEqual([]);
+  });
+});
+
+describe('headVerdict', () => {
+  it('is ready when the pull request is at the approved commit', () => {
+    expect(headVerdict('abc', 'abc', null)).toBe('ready');
+  });
+
+  it('waits when GitHub still shows the commit before the approval', () => {
+    expect(headVerdict('before', 'approved', 'ahead')).toBe('wait');
+  });
+
+  it('refuses when the pull request moved past or away from the approval', () => {
+    expect(headVerdict('after', 'approved', 'behind')).toBe('moved');
+    expect(headVerdict('other', 'approved', 'diverged')).toBe('moved');
+    expect(headVerdict('other', 'approved', null)).toBe('moved');
   });
 });

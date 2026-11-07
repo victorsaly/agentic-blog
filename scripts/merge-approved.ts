@@ -4,9 +4,10 @@
 // let the post out. A check that does not pass keeps the post out, and says which. It merges the commit that
 // recorded the approval and no other: if the pull request has moved past it, nothing is merged. It waits for
 // the required checks by name (REQUIRED_CHECKS, one per line), so a check that registers late is not missed.
+// GitHub can lag the approval push by a moment, so it waits (briefly) for the pull request to show it.
 //   GH_TOKEN=… GITHUB_REPOSITORY=owner/repo BRANCH=… APPROVED_SHA=… BY=… GATE=merge RUN=…
 //   REQUIRED_CHECKS=… npx tsx scripts/merge-approved.ts
-import { readCheckRuns, verdictOf } from './checks-verdict';
+import { headVerdict, readCheckRuns, verdictOf } from './checks-verdict';
 
 const {
   GH_TOKEN: token,
@@ -46,18 +47,46 @@ async function github(path: string, init: RequestInit = {}): Promise<unknown> {
 }
 
 const owner = repo.split('/')[0] ?? '';
-const pulls = await github(`/pulls?state=open&head=${encodeURIComponent(`${owner}:${branch}`)}`);
-const pull: unknown = Array.isArray(pulls) ? pulls[0] : null;
-const number = (pull as { number?: unknown } | null)?.number;
-const sha = (pull as { head?: { sha?: unknown } } | null)?.head?.sha;
-if (typeof number !== 'number' || typeof sha !== 'string')
-  throw new Error(`No open pull request for ${branch}; nothing to merge.`);
-// Only what Victor approved goes out: a push after his approval would go out unread.
-if (sha !== approved) {
-  console.error(
-    `::error::Not merged: the pull request moved after the approval (it is at ${sha}, the approval is ${approved}). Approve it again in the studio.`,
+
+async function readPull(): Promise<{ number: number; sha: string }> {
+  const pulls = await github(
+    `/pulls?state=open&head=${encodeURIComponent(`${owner}:${branch ?? ''}`)}`,
   );
-  process.exit(1);
+  const pull: unknown = Array.isArray(pulls) ? pulls[0] : null;
+  const number = (pull as { number?: unknown } | null)?.number;
+  const sha = (pull as { head?: { sha?: unknown } } | null)?.head?.sha;
+  if (typeof number !== 'number' || typeof sha !== 'string')
+    throw new Error(`No open pull request for ${branch ?? ''}; nothing to merge.`);
+  return { number, sha };
+}
+
+async function compareStatus(base: string, head: string): Promise<string | null> {
+  const data = await github(`/compare/${base}...${head}`);
+  const status = (data as { status?: unknown } | null)?.status;
+  return typeof status === 'string' ? status : null;
+}
+
+// Only what Victor approved goes out: a push after his approval would go out unread. The approval was
+// pushed a moment ago, so GitHub may still show the commit before it; wait for it to catch up.
+const HEAD_WAIT_MS = 5_000;
+const HEAD_LIMIT_MS = 2 * 60_000;
+const asked = Date.now();
+let { number, sha } = await readPull();
+for (;;) {
+  const head = headVerdict(
+    sha,
+    approved,
+    sha === approved ? null : await compareStatus(sha, approved),
+  );
+  if (head === 'ready') break;
+  if (head === 'moved' || Date.now() - asked > HEAD_LIMIT_MS) {
+    console.error(
+      `::error::Not merged: the pull request moved after the approval (it is at ${sha}, the approval is ${approved}). Approve it again in the studio.`,
+    );
+    process.exit(1);
+  }
+  await new Promise((resolve) => setTimeout(resolve, HEAD_WAIT_MS));
+  ({ number, sha } = await readPull());
 }
 
 const started = Date.now();

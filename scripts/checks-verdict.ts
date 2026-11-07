@@ -39,3 +39,20 @@ export function readCheckRuns(data: unknown): CheckRun[] {
       : [];
   });
 }
+
+export type HeadVerdict = 'ready' | 'wait' | 'moved';
+
+/**
+ * Whether the pull request's head is the approved commit. The gates workflow pushes the approval and asks
+ * at once, and GitHub can still report the commit before it for a moment: when the approval is strictly
+ * ahead of the head GitHub reports (compare status `ahead`), wait for it to catch up. Anything else (a
+ * different head, or one past the approval) means the pull request moved, and nothing is merged.
+ */
+export function headVerdict(
+  head: string,
+  approved: string,
+  compareStatus: string | null,
+): HeadVerdict {
+  if (head === approved) return 'ready';
+  return compareStatus === 'ahead' ? 'wait' : 'moved';
+}
