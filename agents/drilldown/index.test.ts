@@ -75,4 +75,20 @@ describe('drilldown pages', () => {
     const { data } = matter(pagesFrom(bare, [], new Set(), 's').files[0]?.content ?? '');
     expect(data['aliases']).toEqual([]);
   });
+
+  it('writes a page whose title holds a colon, with the title quoted', () => {
+    const colon = page(
+      'why: The post leans on her idea.\ntitle: Simone Weil: attention\nkind: person',
+    );
+    const { files } = pagesFrom(colon, [], new Set(), 's');
+    expect(files).toHaveLength(1);
+    expect(matter(files[0]?.content ?? '').data['title']).toBe('Simone Weil: attention');
+  });
+
+  it('skips a page whose front matter cannot be read, and keeps the others', () => {
+    const broken = page('why: Broken.\ntitle: [unclosed\nkind: person');
+    const { files, skipped } = pagesFrom(`${broken}\n\n${copilot}`, [], new Set(), 's');
+    expect(files).toHaveLength(1);
+    expect(skipped[0]).toContain('did not read');
+  });
 });

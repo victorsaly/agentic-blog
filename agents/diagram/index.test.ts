@@ -1,7 +1,8 @@
 // Why: a diagram the site cannot place, or one with an empty box, would show as a broken figure in a
 // post; the plan is checked before anything is written.
 import { describe, expect, it } from 'vitest';
-import { inKnownSections, plan, quoteColonValues, readPlan } from './index.js';
+import { quoteColonValues } from '../_lib/front-matter.js';
+import { inKnownSections, plan, readPlan } from './index.js';
 
 const flowDiagram = {
   section: 'How a note becomes a post',

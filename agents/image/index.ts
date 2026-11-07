@@ -7,6 +7,7 @@ import { join, resolve } from 'node:path';
 import matter from 'gray-matter';
 import { z } from 'zod';
 import { markdownFile } from '../_lib/files.js';
+import { readFrontMatter } from '../_lib/front-matter.js';
 import { kebab, readIfPresent, readOrThrow, userMessage } from '../_lib/generic.js';
 import { unfence } from '../_lib/claude.js';
 import type { AgentContext, AgentRun, OutputFile } from '../_lib/types.js';
@@ -141,7 +142,9 @@ export const run: AgentRun = async (ctx) => {
     `Today is ${ctx.today}. Plan one picture for each entry in pictures_wanted, in that order, as the prompt describes. Reply with front matter only: why, then images, a list with section (copied exactly), name, subject, alt, quote and note for each.`,
   );
   const reply = unfence(await ctx.ask(message, { maxOutputTokens: 8000 }));
-  const parsed = plan.safeParse(matter(reply).data);
+  const parsed = plan.safeParse(
+    readFrontMatter(reply, (data) => plan.safeParse(data).success).data,
+  );
   if (!parsed.success) throw new Error(`the image plan did not parse: ${parsed.error.message}`);
 
   const files: OutputFile[] = previous.map((path) => ({ path, content: '', remove: true }));

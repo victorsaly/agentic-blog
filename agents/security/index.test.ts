@@ -136,6 +136,20 @@ describe('a reply that cannot be checked', () => {
     await expect(run(context({}, answer))).rejects.toThrow(/held/);
   });
 
+  it('reads a reply whose held passage holds an unquoted colon', async () => {
+    const answer = [
+      '---',
+      'why: The publish check for a thought.',
+      'verdict: hold',
+      'held:',
+      '  - My manager said: we close the office',
+      '---',
+      '',
+      '# Security check',
+    ].join('\n');
+    await expect(run(context({}, answer))).resolves.toBeDefined();
+  });
+
   it('fails the run when held is missing', async () => {
     const answer = matter.stringify('\n# Security check\n', {
       why: 'The publish check for a thought.',
