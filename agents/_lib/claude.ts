@@ -93,6 +93,13 @@ export function claudeAdapter(name: string, provider: Provider): ModelAdapter {
             'the model declined this request; read the input before running again',
             { provider: name, model, usage },
           );
+        // A reply stopped at the limit reads like a finished one, so it would land as a version that ends
+        // mid-sentence (it did: "Technology freed us from an"). Nothing cut off is ever kept.
+        if ((response.stop_reason as string) === 'max_tokens')
+          throw new ModelCallError(
+            `the reply was cut off at the ${String(request.maxOutputTokens)}-token limit; raise max_output_tokens in this agent's PROMPT.md and run it again`,
+            { provider: name, model, usage },
+          );
         // Text that runs on (a cited sentence comes in pieces) is joined as it is; text after a search, or
         // after a pause, starts a new paragraph, so a file written after "I'll look for sources." still
         // opens on a line of its own.

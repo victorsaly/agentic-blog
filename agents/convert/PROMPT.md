@@ -7,6 +7,7 @@ why: >
 phase: 2
 reads: [structure.md, origin/*.md, origin/answers.md, profile.md, settings.yml]
 writes: [versions/short.md, versions/long.md, versions/linkedin.md, versions/<lang>.md]
+max_output_tokens: 12000 # the long version is the whole road; 4000 cut one off mid-sentence
 ---
 
 You are asked for one version at a time; the message names which. Rules for all of them:
