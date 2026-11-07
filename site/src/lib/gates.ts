@@ -3,6 +3,7 @@
 // interview's questions, the structure he is approving) is named here once. An answer can be spoken: then it
 // carries the key of its recording, which must be one the studio saved for an answer. Pure, so tested.
 import { isSafeKey } from './origin-request';
+import { MAX_MARKED, isReviewable } from './review';
 
 export type GateDecision = 'answered' | 'approved' | 'redirected' | 'picked';
 export type GateAsks = 'answer' | 'approve' | 'pick';
@@ -18,29 +19,47 @@ export interface GateRequest {
   medium: 'voice' | 'text';
   /** The recording's key in R2, for a spoken answer. */
   key?: string;
+  /** Files to mark reviewed with an approval at the gate before the way out; none otherwise. */
+  reviewed: string[];
 }
 
 export function readGateRequest(
   body: unknown,
 ): { ok: true; value: GateRequest } | { ok: false; error: string } {
   if (typeof body !== 'object' || body === null) return { ok: false, error: 'Send JSON.' };
-  const { decision, words, medium, key } = body as {
+  const { decision, words, medium, key, reviewed } = body as {
     decision?: unknown;
     words?: unknown;
     medium?: unknown;
     key?: unknown;
+    reviewed?: unknown;
   };
   if (typeof decision !== 'string' || !(decisions as readonly string[]).includes(decision))
     return { ok: false, error: 'Say what you decided.' };
   const said = typeof words === 'string' ? words : '';
   if (said.length > MAX_WORDS)
     return { ok: false, error: `Keep it under ${String(MAX_WORDS)} characters.` };
+  const marked = reviewed ?? [];
+  if (
+    !Array.isArray(marked) ||
+    marked.length > MAX_MARKED ||
+    !marked.every((f): f is string => typeof f === 'string' && isReviewable(f))
+  )
+    return { ok: false, error: 'Only versions, recordings and sources can be marked reviewed.' };
+  if (marked.length > 0 && decision !== 'approved')
+    return { ok: false, error: 'Files are marked reviewed only with an approval.' };
   if (medium === 'voice') {
     if (typeof key !== 'string' || !isSafeKey(key) || !key.startsWith('answer/'))
       return { ok: false, error: 'A spoken answer needs the key of its recording.' };
-    return { ok: true, value: { decision: decision as GateDecision, words: said, medium, key } };
+    return {
+      ok: true,
+      value: { decision: decision as GateDecision, words: said, medium, key, reviewed: [] },
+    };
   }
-  return { ok: true, value: { decision: decision as GateDecision, words: said, medium: 'text' } };
+  return {
+    ok: true,
+    value: { decision: decision as GateDecision, words: said, medium: 'text', reviewed: marked },
+  };
 }
 
 /** The file beside a gate's question, from the thought's folder, and what to call it. */

@@ -10,7 +10,9 @@
 // When the gate approved is the one before the way out, it says so ("merge"), and the workflow merges the
 // pull request once its checks pass: the approval in the studio is the merge. Such an approval is refused when
 // something before the gate changed since it opened, and one already recorded is not recorded again, only
-// merged (running the workflow again resumes a merge that did not go through).
+// merged (running the workflow again resumes a merge that did not go through). The files Victor ticked with
+// that approval are marked reviewed in the same commit, so the post goes live without "Not reviewed yet" on
+// what he read, and keeps it on what he did not.
 //   PAYLOAD='{"run":…,"thought":…,"decision":…,"words":…,"by":…}' npx tsx scripts/close-gate.ts
 import { execFile } from 'node:child_process';
 import { appendFile, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
@@ -38,6 +40,7 @@ import {
   publishedStructure,
 } from './gate-answer';
 import { claimNumber, claimsIn } from './claim-number';
+import { markReviewed, reviewableIn } from '../site/src/lib/review.js';
 
 const git = promisify(execFile);
 const root = resolve(process.env['CONTENT_ROOT'] ?? resolve(import.meta.dirname, '..'));
@@ -135,6 +138,21 @@ if (merging) {
   }
 }
 
+// What Victor ticked at the merge is marked reviewed in the commit his approval is in, and nothing else.
+const marked: string[] = [];
+if (merging && payload.reviewed.length > 0) {
+  const asked = reviewableIn(payload.reviewed, payload.thought);
+  if (!asked.ok) throw new Error(asked.error);
+  for (const file of asked.files) {
+    const path = join(root, file);
+    const before = await readFile(path, 'utf8').catch(() => null);
+    const after = before === null ? null : markReviewed(before);
+    if (after === null) continue;
+    await writeFile(path, after, 'utf8');
+    marked.push(file);
+  }
+}
+
 // Carry the run on from where it was saved, telling the studio every event (a resend changes nothing there).
 const live = liveFromEnv(run.id, payload.thought, process.env);
 const last = run.events.at(-1);
@@ -159,7 +177,7 @@ const start = !workflow
 const title = `content: ${closing.node} gate closed on ${payload.thought} (${payload.decision})`;
 const outputs = {
   title,
-  body: `Closed in the studio by ${payload.by}: \`${closing.node}\` ${payload.decision}.${file ? `\n\n- Answer: \`thoughts/${payload.thought}/${file}\`` : ''}${number !== null ? `\n\n- Published as thought ${String(number)}: it goes live with this merge.` : ''}\n- Run: \`${run.id}\``,
+  body: `Closed in the studio by ${payload.by}: \`${closing.node}\` ${payload.decision}.${file ? `\n\n- Answer: \`thoughts/${payload.thought}/${file}\`` : ''}${number !== null ? `\n\n- Published as thought ${String(number)}: it goes live with this merge.` : ''}${marked.length > 0 ? `\n- Marked reviewed with this approval: ${marked.map((f) => `\`${f.replace(`thoughts/${payload.thought}/`, '')}\``).join(', ')}` : ''}\n- Run: \`${run.id}\``,
   branch: `gate/${payload.thought}-${run.id.slice(-4)}`,
   start: start.join(' '),
   // Approving the gate before the way out is Victor's merge; the workflow carries it out once checks pass.
@@ -168,7 +186,7 @@ const outputs = {
 };
 await write(outputs);
 console.info(
-  JSON.stringify({ closed: closing.node, decision: payload.decision, file, number, start }),
+  JSON.stringify({ closed: closing.node, decision: payload.decision, file, number, marked, start }),
 );
 
 /** The numbers every other thought under this checkout already has. */

@@ -154,3 +154,27 @@ export function markReviewed(markdown: string): string | null {
   const turned = front[0].replace(/^reviewed:[ \t]*false[ \t]*$/m, 'reviewed: true');
   return turned === front[0] ? null : turned + markdown.slice(front[0].length);
 }
+
+/** True when the file still says `reviewed: false` in its front matter. */
+export function isUnreviewed(markdown: string): boolean {
+  return markReviewed(markdown) !== null;
+}
+
+/** What to call a reviewable file in a list: `versions/long.md` is "The long version". */
+export function reviewableName(path: string): string {
+  const leaf = path.split('/').pop()?.replace(/\.md$/, '') ?? path;
+  if (path.endsWith('/sources.md')) return 'The sources';
+  if (path.includes('/voice/')) return `The recording of the ${leaf} version`;
+  return `The ${leaf} version`;
+}
+
+/** Only the given thought's reviewable files, each once, in order: anything else is refused. */
+export function reviewableIn(
+  files: readonly string[],
+  thought: string,
+): { ok: true; files: string[] } | { ok: false; error: string } {
+  const bad = files.find((f) => !isReviewable(f) || !f.startsWith(`thoughts/${thought}/`));
+  if (bad !== undefined)
+    return { ok: false, error: `Only this post's versions, recordings and sources (not ${bad}).` };
+  return { ok: true, files: [...new Set(files)].sort() };
+}

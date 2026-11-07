@@ -83,3 +83,18 @@ export async function fileOn(env: Env, path: string, ref: string): Promise<strin
   );
   return response.ok ? response.text() : null;
 }
+
+/** The names of the files directly in a folder on a ref; none when the folder is not there. */
+export async function namesIn(env: Env, dir: string, ref: string): Promise<string[]> {
+  const response = await fetch(
+    `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${dir}?ref=${encodeURIComponent(ref)}`,
+    { headers: githubHeaders(env) },
+  );
+  if (!response.ok) return [];
+  const listed: unknown = await response.json().catch(() => null);
+  if (!Array.isArray(listed)) return [];
+  return listed.flatMap((item: unknown) => {
+    const { type, name } = (item ?? {}) as { type?: unknown; name?: unknown };
+    return type === 'file' && typeof name === 'string' ? [name] : [];
+  });
+}

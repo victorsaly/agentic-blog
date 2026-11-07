@@ -168,4 +168,49 @@ const { show, per_usd: perUsd } = settings.publishing.currency;
     flex-wrap: wrap;
     gap: var(--space-2);
   }
+  /* The files the merge marks reviewed: the review list's rows, each a box and its name. */
+  .gate-answer .mark-reviewed {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+    width: 100%;
+    max-width: var(--measure);
+  }
+  .gate-answer .mark-reviewed legend {
+    padding: 0;
+    font-weight: 700;
+  }
+  .gate-answer .mark-reviewed p {
+    margin: var(--space-1) 0 0;
+  }
+  .gate-answer .mark-reviewed ul {
+    list-style: none;
+    margin: var(--space-2) 0 0;
+    padding: 0;
+  }
+  .gate-answer .mark-reviewed li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-3);
+    min-height: var(--tap);
+    padding-block: var(--space-2);
+    border-bottom: var(--rule-width) solid var(--rule);
+  }
+  .gate-answer .mark-reviewed input {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0;
+    accent-color: var(--ink);
+  }
+  .gate-answer .mark-reviewed label {
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+  }
+  .gate-answer .mark-reviewed code {
+    color: var(--quiet);
+    overflow-wrap: anywhere;
+  }
 </style>

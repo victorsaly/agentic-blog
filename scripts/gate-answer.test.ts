@@ -68,7 +68,9 @@ describe('the close-gate payload', () => {
       by: 'info@victorsaly.com',
       branch: 'origin/2026-10-23-a',
     };
-    expect(closeGatePayload.parse(sent)).toEqual({ ...sent, medium: 'text' });
+    expect(closeGatePayload.parse(sent)).toEqual({ ...sent, medium: 'text', reviewed: [] });
+    const long = 'thoughts/2026-10-23-a/versions/long.md';
+    expect(closeGatePayload.parse({ ...sent, reviewed: [long] }).reviewed).toEqual([long]);
     expect(closeGatePayload.safeParse({ ...sent, run: '../x' }).success).toBe(false);
     expect(closeGatePayload.safeParse({ ...sent, thought: 'x' }).success).toBe(false);
   });

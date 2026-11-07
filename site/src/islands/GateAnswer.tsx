@@ -2,7 +2,9 @@
 // about (the interview's questions, the structure he is approving) and the pull request it is on. An answer
 // can be spoken or written (the studio's recorder, with a preview of how it reads); an approval is Approve,
 // or Not this with his words; at the gate before the way out it is Approve and merge, and says what that
-// does. What he is answering about is shown as it reads, not as Markdown source.
+// does. There it also lists the post's files still marked unreviewed, each ticked, so the same press marks
+// what he read reviewed; he unticks what he has not read, and that keeps its "Not reviewed yet" on the post.
+// What he is answering about is shown as it reads, not as Markdown source.
 // Sending only asks GitHub to record it,
 // which takes about a minute, so the page says it was sent and is waiting, never that it is done; the run
 // turns Done on its own when the workflow has written it. Every control has a label, and the status line is
@@ -14,9 +16,15 @@ import { Markdown } from './Markdown';
 import { agentName } from '../lib/agent-runs';
 import { Recorder, type Delivery } from './Recorder';
 
+interface Unreviewed {
+  file: string;
+  name: string;
+}
+
 interface Context {
   pull: { number: number; url: string } | null;
   context: { label: string; text: string } | null;
+  unreviewed: Unreviewed[];
 }
 
 type Sending =
@@ -36,7 +44,11 @@ function errorOf(data: unknown, fallback: string): string {
 
 function readContext(data: unknown): Context | null {
   if (typeof data !== 'object' || data === null) return null;
-  const { pull, context } = data as { pull?: unknown; context?: unknown };
+  const { pull, context, unreviewed } = data as {
+    pull?: unknown;
+    context?: unknown;
+    unreviewed?: unknown;
+  };
   const isPull =
     typeof pull === 'object' &&
     pull !== null &&
@@ -47,9 +59,16 @@ function readContext(data: unknown): Context | null {
     context !== null &&
     typeof (context as { label?: unknown }).label === 'string' &&
     typeof (context as { text?: unknown }).text === 'string';
+  const files = Array.isArray(unreviewed)
+    ? unreviewed.flatMap((u: unknown): Unreviewed[] => {
+        const { file, name } = (u ?? {}) as { file?: unknown; name?: unknown };
+        return typeof file === 'string' && typeof name === 'string' ? [{ file, name }] : [];
+      })
+    : [];
   return {
     pull: isPull ? (pull as Context['pull']) : null,
     context: isContext ? (context as Context['context']) : null,
+    unreviewed: files,
   };
 }
 
@@ -91,6 +110,8 @@ export function GateAnswer({
   // Merging is public and hard to undo, so it is never one press: the first asks, the second merges.
   const [confirming, setConfirming] = useState(false);
   const [sending, setSending] = useState<Sending>({ state: 'idle' });
+  // What to mark reviewed with the merge: every unreviewed file, until he unticks one.
+  const [unticked, setUnticked] = useState<ReadonlySet<string>>(new Set());
 
   useEffect(() => {
     const leaving = new AbortController();
@@ -114,6 +135,8 @@ export function GateAnswer({
   // The merge is offered only on what is known: nothing running, and the preview read since.
   const fresh = read !== null && read.quiet === quiet;
   const waits = merges && (shut || checking !== 'known' || (!fresh && aboutError === null));
+  const unreviewed = merges ? (about?.unreviewed ?? []) : [];
+  const ticked = unreviewed.filter((u) => !unticked.has(u.file)).map((u) => u.file);
 
   const send = async (decision: 'approved' | 'redirected'): Promise<void> => {
     setSending({ state: 'sending' });
@@ -121,7 +144,11 @@ export function GateAnswer({
       const response = await fetch(`/api/gates/${encodeURIComponent(run)}`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ decision, words }),
+        body: JSON.stringify({
+          decision,
+          words,
+          ...(decision === 'approved' && ticked.length > 0 ? { reviewed: ticked } : {}),
+        }),
       });
       const data: unknown = await response.json().catch(() => null);
       if (!response.ok) throw new Error(errorOf(data, 'The studio could not send it.'));
@@ -165,7 +192,7 @@ export function GateAnswer({
         : sending.decision === 'redirected'
           ? 'Sent back. GitHub records it, and the steps before this gate run again with your words.'
           : merges
-            ? 'Sent. GitHub records your approval, waits for the checks, then merges: a few minutes. This page shows the gate closed when it is recorded.'
+            ? `Sent. GitHub records your approval${ticked.length > 0 ? ` and marks ${String(ticked.length)} ${ticked.length === 1 ? 'file' : 'files'} reviewed` : ''}, waits for the checks, then merges: a few minutes. This page shows the gate closed when it is recorded.`
             : 'Sent. Waiting for GitHub to record it; this page shows the gate closed when it has.';
 
   return (
@@ -217,6 +244,42 @@ export function GateAnswer({
               Approving merges the pull request once its checks pass on the commit that records your
               approval: the post goes live on the site. A check that fails keeps it out.
             </p>
+          )}
+          {unreviewed.length > 0 && (
+            <fieldset className="mark-reviewed" disabled={busy}>
+              <legend>Mark these reviewed with this approval</legend>
+              <p className="small">
+                Untick any you have not read: it goes live with its “Not reviewed yet” tag, and
+                stays in the review list.
+              </p>
+              <ul>
+                {unreviewed.map((u) => {
+                  const box = `${id}-${u.file}`;
+                  return (
+                    <li key={u.file}>
+                      <input
+                        type="checkbox"
+                        id={box}
+                        checked={!unticked.has(u.file)}
+                        onChange={(event) => {
+                          const on = event.currentTarget.checked;
+                          setUnticked((now) => {
+                            const next = new Set(now);
+                            if (on) next.delete(u.file);
+                            else next.add(u.file);
+                            return next;
+                          });
+                        }}
+                      />
+                      <label htmlFor={box}>
+                        <span className="name">{u.name}</span>
+                        <code className="small">{u.file}</code>
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+            </fieldset>
           )}
           <div className="row">
             <button

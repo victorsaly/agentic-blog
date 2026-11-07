@@ -1,7 +1,14 @@
 // Why: the studio's review list is how Victor knows what an agent wrote that he has not read; a version
 // missing from it would reach readers unchecked without anyone noticing.
 import { describe, expect, it } from 'vitest';
-import { markReviewed, readReviewRequest, waitingForReview } from './review.js';
+import {
+  isUnreviewed,
+  markReviewed,
+  readReviewRequest,
+  reviewableIn,
+  reviewableName,
+  waitingForReview,
+} from './review.js';
 
 const thoughts = [
   { slug: '2026-10-22-a', title: 'Older', date: new Date('2026-10-22'), draft: false },
@@ -174,5 +181,31 @@ describe('markReviewed', () => {
     );
     expect(markReviewed('---\nreviewed: true\n---\nText')).toBeNull();
     expect(markReviewed('No front matter.')).toBeNull();
+  });
+});
+
+describe('marking with the merge approval', () => {
+  const slug = '2026-11-07-okay-every-time-build';
+
+  it('knows a file still waiting from one already reviewed', () => {
+    expect(isUnreviewed('---\nwhy: x\nreviewed: false\n---\nBody')).toBe(true);
+    expect(isUnreviewed('---\nwhy: x\nreviewed: true\n---\nBody')).toBe(false);
+  });
+
+  it('names each kind of file the way the gate lists it', () => {
+    expect(reviewableName(`thoughts/${slug}/versions/long.md`)).toBe('The long version');
+    expect(reviewableName(`thoughts/${slug}/voice/short.md`)).toBe(
+      'The recording of the short version',
+    );
+    expect(reviewableName(`thoughts/${slug}/sources.md`)).toBe('The sources');
+  });
+
+  it("takes only this post's reviewable files", () => {
+    const long = `thoughts/${slug}/versions/long.md`;
+    expect(reviewableIn([long, long], slug)).toEqual({ ok: true, files: [long] });
+    expect(reviewableIn(['thoughts/2026-10-25-other/versions/long.md'], slug)).toMatchObject({
+      ok: false,
+    });
+    expect(reviewableIn([`thoughts/${slug}/structure.md`], slug)).toMatchObject({ ok: false });
   });
 });

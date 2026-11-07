@@ -2,12 +2,15 @@
 // the gate is on and the file he is answering about (the interview's questions, the structure). POST takes
 // his decision, checks that the run is a gate still waiting, that the decision fits what it asks, and that he
 // is a person signed in through Access (RB080), and then only asks GitHub to run the gates workflow: the
-// workflow writes, so git stays the record and its history shows who decided. Behind Cloudflare Access.
+// workflow writes, so git stays the record and its history shows who decided. At the gate before the way
+// out, GET also lists the post's files still marked unreviewed, and an approval can carry the ones Victor
+// ticked, so one press both merges and clears their "Not reviewed yet". Behind Cloudflare Access.
 import { closeGate, isPerson, type LedgerEvent } from '@roadbook/core';
 import { isRunId } from '../../../src/lib/live-runs';
 import { bodyOf, gateContext, readGateRequest } from '../../../src/lib/gates';
-import { fileOn, githubHeaders, pullHolding } from '../../_github';
-import { json, problem, signedInEmail, type Handler } from '../../_lib';
+import { isUnreviewed, reviewableIn, reviewableName } from '../../../src/lib/review';
+import { fileOn, githubHeaders, namesIn, pullHolding } from '../../_github';
+import { json, problem, signedInEmail, type Env, type Handler } from '../../_lib';
 
 interface GateRun {
   thought: string;
@@ -26,6 +29,28 @@ async function gateRun(db: D1Database, id: string): Promise<GateRun | null> {
     .bind(id)
     .all<{ event: string }>();
   return { thought: row.thought, events: results.map((r) => JSON.parse(r.event) as LedgerEvent) };
+}
+
+/** The post's versions, recordings and sources on the branch that still say `reviewed: false`. */
+async function unreviewedOn(
+  env: Env,
+  thought: string,
+  ref: string,
+): Promise<{ file: string; name: string }[]> {
+  const base = `thoughts/${thought}`;
+  const [versions, voice] = await Promise.all([
+    namesIn(env, `${base}/versions`, ref),
+    namesIn(env, `${base}/voice`, ref),
+  ]);
+  const files = [
+    ...versions.map((n) => `${base}/versions/${n}`),
+    ...voice.map((n) => `${base}/voice/${n}`),
+    `${base}/sources.md`,
+  ].filter((f) => f.endsWith('.md'));
+  const read = await Promise.all(files.map(async (f) => ({ f, text: await fileOn(env, f, ref) })));
+  return read
+    .filter(({ text }) => text !== null && isUnreviewed(text))
+    .map(({ f }) => ({ file: f, name: reviewableName(f) }));
 }
 
 function runOf(params: Record<string, string | string[]>): string | null {
@@ -49,9 +74,12 @@ export const onRequestGet: Handler = async ({ env, params }) => {
     const text = context
       ? await fileOn(env, `thoughts/${run.thought}/${context.file}`, pull?.branch ?? 'main')
       : null;
+    const unreviewed =
+      opened.node === 'merge' && pull ? await unreviewedOn(env, run.thought, pull.branch) : [];
     return json({
       pull: pull ? { number: pull.number, url: pull.url } : null,
       context: context && text !== null ? { label: context.label, text: bodyOf(text) } : null,
+      unreviewed,
     });
   } catch (error: unknown) {
     return problem(error instanceof Error ? error.message : 'GitHub could not be asked.', 502);
@@ -74,13 +102,20 @@ export const onRequestPost: Handler = async ({ request, env, params }) => {
     );
   const parsed = readGateRequest(await request.json().catch(() => null));
   if (!parsed.ok) return problem(parsed.error, 400);
-  const { decision, words, medium, key } = parsed.value;
+  const { decision, words, medium, key, reviewed } = parsed.value;
 
   const run = await gateRun(db, id);
   if (!run) return problem('The studio has no run by that name.', 404);
   // The same check the workflow makes, so a decision that cannot stand is refused here, not a minute later.
   const closing = closeGate(run.events, { decision, words, by });
   if (!closing.ok) return problem(closing.error, 409);
+  // Only this post's own files, and only with the approval that merges it.
+  const opened = run.events.find((e) => e.type === 'gate.opened');
+  const node = opened?.type === 'gate.opened' ? opened.node : '';
+  if (reviewed.length > 0 && node !== 'merge')
+    return problem('Files are marked reviewed only at the gate before the way out.', 400);
+  const marking = reviewableIn(reviewed, run.thought);
+  if (!marking.ok) return problem(marking.error, 400);
 
   try {
     const pull = await pullHolding(env, `thoughts/${run.thought}/ledger/${id}.jsonl`, run.thought);
@@ -98,6 +133,7 @@ export const onRequestPost: Handler = async ({ request, env, params }) => {
           branch: pull?.branch ?? '',
           medium,
           ...(key ? { key } : {}),
+          ...(marking.files.length > 0 ? { reviewed: marking.files } : {}),
         },
       }),
     });
