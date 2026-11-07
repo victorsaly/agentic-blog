@@ -1,7 +1,7 @@
 ---
 why: Every claim in the post gets a door out, and nothing is published until Victor has opened the link himself. I found one door for each name the long version leans on, in the order they first appear. I found no door for "Steven Case", and I did not guess one.
 checked: 2026-11-07
-reviewed: false
+reviewed: true
 ---
 
 # Sources for "Every agent takes something away"
