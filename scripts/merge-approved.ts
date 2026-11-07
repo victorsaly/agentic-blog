@@ -79,9 +79,16 @@ for (;;) {
     sha === approved ? null : await compareStatus(sha, approved),
   );
   if (head === 'ready') break;
-  if (head === 'moved' || Date.now() - asked > HEAD_LIMIT_MS) {
+  if (head === 'moved') {
     console.error(
       `::error::Not merged: the pull request moved after the approval (it is at ${sha}, the approval is ${approved}). Approve it again in the studio.`,
+    );
+    process.exit(1);
+  }
+  // Still behind, not moved: the approval stands, so running this job again is enough.
+  if (Date.now() - asked > HEAD_LIMIT_MS) {
+    console.error(
+      `::error::Not merged yet: after 2 minutes GitHub still shows the pull request at ${sha}, the commit before the approval ${approved}. Nothing moved and the approval stands; re-run this job to merge.`,
     );
     process.exit(1);
   }
