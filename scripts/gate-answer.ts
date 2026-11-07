@@ -22,6 +22,8 @@ export const closeGatePayload = z.object({
     .string()
     .regex(/^answer\/[A-Za-z0-9-]+\.(webm|m4a|mp3|wav|ogg)$/)
     .optional(),
+  /** Files Victor ticked to mark reviewed with his approval at the gate before the way out. */
+  reviewed: z.array(z.string()).max(20).default([]),
 });
 
 export type CloseGatePayload = z.infer<typeof closeGatePayload>;

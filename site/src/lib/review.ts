@@ -154,3 +154,40 @@ export function markReviewed(markdown: string): string | null {
   const turned = front[0].replace(/^reviewed:[ \t]*false[ \t]*$/m, 'reviewed: true');
   return turned === front[0] ? null : turned + markdown.slice(front[0].length);
 }
+
+/** True when the file still says `reviewed: false` in its front matter. */
+export function isUnreviewed(markdown: string): boolean {
+  return markReviewed(markdown) !== null;
+}
+
+/** What to call a reviewable file in a list, in the review list's own words: `versions/long.md` is "The road". */
+export function reviewableName(path: string): string {
+  const leaf = path.split('/').pop()?.replace(/\.md$/, '') ?? path;
+  if (path.endsWith('/sources.md')) return 'The sources';
+  if (path.includes('/voice/'))
+    return leaf === 'short' ? 'The idea, read aloud' : `The ${leaf} version, read aloud`;
+  if (leaf === 'short') return 'The idea';
+  if (leaf === 'long') return 'The road';
+  if (leaf === 'linkedin') return 'The LinkedIn post';
+  return `The version in ${leaf}`;
+}
+
+/** The review list's order: the idea, the road, the LinkedIn post, other languages, recordings, sources. */
+export function reviewableRank(path: string): number {
+  if (path.endsWith('/sources.md')) return 5;
+  if (path.includes('/voice/')) return 4;
+  const leaf = path.split('/').pop()?.replace(/\.md$/, '') ?? '';
+  const known = ['short', 'long', 'linkedin'].indexOf(leaf);
+  return known === -1 ? 3 : known;
+}
+
+/** Only the given thought's reviewable files, each once, in order: anything else is refused. */
+export function reviewableIn(
+  files: readonly string[],
+  thought: string,
+): { ok: true; files: string[] } | { ok: false; error: string } {
+  const bad = files.find((f) => !isReviewable(f) || !f.startsWith(`thoughts/${thought}/`));
+  if (bad !== undefined)
+    return { ok: false, error: `Only this post's versions, recordings and sources (not ${bad}).` };
+  return { ok: true, files: [...new Set(files)].sort() };
+}

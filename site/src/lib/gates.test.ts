@@ -4,14 +4,31 @@ import { describe, expect, it } from 'vitest';
 import { MAX_WORDS, bodyOf, gateContext, gateOf, readGateRequest } from './gates';
 
 describe('readGateRequest', () => {
+  it('carries the files to mark reviewed with an approval, and only reviewable ones', () => {
+    const long = 'thoughts/2026-11-07-okay-every-time-build/versions/long.md';
+    expect(readGateRequest({ decision: 'approved', reviewed: [long] })).toMatchObject({
+      ok: true,
+      value: { reviewed: [long] },
+    });
+    expect(
+      readGateRequest({ decision: 'approved', reviewed: ['thoughts/x/origin/transcript.md'] }),
+    ).toMatchObject({ ok: false });
+    expect(readGateRequest({ decision: 'approved', reviewed: 'all' })).toMatchObject({
+      ok: false,
+    });
+    expect(
+      readGateRequest({ decision: 'redirected', words: 'No.', reviewed: [long] }),
+    ).toMatchObject({ ok: false });
+  });
+
   it('reads a decision and its words, and refuses anything else', () => {
     expect(readGateRequest({ decision: 'answered', words: 'Here.' })).toEqual({
       ok: true,
-      value: { decision: 'answered', words: 'Here.', medium: 'text' },
+      value: { decision: 'answered', words: 'Here.', medium: 'text', reviewed: [] },
     });
     expect(readGateRequest({ decision: 'approved' })).toEqual({
       ok: true,
-      value: { decision: 'approved', words: '', medium: 'text' },
+      value: { decision: 'approved', words: '', medium: 'text', reviewed: [] },
     });
     expect(readGateRequest({ decision: 'merged' })).toMatchObject({ ok: false });
     expect(readGateRequest(null)).toMatchObject({ ok: false });
@@ -28,7 +45,7 @@ describe('a spoken answer', () => {
     const key = 'answer/2026-10-25T19-00-00-000Z-ab12cd34.webm';
     expect(readGateRequest({ decision: 'answered', words: 'Hi.', medium: 'voice', key })).toEqual({
       ok: true,
-      value: { decision: 'answered', words: 'Hi.', medium: 'voice', key },
+      value: { decision: 'answered', words: 'Hi.', medium: 'voice', key, reviewed: [] },
     });
     for (const bad of ['origin/2026-a.webm', '../secret', undefined])
       expect(
