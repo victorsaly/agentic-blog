@@ -1,7 +1,7 @@
 // Why: a diagram the site cannot place, or one with an empty box, would show as a broken figure in a
 // post; the plan is checked before anything is written.
 import { describe, expect, it } from 'vitest';
-import { inKnownSections, plan } from './index.js';
+import { inKnownSections, plan, quoteColonValues, readPlan } from './index.js';
 
 const flowDiagram = {
   section: 'How a note becomes a post',
@@ -37,5 +37,38 @@ describe('diagram plan', () => {
   it('drops a diagram whose section is not a heading', () => {
     expect(inKnownSections([flowDiagram], ['My advice'])).toEqual([]);
     expect(inKnownSections([flowDiagram], ['How a note becomes a post'])).toHaveLength(1);
+  });
+
+  it('reads a plan whose title, label or item holds a colon, and leaves a good reply as written', () => {
+    const reply = [
+      '---',
+      'why: >',
+      '  One section holds two designs side by side.',
+      'diagrams:',
+      '  - section: Two ways',
+      '    kind: compare',
+      '    title: Support agent: two ways to design it',
+      '    caption: "Already quoted: fine."',
+      '    before:',
+      '      label: One agent',
+      '      items:',
+      '        - Old way: one prompt does it all',
+      '        - Speed: slow',
+      '    after:',
+      '      label: Many agents',
+      '      items:',
+      '        - Each agent has one job',
+      '        - Handoff is "explicit"',
+      '---',
+    ].join('\n');
+    const parsed = plan.safeParse(readPlan(reply));
+    expect(parsed.success).toBe(true);
+    const diagram = parsed.data?.diagrams[0];
+    expect(diagram?.title).toBe('Support agent: two ways to design it');
+    expect(diagram?.kind === 'compare' && diagram.before.items).toEqual([
+      'Old way: one prompt does it all',
+      'Speed: slow',
+    ]);
+    expect(quoteColonValues('title: Plain title')).toBe('title: Plain title');
   });
 });

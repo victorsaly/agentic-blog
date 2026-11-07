@@ -38,6 +38,43 @@ export const plan = z.object({
 
 export type Diagram = z.infer<typeof plan>['diagrams'][number];
 
+/**
+ * A plain YAML value that holds ": " (or ends in ":", or has " #") stops being one string: the model wrote
+ * `title: Support agent: two ways to design it` and the whole plan failed. This wraps such a value in
+ * double quotes, on a `key: value` line or a bare `- item` line, and leaves every other line alone.
+ */
+export function quoteColonValues(yaml: string): string {
+  const needsQuotes = (value: string) =>
+    !/^["'>|[{&*!]/.test(value) && (/: |:$| #/.test(value) || value.startsWith('- '));
+  const quoted = (value: string) => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+  return yaml
+    .split('\n')
+    .map((line) => {
+      const keyed =
+        /^(\s*(?:-\s+)?(?:why|section|kind|title|caption|label|detail):\s+)(.+?)\s*$/.exec(line);
+      if (keyed?.[1] !== undefined && keyed[2] !== undefined)
+        return needsQuotes(keyed[2]) ? keyed[1] + quoted(keyed[2]) : line;
+      const item = /^(\s*-\s+)(.+?)\s*$/.exec(line);
+      if (item?.[1] !== undefined && item[2] !== undefined && needsQuotes(item[2]))
+        return item[1] + quoted(item[2]);
+      return line;
+    })
+    .join('\n');
+}
+
+/** Reads the model's reply as written; only when YAML refuses it, quotes colon-holding values and tries once more. */
+export function readPlan(reply: string): unknown {
+  try {
+    return matter(reply).data;
+  } catch (first) {
+    try {
+      return matter(quoteColonValues(reply)).data;
+    } catch {
+      throw first;
+    }
+  }
+}
+
 /** Keeps only diagrams whose section really is a heading of the long version. */
 export function inKnownSections(diagrams: Diagram[], sections: string[]): Diagram[] {
   return diagrams.filter((d) => sections.includes(d.section.trim()));
@@ -55,7 +92,7 @@ export const run: AgentRun = async (ctx) => {
     `Today is ${ctx.today}. Decide which sections, if any, earn a diagram, as the prompt describes. Reply with front matter only.`,
   );
   const reply = unfence(await ctx.ask(message, { maxOutputTokens: 4000 }));
-  const parsed = plan.safeParse(matter(reply).data);
+  const parsed = plan.safeParse(readPlan(reply));
   if (!parsed.success) throw new Error(`the diagram plan did not parse: ${parsed.error.message}`);
 
   const diagrams = inKnownSections(parsed.data.diagrams, sections);
