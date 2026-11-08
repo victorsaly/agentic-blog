@@ -1,5 +1,6 @@
 // Why: the transcript is the first conversion. Workers AI Whisper runs on the platform, costs pennies, and
 // gives word timestamps, which is how pauses become punctuation later. The text is returned untouched.
+import { allowanceMessage, isAllowanceUsedUp } from '../../src/lib/ai-allowance';
 import { isSafeKey, json, problem, type Handler } from '../_lib';
 
 interface Body {
@@ -30,9 +31,16 @@ export const onRequestPost: Handler = async ({ request, env }) => {
   if (!object) return problem('No recording with that key.', 404);
 
   const bytes = new Uint8Array(await object.arrayBuffer());
-  const result = (await env.AI.run('@cf/openai/whisper-large-v3-turbo', {
-    audio: toBase64(bytes),
-  })) as WhisperResult;
+  let result: WhisperResult;
+  try {
+    result = (await env.AI.run('@cf/openai/whisper-large-v3-turbo', {
+      audio: toBase64(bytes),
+    })) as WhisperResult;
+  } catch (error) {
+    // The free plan's daily allowance ran out: say so and when it returns. Anything else is a real fault.
+    if (isAllowanceUsedUp(error)) return problem(allowanceMessage(new Date()), 429);
+    throw error;
+  }
 
   const text = (result.text ?? '').trim();
   if (text.length === 0)
