@@ -18,4 +18,5 @@ updated: 2026-11-18
 | 7 | 2026-11-18 | safety | safety agent, run locally | Passed. US$0.01. |
 | 8 | 2026-11-18 | security | security agent, run locally | Passed. US$0.02. |
 | 9 | 2026-11-18 | voice | voice agent, run locally | Read the short version in Victor's voice (ElevenLabs eleven_v3), 66.6 seconds. US$0.03. Victor listens before merging. |
-| 10 | – | merge | Victor | Merges the pull request. |
+| 10 | 2026-11-18 | image (cover only) | Claude Code, with the image agent's model | Victor saw a stray hand on the outside of the door. Redrawn twice from the reference photo with the same prompt plus a line about the hands; Victor's pick replaced image/00. About US$0.14. |
+| 11 | – | merge | Victor | Merges the pull request. |
