@@ -19,7 +19,7 @@ images:
     drawn: true
     model: images/gpt-image-2 (asked to draw from the reference photo)
     reviewed_by: victor
-    attempts: 3
+    attempts: 5
     quote: AI-assisted development is how it became a product anyone can use.
     note: >-
       The man opens the door of a small private workshop to the outside, which
@@ -33,11 +33,10 @@ images:
       Dressed simply, a dark jacket or jumper over a shirt. Always the same man,
       drawn the same way. A smiling man with round glasses stands in the open
       doorway of a small workshop shed, the door swung wide open beside him. His
-      left hand rests on the edge of the open door, inside the doorway with him;
-      his right arm reaches outward, palm up, toward the empty open space
-      beyond. He has exactly two hands and both are clearly his own; there are
-      no other hands anywhere in the picture. Generous empty space, nothing
-      else. Square image.
+      right arm reaches outward, palm up, toward the empty open space beyond.
+      Only that one hand is visible in the whole picture: his other arm is
+      hidden behind his body and the open door, with no second hand showing
+      anywhere. Generous empty space, nothing else. Square image.
   - file: image/01-stack-of-folders-beside-lamp.png
     section: Where it started
     subject: >-
