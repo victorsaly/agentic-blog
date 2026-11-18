@@ -6,7 +6,7 @@ why: >
   "What it is now" holds what dbtour always reads against what it reads only when asked. Every label comes
   from the long version.
 generated_by: claude-code
-reviewed: false
+reviewed: true
 diagrams:
   - section: "What changed"
     kind: flow

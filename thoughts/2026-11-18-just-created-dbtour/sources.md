@@ -1,7 +1,7 @@
 ---
 why: Every claim in the post gets a door out, and nothing is shown until Victor has opened the links himself. The post leans only on Victor's own two projects, so every door is his own repository, package or skills page, checked with the GitHub and npm command-line tools.
 checked: 2026-11-18
-reviewed: false
+reviewed: true
 updated: 2026-11-18
 ---
 
