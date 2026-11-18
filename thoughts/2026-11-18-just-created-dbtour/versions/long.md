@@ -4,7 +4,7 @@ kind: long
 language: en
 converted_from: ../origin/text.md
 converted_by: claude-code
-reviewed: false
+reviewed: true
 ---
 
 # It worked for me. Now it works for you.
