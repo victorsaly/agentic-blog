@@ -4,7 +4,7 @@ checked: 2026-11-18
 reviewed: false
 ---
 
-# Sources for "Good ideas don't have to stay internal"
+# Sources for "It worked for me. Now it works for you."
 
 **How I checked.** I read each repository's details and README with the GitHub command-line tool, and the packages with `npm`, on 2026-11-18. Victor still has to open every link before it goes live.
 

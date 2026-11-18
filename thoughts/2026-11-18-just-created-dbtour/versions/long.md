@@ -7,7 +7,7 @@ converted_by: claude-code
 reviewed: false
 ---
 
-# Good ideas don't have to stay internal
+# It worked for me. Now it works for you.
 
 My side projects usually stay small: me and a few close colleagues. dbtour started that way, in 2020. AI-assisted development is how it became a product anyone can use.
 
@@ -49,4 +49,4 @@ dbtour documents SQL Server and SQLite databases today; other databases follow i
 
 ## The message
 
-A good internal idea doesn't have to stay internal.
+It worked for me. Now it works for you.

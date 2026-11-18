@@ -8,7 +8,7 @@ converted_by: claude-code
 reviewed: false
 ---
 
-A good internal idea doesn't have to stay internal.
+It worked for me. Now it works for you.
 
 In 2020 I wrote a small tool for my own projects. It read SQL Server databases and wrote their schemas as Markdown, hooked to a blog so I could search every project's schema in one place. A few close colleagues used it too.
 

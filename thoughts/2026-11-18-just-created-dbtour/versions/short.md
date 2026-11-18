@@ -19,4 +19,4 @@ Where did AI-assisted development help most? A second database, SQLite, the one 
 
 What AI did not do is decide. It took several iterations, a lot of preparation, testing and verification. And using it every day.
 
-A good internal idea doesn't have to stay internal.
+It worked for me. Now it works for you.

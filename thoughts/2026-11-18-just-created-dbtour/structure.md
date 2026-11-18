@@ -1,7 +1,7 @@
 ---
 why: >
   Written in a Claude Code session with Victor instead of by the structure agent, from his written origin and his answers. The facts about dbschema-markdown and dbtour (dates, versions, databases, the MCP server and plugin) come from the two GitHub repositories and npm, checked on 2026-11-18. Victor asked for a shorter message than the one offered, and for the story to be about his own projects and a few close colleagues.
-title: Good ideas don't have to stay internal
+title: It worked for me. Now it works for you.
 date: 2026-11-18
 language: en
 themes:
@@ -33,7 +33,7 @@ Where did AI help most? A second database, SQLite, that I use the least. And the
 
 What AI did not do is decide. It took several iterations, a lot of preparation, testing and verification, and using it every day.
 
-A good internal idea doesn't have to stay internal.
+It worked for me. Now it works for you.
 
 ## The road
 
@@ -48,4 +48,4 @@ The full version, from dbschema-markdown to dbtour, is in [versions/long.md](ver
 | AI helped most with the database I use the least, and the plugs into other tools. | ai-changing-work |
 | AI did not decide. Iterations, testing, verification and daily use did. | credibility, ai-changing-work |
 | The structure comes from the catalogue; the data only read-only, and only if you ask. | apps-and-workflows |
-| A good internal idea doesn't have to stay internal. | ai-changing-work |
+| It worked for me. Now it works for you. | ai-changing-work |
