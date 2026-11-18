@@ -16,7 +16,7 @@ text_sha256: 9f8d2c5f3d648bde9f72f1b35ca5717e1cb0682ce15f41547261740ba0c15ad8
 words: 198
 seconds: 66.618
 made: '2026-11-18'
-reviewed: false
+reviewed: true
 ---
 
 I like to build tools for my own projects. Most of them stay small. Me and a few close colleagues use them, and that is all.
