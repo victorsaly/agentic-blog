@@ -25,7 +25,7 @@ It worked, for me and a few close colleagues. That is where my side projects usu
 
 ## What changed
 
-On 1 November 2026 I started [dbtour](https://github.com/victorsaly/dbtour). The same idea, opened up.
+On 1 November 2026 I started [dbtour](https://skills.victorsaly.com/dbtour). The same idea, opened up.
 
 It reads the catalogue of a database: tables, columns, keys, relations, indexes. It writes what it finds to one model file in your repository. From that file it renders Markdown that GitHub shows with diagrams, and one HTML page you can search, follow relations in and hand to an agent. An MCP server and a Claude Code plugin give an agent the same model, so it writes SQL from the real names.
 
@@ -46,6 +46,8 @@ The good idea was already there in 2020. AI took away the distance between the i
 ## What it is now
 
 dbtour documents SQL Server and SQLite databases today; other databases follow its plan. Documenting needs only read access to the catalogue. Reading the data is your choice: give it a read-only login and it runs a SELECT, inside a transaction that is always rolled back. Passwords go to the system's keychain, never a file.
+
+How to start, and what it looks like, is on [the dbtour page](https://skills.victorsaly.com/dbtour). The code is on [GitHub](https://github.com/victorsaly/dbtour).
 
 ## The message
 

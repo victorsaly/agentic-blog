@@ -13,7 +13,7 @@ In 2020 I wrote dbschema-markdown. A small command-line tool: it read a SQL Serv
 
 It worked, for us. It never went further.
 
-This month it did. dbtour is the same idea, opened up for anyone. It documents a database from its catalogue and keeps the docs in your repository: Markdown with diagrams, one page you can search, and an MCP server so an agent writes SQL from the real names. If you want it to read the data too, it does that read-only.
+This month it did. [dbtour](https://skills.victorsaly.com/dbtour) is the same idea, opened up for anyone. It documents a database from its catalogue and keeps the docs in your repository: Markdown with diagrams, one page you can search, and an MCP server so an agent writes SQL from the real names. If you want it to read the data too, it does that read-only.
 
 Where did AI-assisted development help most? A second database, SQLite, the one I use the least. And the plugs into other tools: the MCP server, the Claude Code plugin, the skill.
 

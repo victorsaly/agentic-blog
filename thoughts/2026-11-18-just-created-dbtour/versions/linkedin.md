@@ -20,6 +20,6 @@ Where did AI-assisted development help most? SQLite, the database I use the leas
 
 What AI did not do is decide. Several iterations, a lot of testing and verification, and using it every day did that.
 
-https://github.com/victorsaly/dbtour
+https://skills.victorsaly.com/dbtour
 
 Talked out loud, tidied by AI · https://blog.victorsaly.com/thoughts/2026-11-18-just-created-dbtour

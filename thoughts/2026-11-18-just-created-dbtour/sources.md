@@ -1,5 +1,5 @@
 ---
-why: Every claim in the post gets a door out, and nothing is shown until Victor has opened the links himself. The post leans only on Victor's own two projects, so every door is his own repository or package page, checked with the GitHub and npm command-line tools.
+why: Every claim in the post gets a door out, and nothing is shown until Victor has opened the links himself. The post leans only on Victor's own two projects, so every door is his own repository, package or skills page, checked with the GitHub and npm command-line tools.
 checked: 2026-11-18
 reviewed: false
 ---
@@ -12,6 +12,7 @@ reviewed: false
 |---|---|---|---|
 | dbschema-markdown, started in January 2020, a CLI that writes a SQL Server schema as Markdown | [victorsaly/dbschema-markdown](https://github.com/victorsaly/dbschema-markdown), GitHub | 2026-11-18 | The repository, created 20 January 2020. Its README shows the command line, a SQL Server connection string, and writing the Markdown between comment markers in a file. |
 | dbtour, started on 1 November 2026: structure from the catalogue, data only through a read-only login, Markdown with diagrams, one page, an MCP server, a Claude Code plugin and skill, SQL Server and SQLite, keychain | [victorsaly/dbtour](https://github.com/victorsaly/dbtour), GitHub | 2026-11-18 | The repository, created 1 November 2026, with more than a hundred commits on main. Its README describes each feature the post names. |
+| dbtour's page: what it is and how to start | [dbtour](https://skills.victorsaly.com/dbtour), skills.victorsaly.com | 2026-11-18 | Victor's own page for dbtour, titled "dbtour: schema docs for SQL Server and SQLite, for people and agents". The post links it as the place to start. |
 | Version 0.11.0 on npm by 17 November | [dbtour](https://www.npmjs.com/package/dbtour), npm | 2026-11-18 | The package page. Version 0.11.0, published 17 November 2026, beside the SQL Server, SQLite, explorer and keychain packages. |
 
 ## Notes for Victor
