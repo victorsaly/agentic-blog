@@ -19,4 +19,5 @@ updated: 2026-11-18
 | 8 | 2026-11-18 | security | security agent, run locally | Passed. US$0.02. |
 | 9 | 2026-11-18 | voice | voice agent, run locally | Read the short version in Victor's voice (ElevenLabs eleven_v3), 66.6 seconds. US$0.03. Victor listens before merging. |
 | 10 | 2026-11-18 | image (cover only) | Claude Code, with the image agent's model | Victor saw a stray hand on the outside of the door. Redrawn from the reference photo with the same prompt plus a line about the hands, then again with only one hand visible, as Victor asked; the pick replaced image/00. Four takes, about US$0.28. |
-| 11 | – | merge | Victor | Merges the pull request. |
+| 11 | 2026-11-18 | update | Claude Code (claude-opus-5-5) | After dbtour 0.11.3, Victor asked for the new features, the new links and infographics (origin/update.md). Updated the long version's "What it is now", added "Try it", four sources and three diagrams. No agent ran; the short version and its recording are unchanged. |
+| 12 | – | review and merge | Victor | Opens the new links, marks the long version, sources and diagrams reviewed, and merges. |
