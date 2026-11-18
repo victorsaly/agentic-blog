@@ -17,13 +17,13 @@ images:
       A smiling man with round glasses holds open the door of a small shed and
       gestures outward to open space.
     drawn: true
-    model: images/gpt-image-2
-    reviewed_by: claude
-    attempts: 1
+    model: images/gpt-image-2 (asked to draw from the reference photo)
+    reviewed_by: victor
+    attempts: 3
     quote: AI-assisted development is how it became a product anyone can use.
     note: >-
       The man opens the door of a small private workshop to the outside, which
-      is the move from an internal tool to one anyone can use.
+      is the move from a side project to one anyone can use.
     prompt: >-
       A linocut print: bold carved black shapes and white cut lines, strong
       contrast, hand-printed texture, only black and white, no grey, no text.
@@ -31,10 +31,13 @@ images:
       always this person: Victor: a man with short dark hair swept up at the
       front, light stubble along the jaw, round glasses and a warm, wide smile.
       Dressed simply, a dark jacket or jumper over a shirt. Always the same man,
-      drawn the same way. A smiling man with round glasses stands in a doorway
-      of a small workshop shed, holding the door wide open and gesturing outward
-      toward an empty open space beyond. Generous empty space, nothing else.
-      Square image.
+      drawn the same way. A smiling man with round glasses stands in the open
+      doorway of a small workshop shed, the door swung wide open beside him. His
+      left hand rests on the edge of the open door, inside the doorway with him;
+      his right arm reaches outward, palm up, toward the empty open space
+      beyond. He has exactly two hands and both are clearly his own; there are
+      no other hands anywhere in the picture. Generous empty space, nothing
+      else. Square image.
   - file: image/01-stack-of-folders-beside-lamp.png
     section: Where it started
     subject: >-
